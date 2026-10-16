@@ -1,0 +1,146 @@
+cache: true
+endpoints:
+  custom:
+    - apiKey: ${GOOGLE_API_KEY}
+      baseURL: https://generativelanguage.googleapis.com/v1beta/openai/
+      models:
+        default:
+          - gemini-3.8-flash
+        fetch: false
+      name: Google
+    - name: Requesty
+      apiKey: ${REQUESTY_API_KEY}
+      baseURL: https://router.requesty.ai/v1
+      modelDisplayLabel: OpenAI
+      models:
+        default:
+          - openai/gpt-6-luna
+          - xiaomi/mimo-v2.6-pro
+          - deepseek/deepseek-v4.1-flash
+        fetch: false
+    - apiKey: ${VERCEL_AI_GATEWAY_API_KEY}
+      baseURL: https://ai-gateway.vercel.sh/v1
+      models:
+        default:
+          - meta/muse-spark-1.3-contributor
+        fetch: false
+      name: Vercel
+      titleModel: meta/muse-spark-1.3-contributor
+      modelDisplayLabel: Meta
+fileConfig:
+  endpoints:
+    default:
+      fileLimit: 20
+      fileSizeLimit: 5
+      totalQuota: 5120
+interface:
+  agents: true
+  bookmarks: false
+  codeInterpreter: true
+  memories: true
+  multiConvo: false
+  presets: true
+  prompts: true
+  runCode: true
+  tools:
+    webSearch: true
+    fork: false
+modelSpecs:
+  enforce: false
+  list:
+    - label: Meta Spark 1.3 (LLM-stats 53.8) $
+      name: muse-spark-1.3-contributor
+      preset:
+        endpoint: Vercel
+        model: meta/muse-spark-1.3-contributor
+        modelLabel: Meta
+        promptPrefix: |-
+          For generated files, use the code execution tool and deliver the downloadable file attachment. Do not add Markdown download links or write sandbox:/mnt/data URLs in your response. Do not invent download URLs. Only claim that a file is available when the tool confirms successful artifact delivery. Keep the final response brief and do not paste the document contents into chat.
+
+        maxContextTokens: 1000000
+      executeCode: true
+      webSearch: false
+      mcpServers:
+        - lab_research
+      iconURL: /ai/assets/lab-brand-icons/meta.svg
+      showIconInMenu: true
+    - label: Xiaomi Mimo 2.6 Pro (LLM-stats 49.9) $
+      name: mimo-v2-6-pro
+      preset:
+        endpoint: Requesty
+        model: xiaomi/mimo-v2.6-pro
+        promptPrefix: |-
+          For generated files, use the code execution tool and deliver the downloadable file attachment. Do not add Markdown download links or write sandbox:/mnt/data URLs in your response. Do not invent download URLs. Only claim that a file is available when the tool confirms successful artifact delivery. Keep the final response brief and do not paste the document contents into chat.
+
+        maxContextTokens: 1000000
+      executeCode: true
+      webSearch: false
+      mcpServers:
+        - lab_research
+      iconURL: /ai/assets/lab-brand-icons/mimo.svg
+      showIconInMenu: true
+    - label: Everyday work (Deepseek 4.1 Flash) $
+      name: deepseek-v4-1-flash
+      preset:
+        endpoint: Requesty
+        model: deepseek/deepseek-v4.1-flash
+        promptPrefix: |-
+          For generated files, use the code execution tool and deliver the downloadable file attachment. Do not add Markdown download links or write sandbox:/mnt/data URLs in your response. Do not invent download URLs. Only claim that a file is available when the tool confirms successful artifact delivery. Keep the final response brief and do not paste the document contents into chat.
+
+        maxContextTokens: 1000000
+      executeCode: true
+      webSearch: false
+      mcpServers:
+        - lab_research
+      iconURL: /ai/assets/lab-brand-icons/deepseek.svg
+      showIconInMenu: true
+    - label: Complex work (Gemini 3.8 Flash) $$
+      name: gemini-3.8-flash
+      preset:
+        endpoint: Google
+        model: gemini-3.8-flash
+        promptPrefix: |-
+          For generated files, use the code execution tool and deliver the downloadable file attachment. Do not add Markdown download links or write sandbox:/mnt/data URLs in your response. Do not invent download URLs. Only claim that a file is available when the tool confirms successful artifact delivery. Keep the final response brief and do not paste the document contents into chat.
+
+      executeCode: true
+      webSearch: false
+      mcpServers:
+        - lab_research
+    - name: gpt-6-luna-pro
+      preset:
+        endpoint: Requesty
+        model: openai/gpt-6-luna
+        modelLabel: OpenAI
+        promptPrefix: |-
+          For generated files, use the code execution tool and deliver the downloadable file attachment. Do not add Markdown download links or write sandbox:/mnt/data URLs in your response. Do not invent download URLs. Only claim that a file is available when the tool confirms successful artifact delivery. Keep the final response brief and do not paste the document contents into chat.
+
+        maxContextTokens: 1000000
+      label: OpenAI GPT-6 Luna (LLM-stats 47) $
+      executeCode: true
+      webSearch: false
+      mcpServers:
+        - lab_research
+  prioritize: true
+summarization:
+  apiKey: ${GOOGLE_API_KEY}
+  maxSummaryTokens: 20000
+  model: gemini-3.8-flash
+  provider: Google
+  reserveRatio: 0.05
+  retainRecent:
+    tokens: 2000
+    turns: 4
+  trigger:
+    type: token_ratio
+    value: 0.8
+  enabled: true
+version: 1.3.13
+mcpServers:
+  lab_research:
+    type: stdio
+    command: node
+    args:
+      - /app/lab-research-tools/scholar.cjs
+    env:
+      TAVILY_API_KEY: ${TAVILY_API_KEY}
+      OPENALEX_API_KEY: ${OPENALEX_API_KEY}

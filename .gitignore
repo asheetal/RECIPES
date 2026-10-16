@@ -9,3 +9,4 @@ __pycache__/
 app/crash-host/
 app/resource-host/status.json
 app/resource-usage-data/
+app/crash-reports/

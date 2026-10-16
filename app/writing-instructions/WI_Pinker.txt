@@ -1,0 +1,700 @@
+COMPREHENSIVE SUMMARY OF KEY PRINCIPLES FROM:
+Steven Pinker, The Sense of Style: The Thinking Person's Guide to Writing in the 21st Century (2014)
+
+This document summarizes all major principles from all six chapters. It is intended as a reference
+to guide writing that follows Pinker's standards. Principles are actionable and specific.
+
+=========================================================
+CHAPTER 1: GOOD WRITING — DEVELOPING A WRITERLY EAR
+=========================================================
+
+The path to good writing begins with reading good prose closely and analytically. Writers acquire
+technique by spotting, savoring, and reverse-engineering examples of excellent writing. Style cannot
+be taught by commandments alone; it must be absorbed from models.
+
+Good writing shares these properties across diverse styles and authors:
+- Fresh wording and concrete imagery over familiar verbiage and abstract summary.
+- Attention to the reader's vantage point: the writer controls what the reader sees and when.
+- The judicious placement of an uncommon or surprising word against a backdrop of simple nouns
+  and verbs. A varied vocabulary and the use of unusual words distinguish sprightly prose from mush.
+  The best words not only pinpoint an idea precisely but echo it in sound (phonesthetics).
+- Structural parallelism: parallel syntax is a powerful device for elegance and clarity.
+- Occasional planned surprise — a stark revelation, an abrupt ending, a zeugma.
+- Telling detail that allows the reader to draw a conclusion without the author stating it explicitly.
+- Meter and sound that resonate with the meaning and mood.
+- Writers do not hide passion or relish. They write as if they have something important to show.
+
+Good writing starts strong — not with a cliché or a banality, but with a contentful observation that
+provokes curiosity. It finishes strong as well.
+
+Good writing shows; it does not tell. Rather than asserting that something is moving or important, it
+presents a specific image or detail that generates the feeling in the reader.
+
+Prose is brought to life with concrete images, similes, metaphors, and well-chosen idioms. Fiction
+and nonfiction share many of the same expository techniques.
+
+=========================================================
+CHAPTER 2: CLASSIC STYLE — THE GUIDING METAPHOR
+=========================================================
+
+THE CLASSIC STYLE IDEAL
+
+The governing metaphor of classic style is seeing the world. The writer has noticed something true
+and orients the reader's gaze so she can see it for herself. Prose is a transparent window onto ideas,
+not a performance of the writer's erudition, caution, or anxiety.
+
+Properties of classic style:
+- The writer's purpose is presentation; the motive is disinterested truth.
+- The truth can be known and is not the same as the language that reveals it.
+- The writer and reader are equals engaged in a conversation.
+- The writer credits the reader with intelligence: she can recognize the truth when she sees it.
+- Classic style is confident, not arrogant. It is direct without being dismissive of complexity.
+- Classic prose is a pretense — the writer has worked hard to make the result seem effortless.
+
+Classic style differs from:
+- Practical style: memos, manuals, term papers written to satisfy defined roles.
+- Romantic or contemplative style: sharing ineffable personal reactions.
+- Oracular or prophetic style: inspiring a crowd with the music of language.
+- Self-conscious, relativistic, postmodern style: foregrounding anxiety about the act of writing,
+  hedging every claim, and refusing to commit to a viewpoint.
+
+Classic style is not the same as avoiding abstraction. It can explain abstract ideas — even quantum
+cosmology — by treating them as objects and forces a reader could recognize if positioned to see them.
+Brian Greene's explanation of the multiverse (cited by Pinker) exemplifies this: he narrates a series
+of events and trusts that any careful reader who can see them will know what they imply.
+
+METADISCOURSE
+
+Metadiscourse is writing about the writing rather than about the subject matter. It bogs down prose
+without conveying content. Eliminate it.
+
+Examples to avoid:
+- "In this paper, we will argue that..."
+- "Having established X, we now turn to Y."
+- "This section reviews the literature on..."
+- "As noted above..." / "As we will see below..."
+- "It is important to note that..." / "It is worth noting that..."
+- "In summary..." / "To recap..."
+- "This section discusses the factors that..."
+
+Readers do not need narration of what is happening; they need the content itself. Trust the structure
+of the prose to guide the reader.
+
+A limited amount of signposting is acceptable in conversation and in writing, but it should be done
+sparingly, as naturally as one would in conversation. Good alternatives to metadiscourse:
+- Open with a question ("What makes a name rise in popularity?") instead of announcing the topic.
+- Use the language of vision: "As we have seen..." puts the writer and reader in the scene together.
+- Use the language of movement: "Now that we have explored X, we arrive at the puzzle of Y."
+
+PROFESSIONAL NARCISSISM
+
+Many writers confuse the world of their subject matter with the world of their profession. The result
+is the typical academic opening that describes researchers' activities rather than the subject they study:
+"In recent years, increasing numbers of psychologists have turned their attention to..."
+Classic style ignores the hired help and looks directly at what they are paid to study:
+"All children acquire a language without explicit lessons. How?"
+
+HEDGING
+
+Writers over-hedge from fear of being wrong. Excessive hedging makes prose tedious and signals
+that the writer does not believe their own claims.
+
+Avoid: somewhat, rather, fairly, relatively, arguably, it could be said that, in some sense, to some
+extent, it may be the case that, perhaps, might (overused), I would argue, appear to, seem to.
+
+Where uncertainty is real and relevant, state it once and specifically — spell out the actual conditions
+under which the claim does not hold — then move on. Do not hedge every clause.
+
+Intensifiers such as very, highly, and extremely also function as hedges: they replace categorical
+affirmation with a graduated scale. "He is an honest man" is more reassuring than "He is a very
+honest man." Intensifiers are usually deletable.
+
+SCARE QUOTES
+
+Do not use quotation marks to distance yourself from a word or phrase you have chosen to use.
+Quotation marks signal that the writer is not using a word in its standard meaning, or is attributing it
+to someone else. Using them apologetically ("he tried to 'think outside the box'") implies you could
+not find a better phrase, that you do not believe your own word, or that you seek immunity from the
+idiom without giving it up. If you are not comfortable using an expression without quotation marks,
+do not use it.
+
+CLICHÉS AND MIXED METAPHORS
+
+A cliché-monger turns off their own visual brain and plants dead idioms on the page. The reader
+stops converting language into mental images and merely mouths the words. Worse, mixed metaphors
+produce ludicrous imagery.
+
+Good writers:
+- Reach for fresh similes and metaphors that engage the reader's sensory cortex.
+- When a shopworn idiom is unavoidable, remember what it literally means and play with the image
+  to revive it in the reader's mind.
+- Use phonesthetically appropriate words: words whose sound echoes their meaning.
+
+ABSTRACT NOUNS (NOMINALIZATION)
+
+Nominalization converts verbs and adjectives into abstract nouns by adding suffixes such as –ance,
+–ment, –ation, or –ing. The writing scholar Helen Sword calls them "zombie nouns" because they
+lumber across the page without a conscious agent directing them.
+
+Avoid: conceptualization, utilization, implementation, the finding, the assumption, investigation,
+examination, consideration, facilitation, the occurrence of, anticipation, cancellation, the existence
+of, a tendency to, the fact that.
+
+Prefer the verb or adjective:
+Bad:  "The conceptualization of the phenomenon resulted in an increase in understanding."
+Better: "Conceptualizing the phenomenon helped us understand it."
+Better still: "We understood the phenomenon better once we conceptualized it."
+
+Also watch for metaconcepts — words that serve as packing material around the real content:
+level, issue, context, framework, approach, model, perspective, variable, process, range, strategy,
+condition, tendency. Ask whether the phrase "on the aspirational level" adds anything that "to aspire"
+does not. It does not.
+
+PASSIVE VOICE
+
+Passive voice is appropriate and sometimes indispensable, but it is widely misused.
+
+Passive is appropriate when:
+(a) The agent is unknown or irrelevant ("The honey was eaten").
+(b) The patient of the action is the topic of the discourse and should appear first for coherence.
+(c) The agent is minor or distracting ("Helicopters were flown in to put out the fires").
+(d) The passive shortens the gap between a relative-clause filler and its gap, easing comprehension.
+
+Passive is problematic when:
+- It hides the agent to evade responsibility ("mistakes were made").
+- It is used out of habit rather than purpose, leaving the reader without an agent to visualize.
+- It displaces the reader's spotlight from the character doing the acting.
+
+Use the active voice whenever the agent is the natural focus of the reader's attention. Active
+constructions train the reader's gaze on who is doing something; passive constructions train the
+reader's gaze on what is being done to whom.
+
+FIRST- AND SECOND-PERSON PRONOUNS
+
+The pronouns I, we, and you simulate a conversation, as classic style recommends. Using them
+reduces the reader's memory load and is more natural than bureaucratic evasion of the first person.
+The social psychologist Gordon Allport summarized the problem: "Please, sir; I didn't do it! It was
+done!" Use I when you mean I.
+
+=========================================================
+CHAPTER 3: THE CURSE OF KNOWLEDGE
+=========================================================
+
+THE CENTRAL PROBLEM
+
+The single most important explanation for bad writing is the "curse of knowledge": writers know
+what they mean, so they forget that readers do not. They omit the context, definitions, and concrete
+examples that would make their meaning clear to a reader who lacks their background.
+
+The curse of knowledge is not malice or pretension; it is a failure of imagination. Bright, honest
+writers fall into it because knowing something well prevents them from noticing that others do not
+know it.
+
+Related cognitive phenomena:
+- Egocentrism: inability to imagine a scene from another's vantage point.
+- Hindsight bias: what we know now seems like it should have been obvious before.
+- False consensus: assuming others would make the same decisions we did.
+- Illusory transparency: assuming others can detect what we know to be the case.
+- The better you know something, the less you remember how hard it was to learn.
+
+JARGON AND ABBREVIATIONS
+
+Every specialty develops argot. The curse of knowledge causes writers to overestimate how standard
+a term has become. Guidelines:
+- Define or gloss all technical terms with a brief phrase in plain language.
+- Spell out abbreviations on first use. Never coin an abbreviation for a single paper.
+- Use examples liberally. An explanation without an example is little better than no explanation.
+- When technical terms are unavoidable, prefer those with transparent, memorable labels.
+
+CHUNKING AND FUNCTIONAL FIXITY
+
+As experts learn, they bundle related concepts into single mental units (chunks) and begin to think of
+objects in terms of their function rather than their physical form (functional fixity). The result:
+writers refer to what they do rather than what they observe, and readers, who have not made the
+same journey through abstraction, cannot follow.
+
+The cure is to unpack the chunk and narrate the concrete events or objects that compose it:
+"Social avoidance" → the mouse cowering in the corner of a cage that contains another mouse.
+"Participants read assertions whose veracity was affirmed" → We presented a sentence, followed by
+the word TRUE or FALSE.
+
+HOW TO LIFT THE CURSE
+
+1. Mentally simulate the reader's perspective at every step. Assume they know considerably less than
+   you think they do.
+2. Show a draft to actual readers who are similar to the intended audience. Revise in response to
+   comments that recur across readers or that make sense to you when you re-read.
+3. Revisit a draft after enough time has passed that the text is no longer familiar.
+4. Polish draft after draft. Good writing is produced through multiple rounds of revision.
+
+The form in which thoughts occur to a writer is rarely the same as the form in which they can be
+absorbed by a reader. The advice in this and other stylebooks is not so much on how to write as on
+how to revise.
+
+=========================================================
+CHAPTER 4: THE WEB, THE TREE, AND THE STRING — SYNTAX
+=========================================================
+
+MENTAL MODELS OF SYNTAX
+
+A sentence converts a web of ideas in the writer's mind into a linear string of words. The conversion
+is accomplished by a tree of phrases. Each phrase is embedded inside larger phrases according to
+rules of English syntax (grammar).
+
+Understanding the treelike structure of sentences helps a writer:
+- Avoid grammatical errors (agreement, case, coordination).
+- Parse ambiguities and garden paths before they reach the reader.
+- Arrange words so the reader can absorb them in the right order with minimum cognitive effort.
+
+AGREEMENT
+
+Subject-verb agreement is defined over trees, not strings. When a bushy phrase separates a subject
+from its verb, the verb must agree with the head of the subject phrase, not with the most recently
+heard noun:
+Wrong: "The readiness of our conventional forces are at an all-time low."
+Right:  "The readiness of our conventional forces is at an all-time low."
+
+To avoid agreement errors: mentally strip the subject phrase down to its head noun, then check
+whether the verb agrees with that noun alone.
+
+COORDINATION
+
+Each phrase in a coordination (joined by and, or, but) must work independently in its position.
+Miscoordinated phrases — where the elements joined by not only…but also, both…and,
+either…or, neither…nor are grammatically mismatched — grate on careful readers. The cure is to
+ensure the phrases following each marker are parallel in grammatical form.
+
+CASE
+
+Pronoun case (nominative vs. accusative) must follow the position the pronoun occupies in the tree,
+not its proximity to other words. The most common error is hypercorrection: using nominative
+"I" or "he" after a coordinator because writers have been corrected for using "me" at the start.
+Check case by removing the coordination and testing the pronoun alone:
+"Give Al Gore and me a chance" (not "and I") — confirmed by "Give me a chance."
+
+WHO AND WHOM
+
+Who is nominative (replaces subjects: he, she, they). Whom is accusative (replaces objects: him,
+her, them). To verify the right choice, mentally move the wh-word back to its original position in
+the sentence and substitute he/him or she/her. If him or her fits, use whom; if he or she fits, use who.
+In casual prose, who is acceptable in many positions where traditionalists would insist on whom.
+
+SENTENCE GEOMETRY: LEFT-BRANCHING, RIGHT-BRANCHING, CENTER-EMBEDDED
+
+Right-branching sentences (in which the most complicated phrase comes last) are the easiest to
+parse. English is predominantly right-branching.
+
+Left-branching sentences (in which a long modifier precedes the main clause or noun) make the
+reader parse many words before learning what the sentence is about. Keep left branches short.
+
+Center-embedded sentences (in which a clause is jammed into the middle of a larger clause) are the
+hardest to parse and often produce the sensation of "convoluted" or "tortuous" syntax. Disinter the
+embedded clauses and place them side by side, or break the sentence into two or more sentences.
+
+OMITTING NEEDLESS WORDS
+
+Every word added to a sentence imposes two cognitive demands on the reader: understanding the
+word and fitting it into the tree. Many common phrases are morbidly obese:
+- "make an appearance" → appear
+- "is capable of being" → can be
+- "in the event that" → if
+- "in view of the fact that" → since
+- "owing to the fact that" → because
+- "have a facilitative impact" → help
+- "It is widely observed that X" → X
+- "at such time as" → when
+- "for the purpose of" → to
+- "in the matter of" → about
+
+Light verbs (make, do, have, bring, put, take) often exist only to create a slot for a zombie noun.
+Replace make an appearance with appear; put on a performance with perform.
+
+Sentences beginning with "It is" or "There is" are often candidates for compression:
+"There is competition between groups for resources" → "Groups compete for resources."
+
+Brevity is not the goal per se. Good writers use long sentences when they are right-branching and
+the reader can absorb the content phrase by phrase. The goal is to eliminate words that impose cost
+without conveying content.
+
+PARSING AIDS: AVOIDING GARDEN PATHS AND AMBIGUITY
+
+A garden path is a sentence that lures the reader into a misparse, forcing her to backtrack.
+
+Causes of garden paths:
+- Statistically frequent word pairs that belong to different phrases ("The data point to...")
+- Ambiguous words whose less frequent sense is the intended one.
+- Phrases that naturally attach to the nearest eligible host, not to the intended one.
+
+Remedies:
+1. Read the sentence aloud. If you stumble, the reader will too.
+2. Punctuate properly. Commas mark supplementary phrases; their absence marks integrated ones.
+3. Retain signal words: the subordinator "that," relative pronouns "which" and "who," and the
+   definite article "the" guide the reader into the right phrase and prevent wrong-turn attachments.
+4. Use structural parallelism. A syntactic template lingering from a previous phrase helps the reader
+   slot new material into the right structure.
+5. Move phrases so that related words stay connected in the tree (not necessarily in the string).
+   Pull apart phrase pairs that attract each other but belong to different parts of the sentence.
+
+WORD ORDER PRINCIPLES
+
+English word order must reconcile two competing demands:
+(a) Syntactic demand: English requires subject before verb before object.
+(b) Cognitive demands: (i) light before heavy, (ii) given before new (topic before comment).
+
+Techniques to reconcile these demands:
+- The passive voice: allows a doer to appear late in the sentence when it is heavy, new, or both.
+- Preposing: move a modifier leftward to tie the sentence to what came before.
+- Postposing: shift a heavy phrase rightward so it arrives when the reader's other work is done.
+- Existential construction ("There was a shepherd..."): delays heavy or new information.
+- Cleft ("It was Oedipus who killed Laius"): focuses attention on a specific element.
+- Pseudo-cleft ("What Oedipus did was kill Laius"): similar focusing device.
+- Choice of verb: verbs like rob/steal, buy/sell, give/receive encode the same event with different
+  roles in subject vs. object position.
+
+Begin a sentence with familiar or given information; place new and heavy information toward the end.
+
+=========================================================
+CHAPTER 5: ARCS OF COHERENCE
+=========================================================
+
+WHAT COHERENCE REQUIRES
+
+Even if every sentence in a passage is individually clear, a succession of them can feel choppy,
+disjointed, and incoherent. Coherence requires three things working together:
+(a) A consistent topic (what the passage is about).
+(b) A clear point (what the writer is trying to accomplish by exploring the topic).
+(c) Visible logical connections between one sentence and the next.
+
+Reveal the topic and the point near the beginning of any section or essay. A reader who does not
+know the topic cannot understand the prose, no matter how explicit the language. As newspaper
+editors say: do not bury the lede.
+
+TOPIC STRINGS
+
+The topic of a discourse corresponds to the subject matter into which incoming sentences should be
+merged. The topic of a sentence is typically its grammatical subject. In coherent prose, these align:
+the subject of each sentence corresponds to what the passage is about.
+
+Practical rules:
+- Keep the protagonist, agent, or main entity in the subject position throughout a passage.
+- Shift topic when necessary, but announce the shift and maintain it consistently.
+- Use the passive voice strategically to keep a topic in subject position even when it is not the agent
+  of the action ("One hungry heron was seen chowing down a litter of feral kittens").
+- Prepose temporal and other modifiers to vary sentence rhythm without displacing the topic.
+
+GIVEN BEFORE NEW
+
+New information should appear toward the end of the sentence, after the familiar or given
+information that anchors it. Do not hurl a new fact at the reader before she has context for it.
+
+THE DEFINITE AND INDEFINITE ARTICLES
+
+Articles signal whether an entity is being introduced for the first time (a/an) or is already known to
+the reader (the). Introduce a character or entity with an indefinite noun phrase; refer to it
+subsequently with a definite noun phrase or pronoun.
+
+On subsequent appearances, choose between pronoun, definite noun, and varied label as follows:
+- A pronoun signals "you already know this person; no need to stop and consider them anew."
+- Repeat the same definite noun phrase when the pronoun is ambiguous or too much time has passed.
+- A varied label (a more generic term) can serve as an honorary pronoun when repeating the name
+  would sound monotonous or would misleadingly suggest a new individual has entered the scene.
+  The substitute must be more generic than the original (a "bus" → "the vehicle") and must
+  immediately call the original to mind.
+- Do not use varied labels capriciously. Elegant variation — the "fear of using the same word twice"
+  (synonymomania) — confuses readers who assume different words refer to different things.
+- Vary wording only when an entity appears multiple times in quick succession and repetition would
+  sound monotonous or misleadingly suggest a new actor.
+
+When comparing or contrasting two things, never vary the wording. Use parallel syntax and vary
+only the word that captures the actual difference. Varying syntax while comparing is like changing
+two variables in a single experiment: the reader cannot determine which variation caused what.
+
+ZOMBIE NOUNS IN COHERENT DISCOURSE
+
+Nominalizations are not always wrong. On second mention, a nominalized event (the cancellation,
+the refusal) serves as a pronoun for that event, allowing reference without tedious repetition.
+The problem with zombie nouns arises on first mention: the writer has already been thinking about
+the event and treats it as old news, while the reader is encountering it for the first time and needs
+to see it enacted in concrete language before it can be summarized.
+
+COHERENCE RELATIONS
+
+Every sentence must connect logically to the one before it. Readers are so eager for coherence that
+they will infer a connection even when none was intended — and will sometimes infer the wrong one.
+
+The major families of coherence relations (with typical connectives):
+
+RESEMBLANCE RELATIONS
+- Similarity: "and," "similarly," "likewise" — Two propositions similar except in one respect; the
+  connective calls attention to what they share.
+- Contrast: "but," "in contrast," "on the other hand," "alternatively," "whereas" — Two
+  propositions similar except in one respect; the connective calls attention to the difference.
+- Elaboration: colon, "that is," "in other words," "furthermore," "also" — General statement
+  followed by specific detail.
+- Exemplification: "for example," "for instance," "such as," "including" — Generalization followed
+  by example(s).
+- Generalization: "in general," "more generally" — Example(s) followed by generalization.
+- Exception: "however," "nonetheless," "nevertheless," "then there is" — A generalization and a
+  case that violates it.
+
+CONTIGUITY RELATIONS (SEQUENCE)
+- Before-and-after: "and," "before," "then."
+- After-and-before: "after," "once," "when."
+All things being equal, describe events in chronological order: easier to process.
+When the spotlight has been on a later event and an earlier one must be introduced, the
+imperative to mention given before new overrides the chronological preference.
+
+CAUSAL RELATIONS
+- Result (cause-effect): "and," "as a result," "therefore," "so."
+- Explanation (effect-cause): "because," "since."
+- Violated expectation (preventer-effect): "but," "however," "nonetheless," "yet."
+- Failed prevention (effect-preventer): "despite," "even though."
+
+ATTRIBUTION
+- "according to," "stated that," "argues that" — Used to distinguish the writer's own claims from
+  those of others. Attribution must be unambiguous.
+
+Key guidance on connectives:
+- Too many connectives make prose pedantic; too few leave the reader puzzled.
+- Calibrate the number to the reader's expertise. Expert readers already know many connections;
+  spelling out obvious ones wastes their time and may confuse them.
+- Never use two connectives to signal the same connection ("the reason is because" — reason
+  already implies a causal explanation).
+- Because of the curse of knowledge, writers more often err on the side of too few connectives
+  than too many. When in doubt, connect.
+
+NEGATION
+
+Negative statements require the reader to form an affirmative proposition and then tag it "false" — 
+extra cognitive work. Guidelines:
+- Prefer affirmative statements where possible.
+- Use negation when denying a proposition the reader is likely to entertain. Set up the plausible
+  belief before denying it: "You might think X... but in fact Y."
+- Do not negate a proposition the reader was not already considering; if you must, introduce it as
+  plausible first.
+- Avoid stacking negations (words like no, not, few, little, seldom, rarely, though, deny, refute,
+  avoid, instead all carry negation). Multiple negations exhaust the reader and risk misnegation
+  (inadvertently asserting the opposite of what you mean).
+- Clarify the scope of negation: place "not" as close as possible to the phrase it negates.
+  "We choose to go to the moon not because it is easy but because it is hard" — the position of
+  "not" makes the scope unambiguous.
+
+SENSE OF PROPORTION
+
+Allocate verbiage in proportion to the centrality of each point to the argument. If 90 percent of
+the evidence supports your position, devote roughly 90 percent of the discussion to it. If extended
+counterarguments are necessary, give them their own section with a clearly stated purpose, rather
+than allowing them to crowd the main argument and mislead the reader about the author's conclusion.
+
+THEMATIC CONSISTENCY
+
+A coherent text refers to each of its main themes in a consistent, transparent way throughout. The
+terms used to describe a theme must be obviously related to each other so the reader can track the
+theme without effort. Do not slip between loosely associated concepts without making their
+connection explicit.
+
+PARAGRAPHS AND STRUCTURE
+
+There is no fixed unit of discourse that must correspond to a paragraph. What exists is the paragraph
+break: a visual bookmark that lets the reader pause, assimilate, and find his place. Paragraph breaks
+should coincide with divisions in the discourse tree.
+
+Academic writers use too few paragraph breaks; journalists sometimes use too many. Show mercy to
+your readers and let their eyes rest. Do not break a paragraph in the middle of a train of thought.
+
+A coherent text is an engineered object: an ordered hierarchy of sections, paragraphs, and sentences,
+crisscrossed by arcs that track topics, points, actors, and themes, and held together by connectives.
+
+=========================================================
+CHAPTER 6: TELLING RIGHT FROM WRONG — USAGE, GRAMMAR, AND PUNCTUATION
+=========================================================
+
+THE PRESCRIPTIVE/DESCRIPTIVE DISTINCTION
+
+Rules of usage are tacit conventions, not logical truths or legislative decrees. No authority governs
+English; usage emerges from an implicit consensus among writers, readers, and editors.
+
+There are two kinds of rules:
+(a) Descriptive rules: regularities in how all fluent speakers use the language.
+(b) Prescriptive rules: conventions adopted by a community of literate writers for formal prose.
+
+The goal of prescriptive rules is not to enforce logic but to signal care, reduce misunderstanding,
+and ensure grammatical consistency that helps readers parse text. Many prescriptive rules are worth
+following; many others are "bubbe meises" — folklore, not grammar — invented by self-proclaimed
+authorities and refuted by both history and usage.
+
+HOW TO DISTINGUISH LEGITIMATE RULES FROM FOLKLORE
+
+Follow a rule if:
+- Careful writers who flout it agree, when it is pointed out, that something has gone wrong.
+- The best writers have respected it historically.
+- It encodes a genuine semantic distinction.
+
+Discard a rule if:
+- It is based on a crackpot theory (e.g., English should imitate Latin).
+- It is instantly refuted by the facts of English.
+- It originated as the pet peeve of a self-anointed authority.
+- Great writers have routinely flouted it.
+- Applying it makes prose clumsier.
+- It confuses a formal-style preference with a grammatical error.
+
+When in doubt: look it up in a reputable modern usage guide or dictionary (American Heritage
+Dictionary, Merriam-Webster Unabridged, Merriam-Webster's Dictionary of English Usage).
+
+LEGITIMATE GRAMMATICAL RULES
+
+Subject-verb agreement: The verb must agree with the head noun of the subject phrase, not the
+most recently heard noun. Mental stripping of the subject to its head noun prevents this error.
+
+Coordination: Each coordinate must be grammatically parallel and must function independently in
+its position. Quantifier pairs (not only…but also, both…and, either…or, neither…nor) require the
+bracketed material after each marker to match in grammatical form.
+
+Case: Use nominative pronouns (I, he, she, we, they, who) as subjects of tensed verbs. Use
+accusative pronouns (me, him, her, us, them, whom) as objects of verbs and prepositions.
+Hypercorrection ("between you and I") is common but avoidable with tree-thinking.
+
+Dangling modifiers: A misplaced modifier can lure a reader to an unintended or comical
+interpretation. The remedy is not to treat danglers as ungrammatical per se but to revise when a
+reader could plausibly attach the modifier to the wrong element. Many participial phrases that appear
+to "dangle" are perfectly acceptable (especially when the subject is the writer and reader, or when
+the participial phrase has become a preposition).
+
+Sequence of tenses: In indirect discourse, the tense of an embedded verb is typically "backshifted"
+to match the past tense of the verb of saying. Backshifting is not mandatory when the reported
+content is a general or ongoing truth.
+
+Split infinitives and "split verbs": The prohibition is a superstition with no basis in English
+grammar. Unsplitting an infinitive often changes the meaning or forces an adverb into a less natural
+position. Split infinitives when doing so places the adverb where it most naturally belongs.
+("Are you sure you want to permanently delete all items?" is correct as written.)
+
+LEGITIMATE SEMANTIC DISTINCTIONS (WORDS WORTH DISTINGUISHING)
+
+The following distinctions matter and are worth preserving:
+- disinterested (impartial, without a vested interest) vs. uninterested (bored)
+- enormity (extreme evil or moral transgression) vs. enormousness (large size)
+- refute (prove false) vs. deny or allege to be false
+- flaunt (show off) vs. flout (disregard, violate)
+- bemused (bewildered) vs. amused
+- reticent (shy, restrained) vs. reluctant
+- fortuitous (coincidental, accidental) vs. fortunate
+- simplistic (naively oversimplified) vs. simple
+- fulsome (excessively ingratiating) vs. full or copious
+- criteria (plural) vs. criterion (singular); phenomena (plural) vs. phenomenon (singular)
+- beg the question (circular reasoning) vs. raise the question
+- literally (in actual fact) vs. figuratively (the common but confusing hyperbolic misuse)
+- mitigate (alleviate) vs. militate (provide reasons against)
+
+GRAMMATICAL FOLKLORE TO DISCARD
+
+The following "rules" are not rules. Great writers have routinely ignored them for centuries:
+- Never begin a sentence with a conjunction (and, but, or, because, so): false.
+- Never end a sentence with a preposition: false.
+- Never split an infinitive: false.
+- "Which" may not introduce a restrictive relative clause: false. Both "that" and "which" are
+  acceptable in restrictive relatives; the real decision is whether to use a restrictive or
+  nonrestrictive clause, and that is marked by punctuation, not by the choice of which vs. that.
+- Singular "they" is a grammatical error: false. "Singular they" (used with universally or
+  negatively quantified antecedents) has been standard since Chaucer and is used by Austen,
+  Shakespeare, and Shaw. It is the most natural solution to the problem of generic reference.
+- "None" must be singular: false. None can be singular or plural depending on whether the writer
+  is thinking of the group collectively or the members individually.
+- "Between" applies only to two items: false. Between is appropriate whenever individuals are
+  considered two at a time, regardless of the total count.
+
+PUNCTUATION — MAJOR PRINCIPLES
+
+The main purpose of punctuation is to resolve ambiguities and garden paths that would mislead a
+reader if print consisted only of letters and spaces. Punctuation indicates prosody (pausing, stress)
+and syntax (phrase boundaries), though neither consistently.
+
+Commas have two main functions:
+(a) Setting off supplementary (nonrestrictive, parenthetical) material from the core of the sentence.
+    A supplementary phrase is one that adds a comment but is not essential to the sentence's meaning.
+    Set it off with commas on both sides: "The senator, who chairs the committee, arrived late."
+(b) Separating items in a list.
+
+A comma may NOT separate integrated (restrictive) phrases — subject from predicate, verb from
+complement, or a noun from an integrated relative clause — even when the writer would pause in
+speech at that point.
+
+Comma splice: Using a comma to join two complete sentences is an error. Two sentences may be
+legitimately joined with a semicolon (all-purpose connector), a colon (for elaboration/exemplification),
+a dash (for interruption or emphasis), a coordinating conjunction with a comma (and, but, or, so,
+yet), or a subordinating conjunction (because, although, when, etc.).
+
+Serial (Oxford) comma: Use it. Omitting the final comma before "and" in a list can create
+ambiguity or garden paths. Use semicolons to separate items in lists that themselves contain commas.
+
+Apostrophe rules:
+- Plurals do NOT take apostrophes: "apples," not "apple's."
+- Contractions DO take apostrophes: you're (you are), it's (it is), he's (he is).
+- The genitive of singular nouns takes 's: "Charles's son," "Sophocles' play" (ancient names).
+- The genitive of plural nouns takes s': "parents' house."
+- Possessive pronouns (its, your, their, whose, hers, ours) take NO apostrophe.
+
+Quotation marks: Use them to reproduce someone else's words, to mention a word as a word, or to
+signal that a word is being used in a sense the writer does not endorse. Do NOT use them for
+emphasis.
+
+=========================================================
+ADDITIONAL PRINCIPLES APPLICABLE ACROSS ALL WRITING
+=========================================================
+
+"WHILE" AND "WHERE" (GRAMMATICAL PRECISION)
+
+While = during the same time. Use only when two events or states are simultaneous.
+Correct:   "Participants completed the survey while the experimenter left the room."
+Incorrect: "Study 1 examined persistence, while Study 2 examined motivation." (Use "whereas.")
+
+Where = in a place or location. Use only when a location is literally meant.
+Correct:   "We recruited participants from a community where income inequality was high."
+Incorrect: "We adopted a design where counterbalancing was used." (Use "in which.")
+
+AVOID REPETITION AND SUMMARY
+
+Good writing does not repeat what it has already said. Summarizing prior points insults the reader's
+intelligence and memory. Each sentence should advance the argument. Readers are not stupid and do
+not have bad memories.
+
+Avoid:
+- Opening a paragraph by restating the prior paragraph's conclusion.
+- Closing a section by summarizing what the section just covered.
+- Transition sentences that merely announce what the reader is about to read.
+- Any sentence that restates an earlier one in different words without adding information.
+
+WORD CHOICE: PRECISION AND DIRECTNESS
+
+Choose the word that says exactly what you mean, not the word that sounds most impressive. Prefer
+shorter, Anglo-Saxon words over longer Latinate synonyms when the shorter word is equally precise:
+"use" over "utilize," "start" over "commence," "end" over "terminate."
+
+Do not use a word to signal membership in a scholarly community; use it because it conveys a
+distinction that a simpler word would not.
+
+Words and phrases to avoid (overused, imprecise, or evasive):
+- critical, crucial, profound, fundamental (overused intensifiers)
+- interesting, important, significant (assert why; do not merely claim it)
+- clearly, obviously (if it were obvious, you would not need to say it)
+- very, quite, rather (usually deletable)
+- in terms of (almost always replaceable by a single preposition: about, for, in, on)
+- the fact that (usually deletable; restructure the sentence)
+- it is worth noting that (delete the frame; just note it)
+- as such (frequently misused to mean "therefore"; it means "in that capacity")
+- as of this writing (usually redundant; omit)
+- needless to say (if needless to say, do not say it)
+
+INTELLECTUAL STANDARDS UNDERLYING GOOD WRITING
+
+Good style and intellectual conscientiousness are linked. Writers should:
+1. Look things up. Do not rely on memory or conventional wisdom; verify claims.
+2. Ensure arguments are sound: conclusions must follow from premises reasonable people accept.
+3. Do not confuse an anecdote or a single observation with a trend or a general truth.
+4. Avoid false dichotomies. Complex issues rarely reduce to a battle between two slogans.
+5. Evaluate arguments on their merits, not on the character or motives of the people making them.
+
+As the linguist Ann Farmer observed: "It isn't about being right. It's about getting it right."
+
+The reason to care about style is ultimately not cosmetic. Good style enhances the spread of ideas,
+exemplifies attention to detail, and adds to the beauty of the world.

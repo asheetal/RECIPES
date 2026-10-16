@@ -1,0 +1,1 @@
+{"sampledAt": 1792139642794, "cpuPercent": 24.2, "cpuCount": 6, "ramTotal": 8326225920, "ramUsed": 4590141440, "diskTotal": 85537378304, "diskUsed": 63961894912, "diskAvailable": 18047954944, "failedServices": ["ifup@eth0.service", "networking.service", "rc-local.service"], "systemErrors24h": 10, "warnings": []}

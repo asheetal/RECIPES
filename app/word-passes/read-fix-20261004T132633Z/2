@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8" />
+    <base href="/" />
+    <meta name="theme-color" content="#171717" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="description" content="LibreChat - An open source chat application with support for multiple AI models" />
+    <title>LibreChat</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16x16.png" />
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon-180x180.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+      }
+    </style>
+    <script>
+      const theme = localStorage.getItem('color-theme');
+      const loadingContainerStyle = document.createElement('style');
+      let backgroundColor;
+
+      if (theme === 'dark') {
+        backgroundColor = '#0d0d0d';
+      } else if (theme === 'light') {
+        backgroundColor = '#ffffff';
+      } else if (theme === 'system') {
+        const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        backgroundColor = prefersDarkScheme ? '#0d0d0d' : '#ffffff';
+      } else {
+        backgroundColor = '#ffffff';
+      }
+
+      loadingContainerStyle.innerHTML = `
+        #loading-container {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          height: 100vh;
+          background-color: ${backgroundColor};
+        }
+      `;
+      document.head.appendChild(loadingContainerStyle);
+    </script>
+    <script>
+      (function () {
+        var KEY = 'lc-asset-recovery-at';
+        function shouldRecover() {
+          try {
+            var last = Number(sessionStorage.getItem(KEY)) || 0;
+            if (Date.now() - last < 60000) {
+              return false;
+            }
+            sessionStorage.setItem(KEY, String(Date.now()));
+            return true;
+          } catch (e) {
+            return false;
+          }
+        }
+        /** Recovers from stale builds (e.g. an outdated service worker serving old
+         * hashed chunks after a deploy) by unregistering workers and reloading once.
+         * Returns true when a recovery reload was initiated. */
+        window.__lcRecoverStaleAssets = function () {
+          if (!shouldRecover()) {
+            return false;
+          }
+          var reload = function () {
+            window.location.reload();
+          };
+          if (navigator.serviceWorker) {
+            var scopeBase = new URL('./', document.baseURI || window.location.href).href;
+            navigator.serviceWorker
+              .getRegistrations()
+              .then(function (registrations) {
+                return Promise.all(
+                  registrations
+                    .filter(function (registration) {
+                      return registration.scope.indexOf(scopeBase) === 0;
+                    })
+                    .map(function (registration) {
+                      return registration.unregister();
+                    }),
+                );
+              })
+              .then(reload, reload);
+          } else {
+            reload();
+          }
+          return true;
+        };
+        if (navigator.serviceWorker) {
+          navigator.serviceWorker.addEventListener('message', function (event) {
+            if (!event.data || event.data.type !== 'LC_SW_PING') {
+              return;
+            }
+            var source = event.source || navigator.serviceWorker.controller;
+            if (source) {
+              source.postMessage({ type: 'LC_SW_PONG' });
+            }
+          });
+        }
+        window.addEventListener(
+          'error',
+          function (event) {
+            var el = event.target;
+            if (!el || !el.tagName) {
+              return;
+            }
+            var failedScript = el.tagName === 'SCRIPT' && el.src;
+            var failedPreload =
+              el.tagName === 'LINK' && /preload/.test(el.rel || '') && /\.js$/.test(el.href || '');
+            if (failedScript || failedPreload) {
+              window.__lcRecoverStaleAssets();
+            }
+          },
+          true,
+        );
+        window.addEventListener('unhandledrejection', function (event) {
+          var message = event.reason && event.reason.message;
+          if (
+            typeof message === 'string' &&
+            (message.indexOf('dynamically imported module') !== -1 ||
+              message.indexOf('Importing a module script failed') !== -1)
+          ) {
+            window.__lcRecoverStaleAssets();
+          }
+        });
+      })();
+    </script>
+    <script type="module" crossorigin src="./assets/index.BFIpmANJ.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/rolldown-runtime.Cyuzqnbw.js">
+    <link rel="modulepreload" crossorigin href="./assets/codemirror-core.DCeggAsc.js">
+    <link rel="modulepreload" crossorigin href="./assets/http-client.BDcV5mNb.js">
+    <link rel="modulepreload" crossorigin href="./assets/mermaid.BupZ7sMH.js">
+    <link rel="modulepreload" crossorigin href="./assets/advanced-inputs.BKUrQSBb.js">
+    <link rel="modulepreload" crossorigin href="./assets/animations.Cg77P7xO.js">
+    <link rel="modulepreload" crossorigin href="./assets/react-vtree.Bv__m2K7.js">
+    <link rel="modulepreload" crossorigin href="./assets/query-devtools.eCLhNcV1.js">
+    <link rel="modulepreload" crossorigin href="./assets/validation.BKpm4y3I.js">
+    <link rel="modulepreload" crossorigin href="./assets/vendor._zwY_lBu.js">
+    <link rel="modulepreload" crossorigin href="./assets/avatars.CH7OGiPh.js">
+    <link rel="modulepreload" crossorigin href="./assets/headlessui.CFQEWvMb.js">
+    <link rel="modulepreload" crossorigin href="./assets/radix-ui.CFzgeTqm.js">
+    <link rel="modulepreload" crossorigin href="./assets/react-interactions.DD3apfEI.js">
+    <link rel="modulepreload" crossorigin href="./assets/routing.Cb7G0LKm.js">
+    <link rel="modulepreload" crossorigin href="./assets/tanstack-vendor.BolsaK2r.js">
+    <link rel="modulepreload" crossorigin href="./assets/markdown-processing.BqkdC0TQ.js">
+    <link rel="modulepreload" crossorigin href="./assets/date-utils.DGtYj8Rl.js">
+    <link rel="modulepreload" crossorigin href="./assets/framer-motion.ngRBXRry.js">
+    <link rel="modulepreload" crossorigin href="./assets/i18n.D3Gbp8tn.js">
+    <link rel="modulepreload" crossorigin href="./assets/utilities.DQzN-PJK.js">
+    <link rel="modulepreload" crossorigin href="./assets/forms.BEEooEiq.js">
+    <link rel="modulepreload" crossorigin href="./assets/virtualization.DQLW_mXI.js">
+    <link rel="modulepreload" crossorigin href="./assets/hooks.BG_WXhy1.js">
+    <link rel="modulepreload" crossorigin href="./assets/sandpack.CjDouyMS.js">
+    <link rel="modulepreload" crossorigin href="./assets/MyFilesModal.C4T0Iizw.js">
+    <link rel="modulepreload" crossorigin href="./assets/security-ui.BjsCPful.js">
+    <link rel="modulepreload" crossorigin href="./assets/ProjectCreateDialog.BL1W-fiG.js">
+    <link rel="modulepreload" crossorigin href="./assets/forms.CQ_riYf9.js">
+    <link rel="modulepreload" crossorigin href="./assets/polyfills.BnDHDYRr.js">
+    <link rel="modulepreload" crossorigin href="./assets/code-editor.CMtCNxFi.js">
+    <link rel="modulepreload" crossorigin href="./assets/math-katex.BMlcaHSk.js">
+    <link rel="stylesheet" crossorigin href="./assets/math-katex.uZ8_QngQ.css">
+    <link rel="stylesheet" crossorigin href="./assets/index.D3Yv9SXb.css">
+  <link rel="manifest" href="./manifest.webmanifest" crossorigin="use-credentials"><script id="vite-plugin-pwa:register-sw" src="./registerSW.js"></script><style id="lab-project-sidebar-only">
+div.flex.flex-col.px-3.text-sm:has(svg.lucide-folders)
++ div.flex.min-h-0.flex-grow.flex-col.overflow-hidden {
+  display: none !important;
+}
+</style>
+<style id="lab-project-chat-indent">
+[data-testid^="project-chats-"] {
+  padding-inline-start: 12px;
+  box-sizing: border-box;
+}
+</style>
+<style id="lab-hide-duplicate-web-search">
+#tools-dropdown-menu [role^="menuitem"]:has(svg.lucide-globe) {
+  display: none !important;
+}
+</style>
+<style id="lab-skills-contact-label">
+[data-testid="tools-menu-skills"] > div:first-child > span {
+  font-size: 0;
+}
+[data-testid="tools-menu-skills"] > div:first-child > span::after {
+  content: "Skills (contact Abhishek for more skills)";
+  font-size: 0.875rem;
+}
+</style>
+<style id="lab-simple-model-menu">
+/* lab-model-pin-fix */
+div.sticky:has(input#model-search),
+.animate-popover:has(input#model-search) button[aria-label*="pin" i] {
+  display: none !important;
+}
+</style>
+<style id="lab-warm-theme">
+html:not(.dark), html:not(.dark) .gizmo:not(.dark) {
+  --presentation: #FAF7F2;
+  --text-primary: #302B27;
+  --text-secondary: #665C52;
+  --text-secondary-alt: #665C52;
+  --text-tertiary: #665C52;
+  --ring-primary: #94543D;
+  --header-primary: #FAF7F2;
+  --header-hover: #EEE7DD;
+  --header-button-hover: #E5DACE;
+  --surface-primary: #FAF7F2;
+  --surface-primary-alt: #F4EEE6;
+  --surface-primary-contrast: #EEE7DD;
+  --surface-secondary: #EEE7DD;
+  --surface-secondary-alt: #E5DACE;
+  --surface-tertiary: #EEE7DD;
+  --surface-tertiary-alt: #FAF7F2;
+  --surface-dialog: #FAF7F2;
+  --surface-chat: #FAF7F2;
+  --surface-active: #E9D8CB;
+  --surface-active-alt: #DEC3B1;
+  --surface-hover: #E5DACE;
+  --surface-hover-alt: #DCCDBE;
+  --surface-submit: #94543D;
+  --surface-submit-hover: #784330;
+  --border-light: #D8CFC2;
+  --border-medium: #C8BAAA;
+  --border-medium-alt: #C8BAAA;
+  --border-heavy: #A08E7C;
+  --border-xheavy: #806F60;
+
+  --background: 38 44% 96%;
+  --foreground: 27 10% 17%;
+  --card: 38 44% 96%;
+  --card-foreground: 27 10% 17%;
+  --primary: 16 42% 41%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 35 33% 90%;
+  --secondary-foreground: 27 10% 17%;
+  --muted: 35 33% 90%;
+  --muted-foreground: 30 11% 36%;
+  --accent: 26 41% 85%;
+  --accent-foreground: 27 10% 17%;
+  --border: 35 22% 80%;
+  --input: 35 22% 80%;
+  --ring: 16 42% 41%;
+}
+html:not(.dark) ::selection {
+  background: #DEC3B1;
+  color: #302B27;
+}
+</style>
+<style id="lab-warm-prompt">
+html:not(.dark) form div.rounded-t-3xl:has(textarea[data-testid="text-input"]) {
+  background-color: #EEE7DD !important;
+  border-color: #D8CFC2 !important;
+  color: #302B27;
+}
+html:not(.dark) textarea[data-testid="text-input"] {
+  background-color: transparent !important;
+  color: #302B27 !important;
+}
+html:not(.dark) textarea[data-testid="text-input"]::placeholder {
+  color: #665C52 !important;
+  opacity: 1;
+}
+</style>
+<meta name="lab-progress-fix" content="v1">
+</head>
+  <body>
+    <div id="root">
+      <div id="loading-container"></div>
+    </div>
+  </body>
+</html>

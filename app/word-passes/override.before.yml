@@ -1,0 +1,152 @@
+services:
+  api:
+    environment:
+      TAVILY_API_KEY: ${TAVILY_API_KEY}
+      NODE_ENV: production
+      LIBRECHAT_CODE_BASEURL: ${LIBRECHAT_CODE_BASEURL}
+      CODEAPI_AUTH_PROVIDER: ${CODEAPI_AUTH_PROVIDER}
+      CODEAPI_JWT_PRIVATE_JWK_JSON: ${CODEAPI_JWT_PRIVATE_JWK_JSON}
+      CODEAPI_JWT_KID: ${CODEAPI_JWT_KID}
+      CODEAPI_JWT_ALGORITHM: ${CODEAPI_JWT_ALGORITHM}
+      CODEAPI_JWT_ISSUER: ${CODEAPI_JWT_ISSUER}
+      CODEAPI_JWT_AUDIENCE: ${CODEAPI_JWT_AUDIENCE}
+      CODEAPI_JWT_TTL_SECONDS: ${CODEAPI_JWT_TTL_SECONDS}
+      CODEAPI_JWT_MINT_CACHE_SECONDS: ${CODEAPI_JWT_MINT_CACHE_SECONDS}
+      CODEAPI_JWT_SINGLE_TENANT_ID: ${CODEAPI_JWT_SINGLE_TENANT_ID}
+      OPENID_REUSE_TOKENS: ${OPENID_REUSE_TOKENS}
+      RAG_API_URL: http://rag_api:8000
+      REQUESTY_API_KEY: ${REQUESTY_API_KEY}
+      CUSTOM_FOOTER: Tryfind.Me - Online tools to work wherever you are
+      VERCEL_AI_GATEWAY_API_KEY: ${VERCEL_AI_GATEWAY_API_KEY}
+      EMAIL_HOST: ${EMAIL_HOST}
+      EMAIL_PORT: ${EMAIL_PORT}
+      EMAIL_ENCRYPTION: ${EMAIL_ENCRYPTION}
+      EMAIL_USERNAME: ${EMAIL_USERNAME}
+      EMAIL_PASSWORD: ${EMAIL_PASSWORD}
+      EMAIL_FROM: ${EMAIL_FROM}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME}
+      ALLOW_PASSWORD_RESET: 'true'
+      DOMAIN_CLIENT: https://tryfind.me/ai
+      DOMAIN_SERVER: https://tryfind.me/ai
+      TZ: America/Los_Angeles
+    depends_on:
+      - rag_api
+    volumes:
+      - type: bind
+        source: /home/sheetal/librechat/research-tools
+        target: /app/lab-research-tools
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat/compaction-20261002T055924Z/node.cjs
+        target: /app/node_modules/@librechat/agents/dist/cjs/summarization/node.cjs
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat/writing-instructions
+        target: /app/writing-instructions
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat/file-panels-20261002T110630Z/runtime
+        target: /app/project-files-feature
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat/project-files-20261002T075912Z/backend/projects.js
+        target: /app/api/server/routes/projects.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat/project-files-20261002T075912Z/backend/code-process.js
+        target: /app/api/server/services/Files/Code/process.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat/email-templates-20261003T064433Z
+        target: /app/api/server/utils/emails
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat/server-time-20261004T074643Z/dist
+        target: /app/client/dist
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat/auto-memory-20261003T084925Z/runtime
+        target: /app/auto-memory-feature
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat/auto-memory-20261003T084925Z/backend/request.js
+        target: /app/api/server/controllers/agents/request.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat/auto-memory-20261003T084925Z/backend/memories.js
+        target: /app/api/server/routes/memories.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat/persistent-uploads-20261003T135617Z
+        target: /app/uploads
+      - type: bind
+        source: /home/sheetal/librechat/budget-llm-20261003T161350Z/source/api/server/controllers/agents/client.js
+        target: /app/api/server/controllers/agents/client.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat/budget-llm-20261003T161350Z/source/api/server/controllers/agents/openai.js
+        target: /app/api/server/controllers/agents/openai.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat/budget-llm-20261003T161350Z/source/api/server/controllers/agents/responses.js
+        target: /app/api/server/controllers/agents/responses.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat/budget-llm-20261003T161350Z/source/api/server/services/Endpoints/assistants/title.js
+        target: /app/api/server/services/Endpoints/assistants/title.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat/budget-llm-20261003T161350Z/source/auto-memory-feature/runtime.cjs
+        target: /app/auto-memory-feature/runtime.cjs
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat/budget-llm-20261003T161350Z
+        target: /app/budget-llm
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat/budget-llm-config
+        target: /app/budget-llm-config
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat/san-francisco-time-20261004T054353Z/AgentContext.cjs
+        target: /app/node_modules/@librechat/agents/dist/cjs/agents/AgentContext.cjs
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat/server-time-20261004T074643Z/index.js
+        target: /app/api/server/index.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat/server-time-20261004T074643Z/clock.cjs
+        target: /app/server-time/clock.cjs
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat/ra-tools-20261004T103841Z
+        target: /app/ra-tools
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat/ra-tools-20261004T103841Z/ToolService.js
+        target: /app/api/server/services/ToolService.js
+        read_only: true
+  rag_api:
+    image: ghcr.io/danny-avila/librechat-rag-api-dev:latest
+    environment:
+      - TAVILY_API_KEY=${TAVILY_API_KEY}
+      - DB_HOST=vectordb
+      - DB_PORT=5432
+      - POSTGRES_USER=rag_user
+      - POSTGRES_PASSWORD=rag_password_secure
+      - POSTGRES_DB=rag_db
+      - RAG_PORT=8000
+      - EMBEDDINGS_PROVIDER=huggingface
+      - VECTOR_DB_TYPE=pgvector
+    depends_on:
+      - vectordb
+    restart: always
+  vectordb:
+    image: pgvector/pgvector:pg16
+    environment:
+      - TAVILY_API_KEY=${TAVILY_API_KEY}
+      - POSTGRES_USER=rag_user
+      - POSTGRES_PASSWORD=rag_password_secure
+      - POSTGRES_DB=rag_db
+    restart: always

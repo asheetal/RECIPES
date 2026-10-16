@@ -1,0 +1,132 @@
+1,$c\
+'use strict';\
+const crypto = require('node:crypto');\
+const MAX_FILE = 25 * 1024 * 1024;\
+const MAX_PROJECT = 100 * 1024 * 1024;\
+const MAX_FILES = 50;\
+const locks = new Map();\
+function fail(status, message) { const e = new Error(message); e.status = status; throw e; }\
+function validName(name) {\
+  if (typeof name !== 'string' || !name || Buffer.byteLength(name) > 240 || /[\\\\\\x00-\\x1f\\x7f]/.test(name)) fail(400, 'Invalid filename');\
+  if (name.startsWith('/') || name.split('/').some(p => !p || p === '.' || p === '..')) fail(400, 'Invalid filename');\
+  return name;\
+}\
+function owner(req) {\
+  const user = String(req.user?.id || req.user?._id || '');\
+  if (!user) fail(401, 'Sign in required');\
+  return { user, tenant: String(req.user?.tenantId || '') };\
+}\
+async function locked(key, fn) {\
+  const previous = locks.get(key) || Promise.resolve();\
+  let release;\
+  const next = new Promise(r => { release = r; });\
+  locks.set(key, next);\
+  await previous;\
+  try { return await fn(); }\
+  finally { release(); if (locks.get(key) === next) locks.delete(key); }\
+}\
+function publicFile(f) { return { id: f.id, name: f.name, bytes: f.bytes, updatedAt: f.updatedAt }; }\
+function makeService(repo, deps) {\
+  async function scope(req, projectId) {\
+    const who = owner(req);\
+    if (typeof projectId !== 'string' || !/^[a-f0-9]{24}$/i.test(projectId)) fail(404, 'Project not found');\
+    if (!await deps.getProject(who.user, projectId)) fail(404, 'Project not found');\
+    const s = { ...who, projectId };\
+    if (await repo.isDeleting(s)) fail(409, 'Project is being deleted');\
+    return s;\
+  }\
+  const key = s => `${s.tenant}:${s.user}:${s.projectId}`;\
+  async function chatScope(req) {\
+    const who = owner(req);\
+    const body = req.body || {};\
+    const convId = body.conversationId;\
+    const convo = typeof convId === 'string' && convId !== 'new' ? await deps.getConversation(who.user, convId) : null;\
+    const requested = body.chatProjectId ?? body.endpointOption?.chatProjectId;\
+    // An existing conversation's server-side project always wins.\
+    const projectId = convo ? convo.chatProjectId : requested;\
+    if (!projectId) return null;\
+    if (convo && requested && String(requested) !== String(projectId)) fail(403, 'Conversation belongs to another project');\
+    return scope(req, String(projectId));\
+  }\
+  async function list(s) { return (await repo.list(s)).map(publicFile); }\
+  async function read(s, id) {\
+    if (typeof id !== 'string' || !/^[a-f0-9-]{36}$/i.test(id)) fail(404, 'File not found');\
+    const f = await repo.get(s, id);\
+    if (!f) fail(404, 'File not found');\
+    return { file: f, buffer: await repo.read(f.blobId) };\
+  }\
+  async function save(s, name, buffer, extra = {}, limits = { maxFileBytes: MAX_FILE, maxFiles: MAX_FILES }) {\
+    validName(name);\
+    if (!Buffer.isBuffer(buffer) || buffer.length > limits.maxFileBytes) fail(413, 'File exceeds the configured maximum size.');\
+    return locked(key(s), async () => {\
+      // Recheck after waiting: deletion may have won the lock.\
+      if (!await deps.getProject(s.user, s.projectId) || await repo.isDeleting(s)) fail(409, 'Project is being deleted');\
+      const files = await repo.list(s);\
+      const prev = files.find(f => f.name === name);\
+      if (!prev && files.length >= limits.maxFiles) fail(413, 'Project has reached its file limit.');\
+      const total = files.reduce((n, f) => n + f.bytes, 0) - (prev?.bytes || 0) + buffer.length;\
+      if (total > MAX_PROJECT) fail(413, 'Project exceeds 100 MB');\
+      const blobId = await repo.upload(s, name, buffer);\
+      const file = {\
+        ...s, id: prev?.id || crypto.randomUUID(), name, blobId, bytes: buffer.length,\
+        revision: crypto.randomUUID(), updatedAt: new Date(),\
+        codeRef: null,\
+        refs: [...(prev?.refs || []), ...(extra.codeRef ? [extra.codeRef] : [])],\
+        attachmentIds: [...new Set([...(prev?.attachmentIds || []), ...(extra.attachmentId ? [extra.attachmentId] : [])])],\
+      };\
+      try { await repo.put(s, file); }\
+      catch (e) { await repo.removeBlob(blobId); throw e; }\
+      if (prev) await repo.removeBlob(prev.blobId);\
+      return publicFile(file);\
+    });\
+  }\
+  async function cleanFile(req, f) {\
+    // Physical storage is deleted first; metadata survives failed cleanup for retry.\
+    try { await deps.deleteAttachments(req, f.attachmentIds || []); } catch (e) { e.projectFileStage = "attachment cleanup"; throw e; }\
+    for (const ref of f.refs || []) try { await deps.deleteCodeRef(req, ref); } catch (e) { e.projectFileStage = "code-file cleanup"; throw e; }\
+    try { await repo.removeBlob(f.blobId); } catch (e) { e.projectFileStage = "project blob deletion"; throw e; }\
+    try { await repo.remove(f, f.id); } catch (e) { e.projectFileStage = "project metadata deletion"; throw e; }\
+  }\
+  async function remove(req, s, id) {\
+    return locked(key(s), async () => {\
+      const f = await repo.get(s, id);\
+      if (!f) fail(404, 'File not found');\
+      await cleanFile(req, f);\
+    });\
+  }\
+  async function deleteProject(req, user, projectId, nativeDelete) {\
+    const s = await scope(req, projectId);\
+    if (s.user !== String(user)) fail(403, 'Access denied');\
+    return locked(key(s), async () => {\
+      await repo.setDeleting(s, true);\
+      try {\
+        for (const f of await repo.list(s)) await cleanFile(req, f);\
+        if (deps.deleteProjectChatFiles) await deps.deleteProjectChatFiles(req, s);\
+        return await nativeDelete(user, projectId);\
+      } finally {\
+        // Failed deletion can be retried; successful deletion is protected by project lookup.\
+        await repo.setDeleting(s, false);\
+      }\
+    });\
+  }\
+  async function prime(req, s, skipNames = new Set()) {\
+    return locked(key(s), async () => {\
+      await scope(req, s.projectId);\
+      const refs = [];\
+      for (const f of await repo.list(s)) {\
+        if (skipNames.has(f.name)) continue;\
+        let ref = f.codeRef;\
+        if (!ref || !await deps.isCodeRefActive(req, ref)) {\
+          const uploaded = await deps.uploadCode(req, f.name, await repo.read(f.blobId));\
+          ref = { ...uploaded, kind: 'user', id: s.user };\
+          f.codeRef = ref; f.refs = [...(f.refs || []), ref];\
+          await repo.put(s, f);\
+        }\
+        refs.push({ id: ref.file_id, resource_id: s.user, kind: 'user', name: f.name, storage_session_id: ref.storage_session_id });\
+      }\
+      return refs;\
+    });\
+  }\
+  return { scope, chatScope, list, read, save, remove, deleteProject, prime };\
+}\
+module.exports = { makeService, validName, publicFile, MAX_FILE, MAX_PROJECT, MAX_FILES };

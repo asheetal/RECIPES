@@ -1,0 +1,27 @@
+const assert=require('assert'),fs=require('fs'),os=require('os'),path=require('path');
+const root=fs.mkdtempSync(path.join(os.tmpdir(),'crash-test-'));process.env.CRASH_REPORT_DIR=root;process.env.CRASH_HOST_DIR=path.join(root,'test-host');process.env.TEST_API_KEY='secret-test-value-123';
+const r=require('./runtime.cjs');
+(async()=>{try{
+ const req={body:{conversationId:'conversation',model:'model',endpoint:'provider',files:[{filename:'paper.tex',sha256:'abc'}]},user:{id:'user'},__researchDiagnostics:{id:'request',calls:3,sinceSave:1,saved:new Set(['paper.tex'])}};
+ r.trace(req,'model_start',{runId:'run'});
+ const err=new Error('HTTP failed');err.status=504;err.headers={'x-request-id':'provider-id','authorization':'secret-test-value-123'};
+ const rid=r.report(req,'provider_failure',err);
+ r.trace(req,'file_delivery',{filename:'paper.tex',sha256:'abc',status:'persisted'});
+ const enriched=r.records().find(x=>x.id===rid);assert.equal(enriched.requestId,'request');assert.equal(enriched.details.error.providerRequestId,'provider-id');assert.equal(enriched.details.timeline.length,2);assert.equal(enriched.details.files[0].sha256,'abc');assert(!JSON.stringify(enriched).includes('secret-test-value-123'));
+ fs.unlinkSync(path.join(root,'events',rid+'.json'));
+ const id=r.capture({kind:'tool_failure',message:'bad Bearer abcdef',details:{password:'sensitive',value:'secret-test-value-123',url:'https://test/?api_key=xyz'}},'one');
+ assert.equal(r.capture({message:'duplicate'},'one'),id);assert.equal(r.records().length,1);
+ assert(!JSON.stringify(r.records()).includes('sensitive'));assert(!JSON.stringify(r.records()).includes('secret-test-value-123'));assert(!JSON.stringify(r.records()).includes('api_key=xyz'));
+ let calls=0;await r.work(async()=>{calls++;throw Error('offline');});assert.equal(calls,1);assert.equal(r.records()[0].groupId,null);
+ const file=path.join(root,'events',id+'.json');let record=r.records()[0];record.nextAttempt=0;fs.writeFileSync(file,JSON.stringify(record));
+ await r.work(async()=>({choices:[{message:{content:JSON.stringify({label:'Missing scratch file',groupId:null})}}]}));
+ const group=r.records()[0].groupId;assert(group);
+ r.capture({kind:'tool_failure',message:'same issue'},'two');await r.work(async()=>({choices:[{message:{content:JSON.stringify({groupId:group,label:'ignored'})}}]}));assert.equal(r.groups(r.records())[0].count,2);
+ let status;const deny={sendStatus:n=>status=n};r.list({user:{role:'USER'}},deny);assert.equal(status,403);r.ingest({},deny);assert.equal(status,401);
+ let downloaded;const res={setHeader(){},json:x=>downloaded=x,sendStatus:n=>status=n};r.download({user:{role:'ADMIN'},params:{groupId:group}},res);assert.equal(downloaded.reports.length,2);
+ r.remove({user:{role:'ADMIN'},params:{groupId:group}},res);assert.equal(r.records().length,0);r.capture({message:'old duplicate'},'one');assert.equal(r.records().length,0);
+ const third=r.capture({kind:'server_exception',message:'third'},'third');
+ let release;const wait=new Promise(resolve=>release=resolve);const inflight=r.work(async()=>{await wait;return {choices:[{message:{content:JSON.stringify({label:'New issue'})}}]};});
+ await new Promise(resolve=>setTimeout(resolve,5));r.remove({user:{role:'ADMIN'},params:{groupId:'pending'}},res);release();await inflight;assert.equal(r.records().length,0);
+ console.log('PASS: durable capture, deduplication, secret redaction, failed-classifier retention, grouping, authorization, full-group download and deletion');
+ }finally{fs.rmSync(root,{recursive:true,force:true});}})().catch(e=>{console.error(e);process.exitCode=1});

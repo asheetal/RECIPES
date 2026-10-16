@@ -1,0 +1,235 @@
+That's Interesting!: Towards a Phenomenology of Sociology and a Sociology of Phenomenology
+
+Murray S. Davis
+Philosophy of the Social Sciences, 1(4), 309–344 (1971)
+
+[Comprehensive synopsis of the full article]
+
+─────────────────────────────────────────────
+PART I: INTRODUCTION
+─────────────────────────────────────────────
+
+CORE THESIS
+
+Davis opens by inverting a widely held assumption: theorists are considered great not because their theories are true, but because their theories are interesting. Truth has little to do with impact — a theory can remain influential even after refutation. The capacity to stimulate interest is therefore a necessary, if not sufficient, characteristic of theoretical greatness, and Davis sets out to determine what makes a theory interesting.
+
+He focuses specifically on synthetic a posteriori propositions — empirical assertions about the world, not definitional claims. He sets aside other sources of interest such as findings, clues, aesthetic descriptions, analogies, and models, confining his analysis to propositional content.
+
+THE INTERESTING AND THE ROUTINE
+
+Davis draws on Garfinkel's (1967) notion of the "routinized taken-for-granted world of everyday life." A theory attracts attention precisely by standing out against this background. A new theory will be noticed only when it denies an old truth — a proverb, platitude, maxim, adage, or commonplace. If a theory merely confirms a taken-for-granted belief, the audience rejects its value while affirming its truth: "Of course." "That's obvious." "Everybody knows that." An interesting proposition is always the negation of an accepted one.
+
+THE INTERESTING IN THEORY AND IN PRACTICE
+
+Interesting theories constitute an attack on the taken-for-granted world of their audience on two levels. On the theoretical level, a proposition must deny some aspect of the audience's assumption-ground. On the practical level, it must deny the significance of some aspect of their ongoing practical activity and redirect them toward new activity. A theory that fails on the practical level elicits: "So what?" "Who cares?" "Why bother?"
+
+Davis identifies a standard rhetorical form that research articles use to appear interesting on both levels:
+  (1) The author articulates the taken-for-granted assumptions of the imagined audience by reviewing the relevant literature ("It has long been thought…").
+  (2) The author adduces one or more propositions that deny what has been traditionally assumed ("But this is false…").
+  (3) The body of the work proves by various methodological means that the old assumptions are wrong and the new propositions are right ("We have seen instead that…").
+  (4) The conclusion suggests the practical consequences of the new propositions for ongoing research ("Further investigation is necessary to…").
+
+PROCEDURE
+
+Davis examined a large number of social and sociological propositions that have achieved wide circulation — meaning they appear in textbooks, are taught in courses, and are cited across the discipline — in order to isolate the common element of interest. He treats wide circulation as his operational criterion for a proposition being interesting.
+
+─────────────────────────────────────────────
+PART II: THE INDEX OF THE INTERESTING
+─────────────────────────────────────────────
+
+THE COMMON ELEMENT
+
+All interesting propositions Davis examined involve a radical distinction between seeming and being — between the phenomenological and the ontological. An interesting proposition first articulates a phenomenological presumption (how a part of the world appears to be), then denies this presumption in the name of a more fundamental ontological truth (how that part of the world actually is). In brief: "What seems to be X is in reality non-X."
+
+THE TWELVE CATEGORIES
+
+Davis organizes interesting propositions into twelve logical categories, divided into two groups: those that characterize a single phenomenon (i–vii) and those that describe relations among multiple phenomena (viii–xii).
+
+A — The Characterization of a Single Phenomenon
+
+(i) Organization
+  a. What seems to be a disorganized (unstructured) phenomenon is in reality an organized (structured) phenomenon.
+     Example: Comte's assertion that social phenomena, thought to lack structure, in fact possess coherent structure graspable by science. Typical of younger, developing disciplines.
+  b. What seems to be an organized (structured) phenomenon is in reality a disorganized (unstructured) phenomenon — or organized in a different way.
+     Example: Marx's assertion in Capital that the economic processes of bourgeois society, thought to be organized in one way, are in fact organized in another. Typical of stagnating disciplines seeking rejuvenation, as in Garfinkel's attack on sociology's methods or Gouldner's attack on its politics.
+
+(ii) Composition
+  a. What seem to be assorted heterogeneous phenomena are in reality composed of a single element.
+     Example: Freud's assertion that the behaviour of children, neurotics, adults in crowds, dreams, jokes, and slips of the tongue — thought to be unrelated — are all manifestations of the same instinctual drives. Associated with the Platonic tradition and methodological "reduction."
+  b. What seems to be a single phenomenon is in reality composed of assorted heterogeneous elements.
+     Example: Weber's assertion in Economy and Society that the stratification system, thought to be monolithic, is in fact composed of three independent variables: economic class, status prestige, and political power. Associated with the Aristotelian tradition and methodological "substruction."
+
+(iii) Abstraction
+  a. What seems like an individual phenomenon is in reality a holistic phenomenon. ("Sociologizing")
+     Example: Durkheim's assertion in Suicide that suicide, thought to be an individual behaviour, is in fact a process characteristic of a society.
+  b. What seems like a holistic phenomenon is in reality an individual phenomenon. ("Psychologizing")
+     Example: Freud's assertion that war, thought to be a social phenomenon, is in fact a psychological phenomenon.
+  Note: A third type asserts that the real locus of a phenomenon is neither the individual nor the social level but some intermediate "social-psychological" level. This third type is interesting only after both the psychological and sociological explanations have already been contested.
+
+(iv) Generalization
+  a. What seems to be a local phenomenon is in reality a general phenomenon.
+     Example: Mannheim's assertion in Ideology and Utopia that ideological distortion of thought, thought to affect only the bourgeois class, in fact affects all social classes.
+  b. What seems to be a general phenomenon is in reality a local phenomenon.
+     Example: Malinowski's assertion that the Oedipus complex, thought to be a human universal, does not in fact occur in all societies.
+
+(v) Stabilization
+  a. What seems to be a stable and unchanging phenomenon is in reality an unstable and changing phenomenon.
+     Example: Marx's assertion in Capital that bourgeois society's economic organization, thought to be permanent, is in fact about to be suddenly and dramatically transformed.
+  b. What seems to be an unstable and changing phenomenon is in reality a stable and unchanging phenomenon.
+     Example: Simmel's assertion in "Conflict" that conflict-ridden social organization, thought to be on the verge of transformation, may in fact be capable of continuing indefinitely in a steady state.
+
+(vi) Function
+  a. What seems to be a phenomenon that functions ineffectively as a means for the attainment of an end is in reality a phenomenon that functions effectively.
+     Example: Merton's assertion in Social Theory and Social Structure that the political machine, thought to be an inefficient institution for obtaining community goals, is in fact an efficient one. This type has conservative political implications: one should not try to change an apparently defective institution that actually works.
+  b. What seems to be a phenomenon that functions effectively as a means for the attainment of an end is in reality a phenomenon that functions ineffectively.
+     Example: Marcuse's assertion in "Repressive Tolerance" that the tradition of tolerance in America, thought to foster a liberated society, in fact hinders it. This type has radical political implications: one should try to change a seemingly successful institution that actually undermines its own goals. Examples include "Jails make people criminals" and "Mental hospitals create mental illness."
+  Note: Merton's distinction between manifest and latent functions (1957) is a classic methodological procedure specifically designed to generate interesting propositions of this type.
+
+(vii) Evaluation
+  a. What seems to be a bad phenomenon is in reality a good phenomenon.
+     Example: R. D. Laing's assertion in The Politics of Experience that schizophrenia, thought to be a bad thing, is in fact a good thing.
+  b. What seems to be a good phenomenon is in reality a bad phenomenon.
+     Example: Nietzsche's assertion in On the Genealogy of Morals that Christian morality, thought to be a good thing, is in fact a bad thing. Goffman, in Asylums, passes a similar judgement on mental hospitals by showing how remarkably they resemble concentration camps.
+  Note: Evaluative propositions are interesting only when the theorist's evaluation differs from the audience's. The theorist can achieve re-evaluation either by changing the indicator (operational definition) used to rate the phenomenon or by changing the comparison baseline against which the phenomenon is evaluated.
+
+B — The Relations Among Multiple Phenomena
+
+(viii) Co-relation
+  a. What seem to be unrelated (independent) phenomena are in reality correlated (interdependent) phenomena.
+     Example: Hollingshead's assertion in Social Class and Mental Illness that social class and mental illness, thought to be uncorrelated, are in fact correlated.
+  b. What seem to be related (interdependent) phenomena are in reality uncorrelated (independent) phenomena.
+     Example: Durkheim's assertion in Suicide that suicide and such phenomena as psychopathological states, race, heredity, and climate, thought to be correlated, are in fact uncorrelated.
+  Note: Qualitative correlations tend to be more interesting than quantitative ones because the human mind, unlike a computer, applies the additional filter of the interesting. It is the unexpected correlation that draws attention.
+
+(ix) Co-existence
+  a. What seem to be phenomena that can exist together are in reality phenomena that cannot exist together.
+     Example: De Rougemont's assertion in Love in the Western World that love and marriage, thought to be compatible, are in fact incompatible.
+  b. What seem to be phenomena that cannot exist together are in reality phenomena that can exist together.
+     Example: Freud's discussion of ambivalence, in which love and hate, thought to be incompatible, are shown to coexist as a psychological state. Type (ix)b propositions are more common than Type (ix)a because phenomena assumed to be incompatible are usually assumed to be strongly so, producing a stronger jolt of interest when they are shown to coexist. Titles such as "The Lonely Crowd," "The Cold War," and "Poverty in the Midst of Plenty" are elliptical Type (ix)b propositions.
+
+(x) Co-variation
+  a. What seems to be a positive co-variation between phenomena is in reality a negative co-variation between phenomena.
+     Example: Caplovitz's assertion in The Poor Pay More that expenditures for many goods and services, thought to decrease at lower income levels, in fact increase at lower income levels.
+  b. What seems to be a negative co-variation between phenomena is in reality a positive co-variation between phenomena.
+     Example: Tocqueville's assertion that a social group's desire for revolution, thought to decrease as living standards rise, in fact increases as living standards rise.
+  Note: Two additional sub-types are interesting: (1) what seems to be a continuous co-variation is in reality a discontinuous (threshold) co-variation (the Marxist notion of quantitative change suddenly becoming qualitative); and (2) what seems to be a linear co-variation is in reality a curvilinear co-variation (extremes resembling each other more than either resembles the mean).
+
+(xi) Opposition
+  a. What seem to be similar (nearly identical) phenomena are in reality opposite phenomena.
+     Example: McLuhan's assertion in Understanding Media that radio and television, thought to be similar media, are in fact opposite — one "hot," the other "cool."
+  b. What seem to be opposite phenomena are in reality similar (nearly identical) phenomena.
+     Example: Hoffer's assertion in The True Believer that the psychological motivations of those who join far-left and far-right movements, thought to be opposite, are in fact similar.
+  Note: When Type (xi)b propositions are combined with Type (vii)b propositions, the result is "Dialectical Thinking": a seemingly positive social phenomenon actually has the negative characteristics of its apparent opposite (e.g., "Ownership is theft," "Marriage is legalized prostitution"). Davis notes that the Anglo-American mind tends to find pure Dialectical Propositions more bizarre than interesting.
+
+(xii) Causation
+  a. What seems to be the independent variable in a causal relation is in reality the dependent variable.
+     Example: Becker's assertion in Outsiders that peculiar behaviour does not cause people to be labelled deviants; rather, being labelled deviant causes the peculiar behaviour.
+  b. What seems to be the dependent variable in a causal relation is in reality the independent variable.
+     Example: Weber's assertion in The Protestant Ethic and the Spirit of Capitalism that the economy of a society does not determine its religion; rather, the religion of a society determines its economy.
+  Note: A third variety asserts that what seems to be a simple one-way causal relation is in reality a complex mutual interaction. Davis notes that Weber's full Sociology of Religion actually embodies this third type, showing religion and economy as reciprocally determining — a point often missed by readers who know only The Protestant Ethic.
+
+─────────────────────────────────────────────
+PART III: DISCUSSION
+─────────────────────────────────────────────
+
+1. NON-INTERESTING PROPOSITIONS
+
+If the defining characteristic of an interesting proposition is that it denies some specific aspect of the audience's assumption-ground, then there are three ways a proposition can fail to be interesting:
+
+  (a) The proposition affirms rather than denies the audience's assumption. The audience responds: "That's obvious!" Phenomenology equals Ontology.
+  (b) The proposition neither affirms nor denies any aspect of the audience's assumption-ground — it is simply irrelevant to it. The audience responds: "That's irrelevant!" Phenomenology is unrelated to Ontology.
+  (c) The proposition denies not a specific aspect but the entire assumption-ground. The audience responds: "That's absurd!" Phenomenology is completely contrary to Ontology.
+
+An interesting proposition must deny a specific, weakly held assumption — not affirm it, not ignore it, and not attack the assumption-ground wholesale. Davis notes (footnote 7) that the more strongly an audience holds an assumption, the more interesting a proposition denying it will initially seem, up to a point — beyond which the audience rejects the proposition as lunatic.
+
+2. COMPLICATING SOCIAL FACTORS
+
+In principle, generating an interesting proposition requires only two steps: specify the audience's assumption about a topic, then construct a proposition that denies it. In practice, specifying a single coherent audience assumption is difficult because audiences are socially segmented.
+
+Davis identifies a fundamental division between laymen (who hold conventional wisdom about a topic) and experts (who hold esoteric knowledge shaped by their intellectual speciality). Within each group, further sub-divisions produce additional variation in assumptions. A proposition that denies an expert's assumption will typically affirm a layman's, and vice versa — the "double dialectic" that makes universal interest difficult to achieve.
+
+Intellectual specialities form precisely when groups coalesce around propositions that refute the common-sense assumption-ground. Once a speciality reaches maturity, its own internal propositions are judged against the speciality's own taken-for-granted assumption-ground, not against common sense. Propositions interesting to experts therefore often appear obvious, irrelevant, or absurd to laymen — and are frequently untranslatable without losing their interestingness, which is why jargon develops.
+
+A theorist can simplify this problem through two strategies:
+
+  RAISING THE LEVEL OF ABSTRACTION: By defining a phenomenon at a sufficiently abstract level, the theorist reduces the diverse assumptions of multiple audience segments to only two mutually exclusive options ("X" or "non-X"). A proposition denying either option will then interest all segments that hold the other.
+
+  CONSENSUS CREATION: To achieve near-universal interest, the theorist can synthesize the audience's apparent diversity of assumptions into a single unified "Refutandum" — the assumption the theorist intends to attack. This involves three steps: (1) articulating the apparent dissensus among audience segments, either generally ("Half think X and half think non-X") or along specific sociological lines; (2) claiming that this dissensus is actually a consensus at a higher level of abstraction ("But both groups are really saying the same thing: Y"); and (3) denying this higher-level consensus ("However, they are both wrong. What is really the case is non-Y"). Once the theorist has convinced the audience that they all share assumption Y, the theorist attacks Y and secures the interest of all segments simultaneously.
+
+3. UNCOMPLICATING SOCIAL FACTORS
+
+Despite the complexity introduced by audience segmentation, interesting propositions do occasionally achieve wide circulation. This is possible partly because, at a sufficient level of abstraction, all audience segments reduce to a duality of assumptions — and a proposition denying either one will interest all who hold the other. Historically, the assumptions of laymen and experts occasionally come into phase during periods when both are evolving dialectically and the slower-changing lay assumptions happen to align with the faster-changing expert assumptions. At such moments, a proposition that is interesting to both becomes possible.
+
+4. FURTHER RESEARCH INTO THE INTERESTING
+
+Davis acknowledges that the Index of the Interesting is not definitive and requires further development in two directions. First, the collection of interesting propositions should be expanded and the categorization made more rigorous — perhaps through surveys of practitioners or analysis of reprinted articles in the field. Second, a more formal category system, modelled on Aristotle's Organon or Kant's Critique of Pure Reason, should be developed. The sub-categories of each type could be elaborated at lower levels of abstraction.
+
+Davis also notes a tension between being interesting and being systematic. A theorist who generates an interesting assertion about phenomenon (a) and phenomenon (b) will find that being systematic requires extending the assertion to phenomena (c), (d), and beyond. But there is no guarantee that the extended assertions will counter the audience's prior beliefs about (c) and (d). Great theorists intuitively recognize this decline in interestingness and leave systematic elaboration to their followers — who apply the original assertion mechanically, without attending to the presuppositions their new audience already holds. Davis concludes: one cannot easily be both interesting and systematic.
+
+5. IMPLICATIONS FOR RESEARCH PRACTICE
+
+Davis argues that the current languor of the social sciences stems directly from the failure of social scientists to apply the criterion of interestingness consistently and consciously. Successful researchers currently satisfy this criterion inadvertently or intuitively; mediocre researchers do not satisfy it at all.
+
+The remedy is not more social theories but more interesting ones. To produce an interesting theory about a topic, the researcher must first familiarise himself with what the audience already assumes to be true about that topic. Theory construction is not an independent logical or empirical enterprise; it competes with what the audience already "knows." A theory attracts interest only by reacting against that baseline. The "review of the literature" section of a research article serves precisely this function — but most researchers do not understand this. They treat it as a rhetorical ritual rather than as the essential step of articulating the assumption-ground that the rest of the article will deny.
+
+6. IMPLICATIONS FOR TEACHING
+
+The standard structural approach to course design — presenting a general theory in the introductory lectures and then applying it to specific cases — fails to engage students because it ignores what students find interesting. A phenomenological-ontological approach would begin by articulating the student's naive common-sense assumptions about the subject matter, then systematically refute those assumptions with expert propositions, and conclude by showing the student how far his original view has been transformed. A course whose development parallels the natural progression of the student's mind from naive assumption to sophisticated understanding will sustain interest throughout. Introductory courses can be made more interesting to beginning students if they show how the classic statements of a discipline actually refute the assumptions students bring from the common-sense world, rather than simply presenting those statements as accumulated knowledge.
+
+7. THE SYSTEMATIZATION OF THE INTERESTING
+
+Davis reflects on a difficulty he encountered in constructing the Index: the more systematic he tried to make it, the less interesting it became. He illustrates this with his attempt to add a thirteenth category (Evolution: "What seem to be phenomena that evolved out of completely different sources are in reality phenomena that evolved out of the same source"). He could find no compelling empirical examples for the logical complement of this category and eventually abandoned the extension rather than force artificial examples into the mould. This experience led him to reflect on the general tension between the interesting and the systematic: systems begin interestingly but carry a logical and sociological necessity to extend into territory where the original proposition no longer denies prior audience assumptions. One must usually choose between being interesting and being systematic.
+
+8. CONCLUSION: PHENOMENOLOGY OF SOCIOLOGY AND SOCIOLOGY OF PHENOMENOLOGY
+
+Davis distinguishes two complementary fields implied by his analysis:
+
+  THE PHENOMENOLOGY OF SOCIOLOGY studies the movement of an audience's mind from one accepted social theory to another — specifically, the process by which a new proposition that denies a taken-for-granted assumption comes to be accepted as a new taken-for-granted assumption.
+
+  THE SOCIOLOGY OF PHENOMENOLOGY studies the dissimilar baseline theories held by the various lay and professional audience segments from which this phenomenological process begins — that is, the social distribution of assumption-grounds.
+
+Neither field alone suffices. The Phenomenology of Sociology needs the Sociology of Phenomenology to identify the diverse starting points from which the movement of mind begins, and the Sociology of Phenomenology needs the Phenomenology of Sociology to understand where those starting points lead.
+
+Davis also contrasts his model of scientific change with Kuhn's (1962). Kuhn attributes paradigm change primarily to the accumulation of anomalous empirical findings that the existing paradigm cannot accommodate. Davis argues that boredom with the old paradigm and ambition to make a name for oneself by attaching one's reputation to a rising new paradigm are equally important motivations. Scientists do not merely wait for anomalies; they actively seek them. The best way to establish a reputation in an intellectual discipline is to be interesting — to deny the assumed while affirming the unanticipated.
+
+Davis closes by noting a fine but definite line between the surprising and the shocking, between the interesting and the absurd. An interesting proposition denies a weakly held assumption; a proposition that denies a strongly held assumption will be judged insane. The difference between the inspired and the insane lies only in the tenacity of the assumptions they choose to attack — which is perhaps why genius has always been considered close to madness.
+
+─────────────────────────────────────────────
+THE STANDARD FORM (for reference)
+─────────────────────────────────────────────
+
+"It has long been thought…" — articulates the taken-for-granted assumption of the audience.
+"But this is false…" — adduces propositions that deny the traditional assumption.
+"We have seen instead that…" — provides methodological proof that the old propositions are wrong and the new ones are right.
+"Further investigation is necessary to…" — suggests the practical consequences for ongoing research.
+
+─────────────────────────────────────────────
+THE INDEX OF THE INTERESTING (condensed reference)
+─────────────────────────────────────────────
+
+A — Characterization of a Single Phenomenon
+  (i)   Organization:     disorganized → organized; organized → disorganized
+  (ii)  Composition:      heterogeneous → single element; single → heterogeneous elements
+  (iii) Abstraction:      individual → holistic (sociologizing); holistic → individual (psychologizing)
+  (iv)  Generalization:   local → general; general → local
+  (v)   Stabilization:    stable → unstable; unstable → stable
+  (vi)  Function:         ineffective → effective; effective → ineffective
+  (vii) Evaluation:       bad → good; good → bad
+
+B — Relations Among Multiple Phenomena
+  (viii) Co-relation:     unrelated → correlated; correlated → unrelated
+  (ix)   Co-existence:    compatible → incompatible; incompatible → compatible
+  (x)    Co-variation:    positive → negative; negative → positive
+  (xi)   Opposition:      similar → opposite; opposite → similar
+  (xii)  Causation:       independent variable → dependent; dependent → independent
+
+C — Additional phenomena added by the author
+
+(xiii) What seems to be an unsolvable problem is actually solvable
+(xiv) What seems to be a constant is actually a variable
+(xv) What seems to be a variable is actually a constant
+(xvi) What seems to be a relationship mediated by one process is mediated by another process.
+(xvii) Moderation with Reversal (Crossover Interaction): What seems to be a uniformly positive (or negative) effect is in reality positive under some conditions and negative under others.
+(xviii) Temporal Reversal: What seems to be beneficial (or harmful) in the short term is in reality harmful (or beneficial) in the long term.
+(xix) Level-of-Analysis Reversal: What is true at the individual level is false at the aggregate level, or vice versa.
+(xx) Asymmetry: What seems to be a symmetric relationship between two parties, or between positive and negative instances of the same phenomenon, is in reality asymmetric.

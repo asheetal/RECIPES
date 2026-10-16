@@ -1,0 +1,11 @@
+.env
+*.bak
+*.bak-*
+*.old-*
+*.log
+node_modules/
+__pycache__/
+*.pyc
+app/crash-host/
+app/resource-host/status.json
+app/resource-usage-data/

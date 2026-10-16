@@ -1,0 +1,161 @@
+const readline=require("readline");
+const assert=require("assert");
+const fs=require("fs");
+
+async function request(url,options={}) {
+  const r=await fetch(url,{
+    ...options,
+    signal:AbortSignal.timeout(15000)
+  });
+  if(!r.ok) throw Error("Search API HTTP "+r.status);
+  return r.json();
+}
+
+async function web(query) {
+  const key=process.env.TAVILY_API_KEY;
+  if(!key) throw Error("Tavily API key unavailable.");
+  const data=await request("https://api.tavily.com/search",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      api_key:key,query,search_depth:"basic",max_results:8
+    })
+  });
+  return {
+    source:"general_web",
+    results:data.results||[]
+  };
+}
+
+async function academic(query) {
+  const url=new URL("https://api.semanticscholar.org/graph/v1/paper/search");
+  url.searchParams.set("query",query);
+  url.searchParams.set("limit","8");
+  url.searchParams.set("fields",
+    "title,authors,year,abstract,externalIds,url,venue,citationCount,openAccessPdf");
+  const headers={};
+  if(process.env.SEMANTIC_SCHOLAR_API_KEY)
+    headers["x-api-key"]=process.env.SEMANTIC_SCHOLAR_API_KEY;
+  const data=await request(url,{headers});
+  return {
+    source:"semantic_scholar",
+    results:data.data||[]
+  };
+}
+
+async function search({query,mode="academic"}) {
+  if(typeof query!=="string"||!query.trim())
+    throw Error("A search query is required.");
+  if(!["academic","web"].includes(mode))
+    throw Error("Search mode must be academic or web.");
+  if(mode==="web") return web(query);
+  let reason;
+  try {
+    const result=await academic(query);
+    if(result.results.length) return result;
+    reason="Semantic Scholar returned no results.";
+  } catch(e) {
+    reason=e.message;
+  }
+  return {...await web(query),fallbackReason:reason};
+}
+
+const tool={
+  name:"research_search",
+  description:
+    "Search scholarly papers using mode academic: Semantic Scholar first, "+
+    "then general web search if unavailable or empty. "+
+    "Use mode web when the user explicitly requests web search; "+
+    "that mode uses the general web API directly.",
+  inputSchema:{
+    type:"object",
+    properties:{
+      query:{type:"string",description:"Search terms"},
+      mode:{type:"string",enum:["academic","web"],default:"academic"}
+    },
+    required:["query"],
+    additionalProperties:false
+  }
+};
+
+async function dispatch(m) {
+  if(m.method==="initialize") return {
+    protocolVersion:"2024-11-05",
+    capabilities:{tools:{}},
+    serverInfo:{name:"lab-research-search",version:"1.0.0"}
+  };
+  if(m.method==="ping") return {};
+  if(m.method==="tools/list") return {tools:[tool]};
+  if(m.method==="tools/call") {
+    if(m.params?.name!==tool.name) throw Error("Unknown tool.");
+    try {
+      const result=await search(m.params.arguments||{});
+      return {content:[{type:"text",text:JSON.stringify(result)}]};
+    } catch(e) {
+      return {
+        isError:true,
+        content:[{type:"text",text:e.message}]
+      };
+    }
+  }
+  throw Error("Unsupported method.");
+}
+
+async function selfTest() {
+  const original=global.fetch;
+  const calls=[];
+  global.fetch=async url=>{
+    calls.push(String(url));
+    return {
+      ok:true,
+      json:async()=>String(url).includes("semanticscholar")
+        ? {data:[{title:"Test paper"}]}
+        : {results:[{title:"Test web result"}]}
+    };
+  };
+  const oldKey=process.env.TAVILY_API_KEY;
+  process.env.TAVILY_API_KEY="test";
+  assert.equal((await search({query:"research",mode:"academic"})).source,
+               "semantic_scholar");
+  assert.equal(calls.length,1);
+  calls.length=0;
+  await search({query:"research",mode:"web"});
+  assert.equal(calls.length,1);
+  assert(calls[0].includes("tavily.com"));
+  global.fetch=original;
+  if(oldKey) process.env.TAVILY_API_KEY=oldKey;
+  else delete process.env.TAVILY_API_KEY;
+  console.log("Routing tests: PASS");
+  const papers=await search({
+    query:"diachronic word embeddings",mode:"academic"
+  });
+  if(!papers.results.length) throw Error("Academic search returned no results.");
+  console.log("Academic search: PASS; source="+papers.source);
+  if(papers.fallbackReason) console.log(papers.fallbackReason);
+  const general=await search({
+    query:"LibreChat documentation",mode:"web"
+  });
+  if(!general.results.length) throw Error("Web search returned no results.");
+  console.log("Explicit web search: PASS; source="+general.source);
+}
+
+if(process.argv.includes("--self-test")) {
+  selfTest().catch(e=>{console.error(e.message);process.exitCode=1;});
+} else {
+  readline.createInterface({input:process.stdin}).on("line",async line=>{
+    let m;
+    try {m=JSON.parse(line);} catch {return;}
+    if(m.id===undefined) return;
+    try {
+      const result=await dispatch(m);
+      process.stdout.write(JSON.stringify({
+        jsonrpc:"2.0",id:m.id,result
+      })+"\n");
+    } catch(e) {
+      process.stdout.write(JSON.stringify({
+        jsonrpc:"2.0",id:m.id,
+        error:{code:-32601,message:e.message}
+      })+"\n");
+    }
+  });
+}

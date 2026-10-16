@@ -1,0 +1,194 @@
+"""Conservative OOXML reader/editor. No network; workspace-confined, no overwrite."""
+import json,sys,hashlib,zipfile,io,copy,os
+from pathlib import Path
+from datetime import datetime,timezone
+from lxml import etree as E
+ROOT=Path('/mnt/data')
+NS={'w':'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
+W='{'+NS['w']+'}'
+def digest(b): return hashlib.sha256(b).hexdigest()
+def locate(s,existing=True):
+ p=(ROOT/s).resolve()
+ if not p.is_relative_to(ROOT.resolve()) or p==ROOT.resolve(): raise ValueError('Outside workspace')
+ if existing and not p.is_file():
+  docx_files = list(ROOT.glob("*.docx"))
+  if len(docx_files) == 1:
+   p = docx_files[0].resolve()
+  else:
+   raise ValueError('Missing input')
+ if not existing and p.exists(): raise ValueError('Output exists; use a new pass filename')
+ return p
+def load(s):
+ p=locate(s); b=p.read_bytes()
+ z=zipfile.ZipFile(io.BytesIO(b))
+ if sum(i.file_size for i in z.infolist())>100_000_000: raise ValueError('Expanded document exceeds safety limit')
+ if len(set(z.namelist()))!=len(z.namelist()): raise ValueError('Duplicate ZIP entries')
+ r=E.fromstring(z.read('word/document.xml'),E.XMLParser(resolve_entities=False,no_network=True))
+ return b,z,r
+def paragraphs(r): return r.xpath('//w:p[not(ancestor::w:txbxContent)]',namespaces=NS)
+def accepted(p):
+ out=[]
+ for n in p.iter():
+  if n is not p and any(a.tag==W+'p' for a in n.iterancestors() if a is not p): continue
+  if any(a.tag in (W+'del',W+'moveFrom') for a in n.iterancestors()): continue
+  if n.tag==W+'t': out.append(n.text or '')
+  elif n.tag==W+'tab':out.append('\t')
+  elif n.tag in (W+'br',W+'cr'):out.append('\n')
+ return ''.join(out)
+def editable_ranges(p):
+ pos=0;result=[];last=None;fmt=None
+ for n in p.iter():
+  if n.tag not in (W+'t',W+'tab',W+'br',W+'cr'):continue
+  if any(a.tag in (W+'del',W+'moveFrom') for a in n.iterancestors()):continue
+  text=(n.text or '') if n.tag==W+'t' else '\t' if n.tag==W+'tab' else '\n'
+  run=n.getparent();end=pos+len(text)
+  safe=n.tag==W+'t' and run.tag==W+'r' and run.getparent() is p and len(run.findall(W+'t'))==1 and all(c.tag in (W+'rPr',W+'t') for c in run)
+  if safe:
+   pr=run.find(W+'rPr');f=E.tostring(pr) if pr is not None else b''
+   if result and last is not None and last.getnext() is run and fmt==f:result[-1][1]=end
+   else:result.append([pos,end])
+   last=run;fmt=f
+  else:last=None
+  pos=end
+ return result
+
+def tracking_parts(z):
+ relns='http://schemas.openxmlformats.org/package/2006/relationships'
+ ctns='http://schemas.openxmlformats.org/package/2006/content-types'
+ parser=E.XMLParser(resolve_entities=False,no_network=True)
+ updates={};name='word/settings.xml'
+ settings=E.fromstring(z.read(name),parser) if name in z.namelist() else E.Element(W+'settings',nsmap={'w':NS['w']})
+ protection=settings.find(W+'documentProtection')
+ if protection is not None and protection.get(W+'enforcement') in ('1','true','on'):raise ValueError('Document protection enabled; no output written')
+ tracking=settings.find(W+'trackRevisions')
+ if tracking is None:
+  tracking=E.Element(W+'trackRevisions')
+  # Insert before settings that follow trackRevisions in the OOXML sequence.
+  before={'doNotTrackMoves','doNotTrackFormatting','documentProtection','autoFormatOverride','styleLockTheme','styleLockQFSet','defaultTabStop','autoHyphenation','compat','rsids','mathPr','themeFontLang','clrSchemeMapping'}
+  following=next((n for n in settings if E.QName(n).localname in before),None)
+  if following is not None:following.addprevious(tracking)
+  else:settings.append(tracking)
+ tracking.set(W+'val','true');updates[name]=E.tostring(settings,xml_declaration=True,encoding='UTF-8',standalone=True)
+ if name not in z.namelist():
+  rn='word/_rels/document.xml.rels';rels=E.fromstring(z.read(rn),parser) if rn in z.namelist() else E.Element('{'+relns+'}Relationships',nsmap={None:relns})
+  typ='http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings'
+  if any(n.get('Type')==typ for n in rels):raise ValueError('Nonstandard settings relationship; stopped')
+  ids={n.get('Id') for n in rels};i=1
+  while 'rIdTracking'+str(i) in ids:i+=1
+  E.SubElement(rels,'{'+relns+'}Relationship',Id='rIdTracking'+str(i),Type=typ,Target='settings.xml');updates[rn]=E.tostring(rels,xml_declaration=True,encoding='UTF-8')
+  ct=E.fromstring(z.read('[Content_Types].xml'),parser)
+  if not any(n.get('PartName')=='/word/settings.xml' for n in ct):E.SubElement(ct,'{'+ctns+'}Override',PartName='/word/settings.xml',ContentType='application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml')
+  updates['[Content_Types].xml']=E.tostring(ct,xml_declaration=True,encoding='UTF-8')
+ return updates
+
+def records(r):
+ rows=[]
+ for i,p in enumerate(paragraphs(r)):
+  rows.append({'id':f'p{i+1:06}', 'text':accepted(p), 'table':any(a.tag==W+'tc' for a in p.iterancestors()),'style':p.xpath('string(w:pPr/w:pStyle/@w:val)',namespaces=NS), 'existing_revisions':len(p.xpath('.//w:ins|.//w:del|.//w:moveFrom|.//w:moveTo',namespaces=NS)), 'editable_ranges':editable_ranges(p), 'comments':p.xpath('.//w:commentRangeStart/@w:id',namespaces=NS)})
+ return rows
+def read(a):
+ b,z,r=load(a['input']); rows=records(r)
+ start=int(a.get('start',0));limit=int(a.get('limit',len(rows)))
+ if start<0 or limit<1:raise ValueError('Invalid range')
+ extra={}
+ for name in z.namelist():
+  if name=='word/comments.xml' or name in ('word/footnotes.xml','word/endnotes.xml') or name.startswith(('word/header','word/footer')) and name.endswith('.xml'):
+   rr=E.fromstring(z.read(name),E.XMLParser(resolve_entities=False,no_network=True))
+   extra[name]=[{'id':n.get(W+'id'),'text':'\n'.join(accepted(p) for p in n.xpath('.//w:p',namespaces=NS))} for n in rr] if name.endswith(('comments.xml','footnotes.xml','endnotes.xml')) else [accepted(p) for p in paragraphs(rr)]
+ result={'sha256':digest(b),'paragraphs':rows[start:start+limit],'total_paragraphs':len(rows),'next_start':start+limit if start+limit<len(rows) else None,'auxiliary_text':extra,'textboxes':[accepted(p) for p in r.xpath('//w:txbxContent//w:p',namespaces=NS)],'view':'accepted text: insertions included, deletions excluded; existing revisions remain in file','scope':'Editing supports plain body/table text; fields, hyperlinks, existing revisions and anchored objects are protected.'}
+ # Stay beneath the sandbox stdout cap, using complete paragraphs and an exact cursor.
+ selected=result['paragraphs']
+ while len(json.dumps(result,ensure_ascii=False).encode('utf-8'))>48000:
+  if not selected:raise ValueError('Auxiliary text exceeds read limit; separate extraction is required')
+  selected.pop()
+  result['next_start']=start+len(selected)
+ if not selected and start<len(rows):raise ValueError('One paragraph exceeds read limit; targeted extraction is required')
+ result['next_start']=start+len(selected) if start+len(selected)<len(rows) else None
+ result['read_instruction']='Read every page by following next_start exactly until null before revising. Pages are transport segments, not independent editing units.'
+ return result
+
+def piece(run,s,deleted=False):
+ n=E.Element(W+'r');pr=run.find(W+'rPr')
+ if pr is not None:n.append(copy.deepcopy(pr))
+ t=E.SubElement(n,W+('delText' if deleted else 't'));t.text=s;t.set('{http://www.w3.org/XML/1998/namespace}space','preserve');return n
+def apply(a):
+ b,z,r=load(a['input'])
+ if digest(b)!=a['sha256']:raise ValueError('Stale document hash; read current pass')
+ requested=locate(a['output']) if (ROOT/a['output']).exists() else locate(a['output'],False)
+ target=requested;number=2
+ while target.exists():
+  target=requested.with_name(requested.stem+'_revision'+str(number)+requested.suffix);number+=1
+  locate(str(target),target.exists())
+ if not a.get('plan') or not a.get('pass_name'):raise ValueError('Whole-document plan and pass_name required')
+ ps=paragraphs(r); edits=a['edits']; expected={}; seen=set()
+ rid=max([int(v) for v in r.xpath('//@w:id',namespaces=NS) if v.isdigit()]+[0])+1
+ rejected=[]
+ for ed in edits:
+  try:
+   idx=int(ed['id'][1:])-1
+   if ed['id']!=f'p{idx+1:06}' or idx<0 or idx>=len(ps):raise ValueError('Invalid paragraph ID')
+   if idx in seen:raise ValueError('One consolidated edit per paragraph per pass')
+   seen.add(idx);p=ps[idx];old=ed['old'];new=ed['new'];txt=accepted(p)
+   if not old or txt.count(old)!=1:raise ValueError(ed['id']+': old text must occur exactly once')
+   if old==new:raise ValueError('No-op edit')
+   start=txt.index(old);end=start+len(old);pos=0;spans=[]
+   # Map accepted text positions, protecting revisions, fields and non-run nodes.
+   for n in p.iter():
+    if n.tag not in (W+'t',W+'tab',W+'br',W+'cr'):continue
+    if any(a.tag in (W+'del',W+'moveFrom') for a in n.iterancestors()):continue
+    s=n.text or '' if n.tag==W+'t' else '\t' if n.tag==W+'tab' else '\n'
+    lo,hi=pos,pos+len(s);pos=hi
+    if hi<=start or lo>=end:continue
+    run=n.getparent()
+    if n.tag!=W+'t' or run.tag!=W+'r' or run.getparent() is not p or any(c.tag not in (W+'rPr',W+'t') for c in run) or len(run.findall(W+'t'))!=1:
+     raise ValueError(ed['id']+': edit overlaps protected content; leave it unchanged and report limitation')
+    spans.append((run,s,max(0,start-lo),min(len(s),end-lo)))
+   if not spans:raise ValueError('No editable span')
+   children=list(p);first=children.index(spans[0][0]);last=children.index(spans[-1][0])
+   if children[first:last+1]!=[x[0] for x in spans]:raise ValueError('Edit crosses comment/bookmark/field boundary')
+   formats=[E.tostring(x[0].find(W+'rPr')) if x[0].find(W+'rPr') is not None else b'' for x in spans]
+   if len(set(formats))>1:raise ValueError('Edit crosses mixed formatting; target smaller phrases')
+   out=[]
+   if spans[0][2]:out.append(piece(spans[0][0],spans[0][1][:spans[0][2]]))
+   now=datetime.now(timezone.utc).isoformat().replace('+00:00','Z')
+   for tag in ('del','ins'):
+    if tag=='ins' and not new:continue
+    node=E.Element(W+tag);node.set(W+'id',str(rid));rid+=1;node.set(W+'author','Research assistant');node.set(W+'date',now)
+    if tag=='del':
+     for run,s,lo,hi in spans:node.append(piece(run,s[lo:hi],True))
+    else:node.append(piece(spans[0][0],new))
+    out.append(node)
+   run,s,lo,hi=spans[-1]
+   if hi<len(s):out.append(piece(run,s[hi:]))
+   for run,*_ in spans:p.remove(run)
+   for n in reversed(out):p.insert(first,n)
+   expected[idx]=txt[:start]+new+txt[end:]
+  except (ValueError,KeyError,TypeError) as error:
+   rejected.append({'id':ed.get('id'),'reason':str(error)})
+ for i,p in enumerate(ps):
+  if i in expected and accepted(p)!=expected[i]:raise ValueError('Post-edit text verification failed')
+ updates=tracking_parts(z)
+ updates['word/document.xml']=E.tostring(r,xml_declaration=True,encoding='UTF-8',standalone=True)
+ buf=io.BytesIO()
+ with zipfile.ZipFile(buf,'w') as dst:
+  for info in z.infolist():dst.writestr(copy.copy(info),updates.get(info.filename,z.read(info.filename)))
+  for name,data in updates.items():
+   if name not in z.namelist():dst.writestr(name,data)
+ result=buf.getvalue()
+ with zipfile.ZipFile(io.BytesIO(result)) as out:
+  if out.testzip():raise ValueError('ZIP verification failed')
+  for name in z.namelist():
+   if name not in updates and out.read(name)!=z.read(name):raise ValueError('Unrelated package part changed')
+ target.parent.mkdir(parents=True,exist_ok=True)
+ with target.open('xb') as f:f.write(result)
+ return {'output':str(target),'sha256':digest(result),'pass_name':a['pass_name'],'edited_paragraphs':len(expected),'rejected_edits':rejected,'status':'partial' if rejected else 'complete','track_changes_enabled':True,'verified':'Accepted text verified; tracking enabled; unrelated package parts preserved','next':'Read entire output for the next pass; edits inside earlier revisions remain protected. Review the full output and disclose rejected edits; do not claim complete editing if any were blocked.'}
+def main(a):
+ try:
+  if a['action']=='read':return read(a)
+  if a['action']=='apply':return apply(a)
+  raise ValueError('Unknown action')
+ except (ValueError,KeyError,TypeError) as error:
+  return {'error':str(error),'output_written':False}
+if __name__=='__main__':
+ try:print(json.dumps(main(json.load(sys.stdin)),ensure_ascii=False))
+ except Exception as e:print(json.dumps({'error':str(e),'output_written':False}));sys.exit(1)

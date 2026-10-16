@@ -1,0 +1,62 @@
+const express = require("express");
+const { createAdminUsersHandlers } = require("@librechat/api");
+const { SystemCapabilities } = require("@librechat/data-schemas");
+const { requireCapability } = require("~/server/middleware/roles/capabilities");
+const { requireJwtAuth } = require("~/server/middleware");
+const db = require("~/models");
+
+const router = express.Router();
+
+const requireAdminAccess = requireCapability(SystemCapabilities.ACCESS_ADMIN);
+const requireReadUsers = requireCapability(SystemCapabilities.READ_USERS);
+const requireManageUsers = requireCapability(SystemCapabilities.MANAGE_USERS);
+
+const handlers = createAdminUsersHandlers({
+  findUsers: db.findUsers,
+  countUsers: db.countUsers,
+  deleteUserById: db.deleteUserById,
+  deleteConfig: db.deleteConfig,
+  deleteAclEntries: db.deleteAclEntries,
+});
+
+const labAdmin = require("/app/admin-tools/routes.cjs");
+const modelAccess = require("/app/admin-tools/model-access.cjs");
+const llmRoles = require("/app/admin-tools/llm-roles.cjs");
+const friends = require("/app/admin-tools/friends.cjs");
+const compression = require("/app/admin-tools/compression.cjs");
+const projectUpload = require("/app/admin-tools/project-upload.cjs");
+
+router.use(requireJwtAuth, requireAdminAccess, labAdmin.admin);
+
+router.get("/", requireReadUsers, handlers.listUsers);
+router.get("/search", requireReadUsers, handlers.searchUsers);
+router.post("/invite", requireManageUsers, labAdmin.invite);
+router.post("/:id/delete", requireManageUsers, labAdmin.remove);
+
+// Model access
+router.get("/model-access", requireManageUsers, async (req,res)=>{try{res.json(await modelAccess.get(req));}catch(e){res.status(500).json({message:e.message});}});
+router.post("/model-access/apis", requireManageUsers, async (req,res)=>{try{res.json(await modelAccess.saveAPI(req.body));}catch(e){res.status(400).json({message:e.message});}});
+router.post("/model-access/models", requireManageUsers, async (req,res)=>{try{res.json(await modelAccess.saveModel(req.body));}catch(e){res.status(400).json({message:e.message});}});
+router.post("/model-access/models/:id/test", requireManageUsers, async (req,res)=>{try{res.json(await modelAccess.retestModel(req.params.id));}catch(e){res.status(400).json({message:e.message});}});
+router.post("/model-access/models/:id/delete", requireManageUsers, async (req,res)=>{try{res.json(await modelAccess.deleteModel(req.params.id));}catch(e){res.status(400).json({message:e.message});}});
+
+// LLM roles
+router.get("/llm-roles", requireManageUsers, llmRoles.get);
+router.post("/llm-roles", requireManageUsers, llmRoles.save);
+
+// Friends
+router.get("/friends", requireManageUsers, friends.get);
+router.post("/friends/codes", requireManageUsers, friends.createCode);
+router.post("/friends/codes/:id/revoke", requireManageUsers, friends.revokeCode);
+router.post("/friends/:id/convert", requireManageUsers, friends.convert);
+router.post("/friends/:id/delete", requireManageUsers, friends.remove);
+
+// Compression
+router.get("/compression", requireManageUsers, compression.get);
+router.post("/compression", requireManageUsers, compression.save);
+
+// Project upload
+router.get("/project-upload", requireManageUsers, projectUpload.get);
+router.post("/project-upload", requireManageUsers, projectUpload.save);
+
+module.exports = router;

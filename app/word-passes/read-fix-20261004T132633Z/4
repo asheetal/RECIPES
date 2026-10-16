@@ -1,0 +1,89 @@
+const readline=require("readline");
+const assert=require("assert");
+async function search({query,mode="academic"}) {
+  if(mode!=="academic")
+    throw Error("Use the Web Search toggle for general web searches.");
+  if(typeof query!=="string"||!query.trim())
+    throw Error("A search query is required.");
+  const url=new URL("https://api.semanticscholar.org/graph/v1/paper/search");
+  url.searchParams.set("query",query);
+  url.searchParams.set("limit","8");
+  url.searchParams.set("fields",
+    "title,authors,year,abstract,externalIds,url,venue,citationCount,openAccessPdf");
+  const headers={};
+  if(process.env.SEMANTIC_SCHOLAR_API_KEY)
+    headers["x-api-key"]=process.env.SEMANTIC_SCHOLAR_API_KEY;
+  const r=await fetch(url,{headers,signal:AbortSignal.timeout(15000)});
+  if(!r.ok) throw Error("Semantic Scholar HTTP "+r.status+
+    "; general web fallback is disabled.");
+  const data=await r.json();
+  return {source:"semantic_scholar",results:data.data||[]};
+}
+const tool={
+  name:"research_search",
+  description:"Search academic papers using Semantic Scholar only. "+
+    "No general web search or automatic web fallback is available through this tool.",
+  inputSchema:{
+    type:"object",
+    properties:{
+      query:{type:"string"},
+      mode:{type:"string",enum:["academic"],default:"academic"}
+    },
+    required:["query"],additionalProperties:false
+  }
+};
+async function dispatch(m) {
+  if(m.method==="initialize") return {
+    protocolVersion:"2024-11-05",capabilities:{tools:{}},
+    serverInfo:{name:"lab-research-search",version:"2.0.0"}
+  };
+  if(m.method==="ping") return {};
+  if(m.method==="tools/list") return {tools:[tool]};
+  if(m.method==="tools/call") {
+    if(m.params?.name!==tool.name) throw Error("Unknown tool.");
+    try {
+      return {content:[{
+        type:"text",text:JSON.stringify(await search(m.params.arguments||{}))
+      }]};
+    } catch(e) {
+      return {isError:true,content:[{type:"text",text:e.message}]};
+    }
+  }
+  throw Error("Unsupported method.");
+}
+async function selfTest() {
+  const original=global.fetch;
+  const urls=[];
+  global.fetch=async url=>{
+    urls.push(String(url));
+    return {ok:true,json:async()=>({data:[{title:"Test paper"}]})};
+  };
+  assert.equal((await search({query:"test"})).source,"semantic_scholar");
+  assert.equal(urls.length,1);
+  assert(urls[0].startsWith("https://api.semanticscholar.org/"));
+  urls.length=0;
+  await assert.rejects(search({query:"test",mode:"web"}));
+  assert.equal(urls.length,0);
+  global.fetch=async()=>({ok:false,status:429});
+  await assert.rejects(search({query:"test"}),/fallback is disabled/);
+  global.fetch=original;
+  console.log("Semantic-only routing, web rejection and no-fallback tests: PASS");
+}
+if(process.argv.includes("--self-test")) {
+  selfTest().catch(e=>{console.error(e.message);process.exitCode=1;});
+} else {
+  readline.createInterface({input:process.stdin}).on("line",async line=>{
+    let m;
+    try {m=JSON.parse(line);} catch {return;}
+    if(m.id===undefined) return;
+    try {
+      process.stdout.write(JSON.stringify({
+        jsonrpc:"2.0",id:m.id,result:await dispatch(m)
+      })+"\n");
+    } catch(e) {
+      process.stdout.write(JSON.stringify({
+        jsonrpc:"2.0",id:m.id,error:{code:-32601,message:e.message}
+      })+"\n");
+    }
+  });
+}

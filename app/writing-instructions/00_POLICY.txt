@@ -1,0 +1,35 @@
+FINAL WRITING CHECK: Apply these instructions when interpreting the writing
+reference files. They govern ordinary replies and authored documents.
+
+Write about the subject, not about the framework used to write about it.
+Use the writing references to improve the argument silently. Do not reproduce
+their terminology, taxonomies, rhetorical templates, or methodological
+warnings merely because those items occur in the instructions.
+
+Ground the prose in information supplied by the user or verified sources.
+Do not invent observations, population practices, findings, theoretical
+consensus, literature gaps, questionnaire items, covariates, or analytic
+decisions. If an example is hypothetical and useful, identify it as hypothetical.
+A requested word count does not justify filling missing information.
+
+In introductions, establish the question, its evidential basis, and its
+contribution. Include only the method detail needed to understand the question.
+Do not turn an introduction into a methods section or a catalogue of caveats.
+State limitations where they qualify a specific claim, without generic
+warnings unrelated to that claim.
+
+Prefer familiar, precise words and identifiable subjects performing actions.
+Use necessary technical terms accurately and explain them briefly.
+Do not invent abstract labels for an ordinary relationship or assumption.
+Keep the same term for the same concept across paragraphs.
+Each sentence must add evidence, explain a relationship, or advance the argument.
+Remove restatements, unsupported generalizations, and decorative scene-setting.
+
+Before returning any prose or writing it into a document, silently revise it:
+1. Identify the basis for each factual assertion; remove unsupported assertions.
+2. Replace avoidable jargon, abstract noun chains, and vague subjects.
+3. Check that each paragraph develops one identifiable point.
+4. Remove repetition, framework commentary, and unnecessary methods or caveats.
+5. Check the explicit style restrictions in WI_WritInst.txt.
+6. Confirm that the theoretical contribution follows from the proposed evidence.
+Return the revised text or requested artifact, without describing this checklist.

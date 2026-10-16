@@ -56,14 +56,6 @@ function wrapLoad(load,execute){return async params=>{
  const search=createSearch(dispatch);
  params.req._unifiedSearch={dispatch,search};
  const result=expose(backend,search);
- if(selection!=='training'){
-  if(!params.req._unifiedSearchEvidence)
-   params.req._unifiedSearchEvidence=dispatch(
-    queryFor(params.req),{signal:params.signal});
-  const evidence=await params.req._unifiedSearchEvidence;
-  result.toolContextMap={...(result.toolContextMap||{}),
-   search:'Search response: '+JSON.stringify(evidence)};
- }
  return result;
 };}
 function wrapExecution(execute){return async params=>{

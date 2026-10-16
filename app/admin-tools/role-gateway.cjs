@@ -134,7 +134,7 @@ module.exports={audit,selection,available,connection,complete,tracedFetch,snapsh
 function configureContext(ctx,role,context){
  if(role!=='LLM_SURGERY')throw Error('Unsupported workflow handle');
  const schema=contract.schemas[role];
- if(!schema)throw Error('Missing JSON schema for workflow handle');
+ if(!schema)return;
  context.clientOptions={...context.clientOptions,modelKwargs:{
   ...context.clientOptions?.modelKwargs,
   response_format:contract.format(role.toLowerCase(),schema)

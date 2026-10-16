@@ -3,6 +3,7 @@ const {createRequire}=require('node:module');
 const app=createRequire('/app/package.json');
 const {createHash,randomUUID}=require('node:crypto');
 const {setTimeout:pause}=require('node:timers/promises');
+const {persistentView}=require('./persistent-view.cjs');
 const {PromptManager,initialState}=require('./prompt/prompt-manager.cjs');
 const {ChatStateRepository,CheckpointRepository}=require('./storage/mongo-repositories.cjs');
 const {ModelClient}=require('./llm/model-client.cjs');
@@ -52,7 +53,7 @@ function validSources(sources,rows){
 function project(rows,context){
  const candidates=[context,...rows.slice().reverse().map(m=>m.metadata?.labPromptCompression)];
  for(const candidate of candidates){
-  if(!candidate?.summary||!validSources(candidate.sources,rows))continue;
+  if(candidate?.retentionVersion!==1||!candidate.summary||!validSources(candidate.sources,rows))continue;
   const last=rows.findIndex(m=>identity(m)===candidate.sources.at(-1).id);
   const first=(candidate.keptIds||[])[0];
   const start=first?rows.findIndex(m=>identity(m)===first):last+1;
@@ -60,7 +61,7 @@ function project(rows,context){
  }
  for(let i=rows.length-1;i>=0;i--){
   const r=rows[i].metadata?.labAfterCompression;
-  if(r?.version!==1||!r.text||!validSources(r.sources,rows))continue;
+  if(r?.retentionVersion!==1||r.version!==1||!r.text||!validSources(r.sources,rows))continue;
   const start=rows.findIndex(m=>identity(m)===r.keepFromId);
   if(start>=0)return {rows:rows.slice(start),summary:r.text,boundary:identity(rows[i])};
  }
@@ -69,7 +70,8 @@ function project(rows,context){
 function unitsFor(projection){
  const units=[];
  if(projection.summary)units.push({id:'@summary:'+projection.boundary,text:projection.summary,retainable:false});
- for(const m of projection.rows){
+ for(const original of projection.rows){
+  const m=persistentView(original);
   if(m.isCreatedByUser||!units.length||units.at(-1).retainable===false)units.push({id:identity(m),text:''});
   const content=Array.isArray(m.content)&&m.content.length?m.content:m.text||'';
   units.at(-1).text+=JSON.stringify({role:m.isCreatedByUser?'user':'assistant',content,files:m.files||[],quotes:m.quotes||[]})+'\n';
@@ -175,8 +177,8 @@ function kick(s){
   try{
    const rows=await branch(s,job.snapshot.headMessageId);
    if(!validSources(job.snapshot.sources,rows))throw Error('Compression source changed');
-   const connection=require('/app/budget-llm/runtime.cjs').connection();
-   const model=new ModelClient({resolveConnection:async()=>connection});
+   const connection=await require('/app/admin-tools/role-gateway.cjs').connection('LLM_ERP', s);
+   const model=new ModelClient({resolveConnection:async()=>connection,fetchImpl:require('/app/admin-tools/role-gateway.cjs').tracedFetch('LLM_ERP', s)});
    const flow=new CompressionFlow({model,checkpoints,countTokens});
    const result=await flow.run({scope:s,job,units:unitsFor(project(rows,state.context)),signal:controller.signal});
    const fresh=await branch(s,job.snapshot.headMessageId);
@@ -185,6 +187,7 @@ function kick(s){
    const first=result.context.keptIds[0];
    const boundary=first?rows.findIndex(m=>identity(m)===first):rows.length;
    if(boundary<1)throw Error('Compressed history boundary is missing');
+   result.context.retentionVersion=1;
    result.context.sources=job.snapshot.sources.slice(0,boundary);
    const head=rows.at(-1),usage=head.metadata?.contextUsage;
    const fields={'metadata.labPromptCompression':result.context,

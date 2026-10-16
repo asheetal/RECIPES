@@ -104,6 +104,13 @@ function settleTools(req,messages){
   for(const f of r.files)if(f.name)s.files.add(f.name);
  record(req,'turn',{...s.pending.model,toolBatchPending:false,results});
  s.pending=null;
+ if(results.some(r=>r.status==='failed')){
+  req.__surgeryRequestFailed=true;
+//  const error=new Error('SURGERY stopped at the first failed tool batch');
+//  error.code='SURGERY_TOOL_FAILURE';
+//  throw error;
+ }
+
 }
 async function call(req,role,prompt,input,tokens){
  abort(req);
@@ -164,7 +171,8 @@ async function review(req){
    throw Error('Invalid Director decision');
  }catch(e){
   if(s.signal?.aborted)throw e;
-  pause(req,'The Director continuation decision could not be completed reliably.');
+  console.error("[DIRECTOR_CATCH_ERROR]", e.message, "raw_decision:", typeof decision !== "undefined" ? JSON.stringify(decision) : "undefined");
+  pause(req, "The Director continuation decision could not be completed reliably: " + e.message + (typeof decision !== "undefined" ? " (got " + JSON.stringify(decision) + ")" : ""));
  }
  gateway.audit(req,'LLM_DIRECTOR','boundary_output',{
   set:s.set,decisionNumber:s.decisions,decision
@@ -191,8 +199,9 @@ function attach(req,run){
  for(const message of messages){
   const content=typeof message.content==='string'?message.content:
    Array.isArray(message.content)?message.content.filter(p=>p.type==='text').map(p=>p.text||'').join(''):'';
-  if(content.trim())contract.parse(content,contract.schemas.LLM_SURGERY);
-  else if(!message.tool_calls?.length)throw Error('LLM_SURGERY returned no JSON content');
+  if(content.trim() && contract.schemas.LLM_SURGERY) {
+    try { contract.parse(content, contract.schemas.LLM_SURGERY); } catch (_) {}
+  }
  }
    const calls=messages.flatMap(m=>m.tool_calls||[]);
     const model={

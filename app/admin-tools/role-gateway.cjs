@@ -58,7 +58,7 @@ async function complete(role,messages,{ctx,max_tokens=4096,json=false,signal}={}
  const timeout=AbortSignal.timeout(120000);
  const response=await tracedFetch(role,ctx)(c.base+'/chat/completions',{
   method:'POST',headers:{...c.headers,Authorization:'Bearer '+c.key,'Content-Type':'application/json'},
-  body:JSON.stringify({model:c.model,messages,max_tokens,stream:false,...(schema?{response_format:role==='LLM_DIRECTOR'?{type:'json_object'}:contract.format(role.toLowerCase(),schema)}:json?{response_format:{type:'json_object'}}:{}),...(role==='LLM_DIRECTOR'?{thinking:{type:'disabled'}}:{})}),
+  body:JSON.stringify({model:c.model,messages,max_tokens,stream:false,...(schema?{response_format:role==='LLM_DIRECTOR'?{type:'json_object'}:contract.format(role.toLowerCase(),schema)}:json?{response_format:{type:'json_object'}}:{}),...(role==='LLM_DIRECTOR'||role==='LLM_TRIAGE'?{thinking:{type:'disabled'}}:{})}),
   signal:signal?AbortSignal.any([signal,timeout]):timeout
  });
  if(!response.ok){const e=Error(role+' HTTP '+response.status);e.code='HTTP_'+response.status;throw e;}

@@ -63,7 +63,8 @@ function receipt(content,artifact,tool,messageStatus){
   });
  }
  const inventoryOnly=value?.inventory_only===true;
- const registered=inventoryOnly?[]:(artifact?.files||[]).map(f=>({
+ const delivered=savedFiles.length>0;
+ const registered=(inventoryOnly||!delivered)?[]:(artifact?.files||[]).map(f=>({
   name:f.name||f.filename
  }));
  if(inventoryOnly&&value&&Array.isArray(value.files)){

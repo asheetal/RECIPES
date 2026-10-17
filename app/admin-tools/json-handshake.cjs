@@ -66,6 +66,10 @@ function receipt(content,artifact,tool,messageStatus){
  const registered=inventoryOnly?[]:(artifact?.files||[]).map(f=>({
   name:f.name||f.filename
  }));
+ if(inventoryOnly&&value&&Array.isArray(value.files)){
+  value={...value,files:[],inventory_count:value.files.length,
+    inventory_note:'File list is in the ## Project files manifest of the system prompt'};
+ }
  const seen=new Set();
  const rows=[
   ...(Array.isArray(value?.files)?value.files:[]),

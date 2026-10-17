@@ -22,9 +22,22 @@ async function verify({references}){
 }
 function makeTool(){const {DynamicStructuredTool}=require('@librechat/agents/langchain/tools');const {z}=require('zod');return new DynamicStructuredTool({name:NAME,description:def.description,schema:z.object({references:z.array(z.object({doi:z.string(),title:z.string().optional()})).min(1).max(12)}),func:verify});}
 function allowed(p){return Boolean(p.req?.user?.id);}
+function toText(c){
+ if(c==null)return '';
+ if(typeof c==='string')return c;
+ if(Array.isArray(c))return c.map(toText).join(' ');
+ if(typeof c==='object')return [c.text,c.content].map(toText).join(' ');
+ return '';
+}
+function wantsDocWork(p){
+ const body=p.req?.body||{};
+ const lastUser=(body.conversation||[]).filter(m=>m.role==='user').pop();
+ const text=[body.text,toText(lastUser?.content),toText(lastUser?.text)].filter(Boolean).join(' ');
+ return /\b(create|write|draft|edit|render|compile|docx?|xlsx?|pptx?|\.tex\b|latex|manuscript|redline|tracked.?changes?|revision)\b/i.test(text);
+}
 function wrapLoad(load){return async p=>{
  const r=await load(p);if(!r||!allowed(p))return r;
- r.toolContextMap={...(r.toolContextMap||{}),ra_workbench:fs.readFileSync('/app/ra-tools/usage.txt','utf8')};
+ if(wantsDocWork(p)){r.toolContextMap={...(r.toolContextMap||{}),ra_workbench:fs.readFileSync('/app/ra-tools/usage.txt','utf8')};}
  r.toolDefinitions=[...(r.toolDefinitions||[]).filter(x=>x.name!==NAME),def];
  r.toolRegistry=new Map(r.toolRegistry||[]);r.toolRegistry.set(NAME,def);
  if(p.definitionsOnly===false)r.tools=[...(r.tools||[]),makeTool()];return r;

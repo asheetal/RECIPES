@@ -63,13 +63,11 @@ function receipt(content,artifact,tool,messageStatus){
   });
  }
  const registered=(artifact?.files||[]).map(f=>({
-  name:f.name||f.filename,id:f.id||f.file_id||null,
-  storageSessionId:f.storage_session_id||artifact.session_id||null
+  name:f.name||f.filename
  }));
  const rows=[
   ...(Array.isArray(value?.files)?value.files:[]),
-  ...(Array.isArray(value?.verified_files)?value.verified_files:[]),
-  ...registered
+  ...(Array.isArray(value?.verified_files)?value.verified_files:[])
  ].filter(f=>f&&typeof f.name==='string').map(f=>({
   name:f.name,...(f.id?{id:f.id}:{}),
   ...(f.sha256?{sha256:f.sha256}:{}),

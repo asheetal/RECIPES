@@ -7,7 +7,7 @@ const { XMLParser, XMLValidator } = app('fast-xml-parser');
 const yauzl = app('yauzl');
 const accepted = new WeakSet();
 const mime = Object.freeze({txt:'text/plain', pdf:'application/pdf', xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation', docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document', json:'application/json', xml:'application/xml'});
-const instructions = 'FILES: Use research_files with action read_all and the exact file handle returned by the inventory. The file layer detects the format and returns readable contents. Use its contents for the task; do not implement another reader. Report actual reader errors accurately. read_all without names lists files. Use edit_text for hash-checked text edits, manuscript_word for tracked document edits, and deliver for requested downloads. Verification checks saving and delivery.';
+const instructions = 'FILES: Use research_files with action read_all and the exact file handle returned by the inventory. The file layer detects the format and returns readable contents. Use its contents for the task; do not implement another reader. Report actual reader errors accurately. read_all without names lists files. Use edit_text for hash-checked text edits and deliver for requested downloads. Verification checks saving and delivery.';
 function fail(message) { const e = new Error(message); e.status = 415; throw e; }
 function xml(bytes) {
   const text = decode(bytes);

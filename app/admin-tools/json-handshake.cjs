@@ -62,13 +62,15 @@ function receipt(content,artifact,tool,messageStatus){
    sha256:value.sha256,verified:true
   });
  }
- const registered=(artifact?.files||[]).map(f=>({
+ const inventoryOnly=value?.inventory_only===true;
+ const registered=inventoryOnly?[]:(artifact?.files||[]).map(f=>({
   name:f.name||f.filename
  }));
+ const seen=new Set();
  const rows=[
   ...(Array.isArray(value?.files)?value.files:[]),
   ...(Array.isArray(value?.verified_files)?value.verified_files:[])
- ].filter(f=>f&&typeof f.name==='string').map(f=>({
+ ].filter(f=>f&&typeof f.name==='string'&&!seen.has(f.name)&&seen.add(f.name)).map(f=>({
   name:f.name,...(f.id?{id:f.id}:{}),
   ...(f.sha256?{sha256:f.sha256}:{}),
   ...(Number.isSafeInteger(f.bytes)?{bytes:f.bytes}:{})

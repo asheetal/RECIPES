@@ -20,6 +20,14 @@ def main(a):
  action=a.get('action')
  if action=='read_all':
   names=a.get('names')
+  if names:
+   big=[]
+   for n in names:
+    try:
+     pp=path(n)
+     if pp.is_file() and pp.suffix.lower() in ('.xlsx','.csv') and pp.stat().st_size>200*1024: big.append(n)
+    except Exception: pass
+   if big: return {'error':'Tabular file exceeds 200KB dump threshold. Use action=describe first, then action=query or action=fetch.','complete':False,'rejected':big}
   if not names:
    files=sorted(p for p in ROOT.rglob('*') if p.is_file() and not any(x.startswith('.') for x in p.relative_to(ROOT).parts) and not p.name.startswith(('file0.','research-read-')))
    return {'inventory_only':True,'files':[{'name':str(p.relative_to(ROOT)),'bytes':p.stat().st_size} for p in files]}
@@ -36,6 +44,19 @@ def main(a):
   for name in a.get('names',[]):
    p=path(name);r=read(p);r.pop('text',None);result.append(r)
   return {'verified_files':result}
+ if action in ('catalog','describe','query','fetch'):
+  names=a.get('names') or []
+  if not names: return {'error':action+' requires names=[<file>]','complete':False}
+  p_=path(names[0])
+  if not p_.is_file(): return {'error':'file not found: '+names[0],'complete':False}
+  doc=FileDocument(p_, ROOT)
+  try:
+   if action=='catalog': return doc.tabular_catalog()
+   if action=='describe': return doc.tabular_describe(sheet=a.get('sheet'), rows=int(a.get('rows') or 5), cols=int(a.get('cols') or 10))
+   if action=='query': return doc.tabular_query(sheet=a.get('sheet'), row_label=a.get('row_label'), column_label=a.get('column_label'), equals=a.get('equals'), limit=int(a['limit']) if a.get('limit') else None)
+   if action=='fetch': return doc.tabular_fetch(sheet=a.get('sheet'), start=a.get('start') or 'A1', end=a.get('end'), max_chars=int(a.get('max_chars') or 100000))
+  except Exception as e:
+   return {'error':type(e).__name__+': '+str(e),'complete':False}
  if action=='edit_text':
   if not isinstance(a.get('input'),str) or not a['input'] or not isinstance(a.get('sha256'),str) or not re.fullmatch(r'[a-fA-F0-9]{64}',a['sha256']):
    return {'error':'edit_text requires input filename and its current 64-character sha256 from read_all. No changes written.','complete':False}

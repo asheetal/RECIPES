@@ -85,9 +85,10 @@ function receipt(content,artifact,tool,messageStatus){
   if(existing)existing.sha256=f.sha256;
   else rows.push({name:f.name,sha256:f.sha256});
  }
+ const resultHasFiles=Array.isArray(value?.files)&&value.files.length>0;
  return check({
   contractVersion:VERSION,tool,status:failed?'error':'ok',
-  result:value,files:rows,savedFiles,
+  result:value,files:resultHasFiles?[]:rows,savedFiles,
   delivery:{status:registered.length?'registered':'none',files:registered},
   stdout:p.stdout,stderr:p.stderr
  });

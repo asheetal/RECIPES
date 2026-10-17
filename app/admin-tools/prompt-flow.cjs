@@ -240,22 +240,6 @@ async function captureRun(client,run,messages){
  director.attach(req,run);
  for(const context of run.Graph.agentContexts.values()){
  gateway.configureContext(req,'LLM_SURGERY',context);
-    const readerGuidance=require('/app/file-layer/index.cjs').instructions+' Tool responses use JSON receipts: result contains the original tool payload; savedFiles records verified saves; delivery records registration only. Registration does not establish that the whole task is complete.';
-   if(!String(context.instructions||'').includes(readerGuidance)){
-    context.instructions=[context.instructions,readerGuidance].filter(Boolean).join('\n\n');
-    context.systemRunnableStale=true;
-    if(context.tokenCounter){
-     const prior=context.tokenCalculationPromise;
-     context.tokenCalculationPromise=(async()=>{
-      if(prior)await prior;
-      context.initializeSystemRunnable();
-      await context.calculateInstructionTokens(context.tokenCounter);
-      context.updateTokenMapWithInstructions(context.baseIndexTokenCountMap);
-     })();
-     await context.tokenCalculationPromise;
-    }
-   }
-
   const assembled=context.systemRunnable?await context.systemRunnable.invoke(messages):messages;
   gateway.audit(req,'LLM_SURGERY','assembled_input',{messages:assembled,tools:context.toolDefinitions,agentId:"LLM_SURGERY"});
  }

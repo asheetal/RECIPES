@@ -131,8 +131,14 @@ async function available(role,ctx){
 }
 module.exports={audit,selection,available,connection,complete,tracedFetch,snapshot,bindRequest,title,summarization};
 
+function wantsTimeReference(req){
+ const text=[req?.body?.text,(req?.body?.conversation||[]).filter(m=>m.role==='user').pop()?.content].filter(Boolean).join(' ');
+ if(typeof text!=='string'||!text)return true;
+ return /\b(time|clock|date|today|tomorrow|yesterday|now|current\s+(time|date|day|year|month)|hour|minute|timezone|time\s+zone|utc|gmt|am|pm|edt|est|pdt|pst|gmt|cet|jst)\b/i.test(text) || /\b\d{1,2}:\d{2}\b/.test(text);
+}
 function configureContext(ctx,role,context){
  if(role!=='LLM_SURGERY')throw Error('Unsupported workflow handle');
+ context.timeReferenceEnabled=wantsTimeReference(ctx);
  const schema=contract.schemas[role];
  if(!schema)return;
  context.clientOptions={...context.clientOptions,modelKwargs:{

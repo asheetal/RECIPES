@@ -33,7 +33,7 @@ function wantsDocWork(p){
  const body=p.req?.body||{};
  const lastUser=(body.conversation||[]).filter(m=>m.role==='user').pop();
  const text=[body.text,toText(lastUser?.content),toText(lastUser?.text)].filter(Boolean).join(' ');
- return /\b(create|write|draft|edit|render|compile|docx?|xlsx?|pptx?|\.tex\b|latex|manuscript|redline|tracked.?changes?|revision)\b/i.test(text);
+ return /\b(create|write|draft|render|compile|docx|docx-revisions|openpyxl|python-pptx|tracked.?changes|redline)\b/i.test(text);
 }
 function wrapLoad(load){return async p=>{
  const r=await load(p);if(!r||!allowed(p))return r;

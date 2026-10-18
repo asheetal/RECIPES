@@ -86,11 +86,18 @@ function receipt(content,artifact,tool,messageStatus){
   else rows.push({name:f.name,sha256:f.sha256});
  }
  const resultHasFiles=Array.isArray(value?.files)&&value.files.length>0;
+ let stdoutClean=p.stdout||'';
+ if(stdoutClean&&value!==undefined){
+  try{
+   const parsed=JSON.parse(stdoutClean);
+   if(JSON.stringify(parsed)===JSON.stringify(value))stdoutClean='';
+  }catch{}
+ }
  return check({
   contractVersion:VERSION,tool,status:failed?'error':'ok',
   result:value,files:resultHasFiles?[]:rows,savedFiles,
   delivery:{status:registered.length?'registered':'none',files:registered},
-  stdout:p.stdout,stderr:p.stderr
+  stdout:stdoutClean,stderr:p.stderr
  });
 }
 const wrapped=new WeakSet();

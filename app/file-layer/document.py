@@ -215,7 +215,18 @@ class FileDocument:
                 pr = self._parse_ref(ref)
                 if pr and pr[1] <= cols: sample[ref] = val
         return {'sheet': target['name'], 'rows': target['row_count'], 'columns': target['columns'], 'sample': sample, 'sheets': [{'name': s['name'], 'rows': s['row_count'], 'columns': s['columns']} for s in sheets], 'note': 'Transposed sheets have labels in column A (use query with row_label and equals). Normal sheets have headers in row 1 (use query with column_label and equals). Use fetch(start,end) for cell ranges.', 'complete': True}
-    def tabular_query(self, sheet=None, row_label=None, column_label=None, equals=None, limit=None):
+    @staticmethod
+    def _match(val, equals, contains, in_values):
+        if val is None: return False
+        sv = str(val)
+        if equals is not None and sv != str(equals): return False
+        if contains is not None and str(contains).lower() not in sv.lower(): return False
+        if in_values is not None:
+            try:
+                if sv not in [str(x) for x in in_values]: return False
+            except TypeError: return False
+        return True
+    def tabular_query(self, sheet=None, row_label=None, column_label=None, equals=None, contains=None, in_values=None, limit=None, count_only=False):
         parsed = self._tabular_parsed()
         sheets = parsed['sheets']
         if not sheets: return {'error': 'no sheets', 'complete': False}
@@ -235,12 +246,15 @@ class FileDocument:
             for ref, val in target_row['cells'].items():
                 pr = self._parse_ref(ref)
                 if not pr or pr[1] == 1: continue
-                if equals is not None and str(val) != str(equals): continue
+                if not self._match(val, equals, contains, in_values): continue
                 col_letter = self._n_to_col(pr[1])
                 header = header_row['cells'].get(f'{col_letter}{header_row["row"]}')
                 cols.append({'column': col_letter, 'header': header, 'value': val})
+            total = len(cols)
             if limit: cols = cols[:limit]
-            return {'sheet': target['name'], 'row_label': row_label, 'equals': equals, 'count': len(cols), 'columns': [c['header'] for c in cols], 'matches': cols, 'complete': True}
+            if count_only:
+                return {'sheet': target['name'], 'row_label': row_label, 'equals': equals, 'contains': contains, 'in': in_values, 'count': total, 'complete': True}
+            return {'sheet': target['name'], 'row_label': row_label, 'equals': equals, 'contains': contains, 'in': in_values, 'count': total, 'columns': [c['header'] for c in cols], 'matches': cols, 'complete': True}
         if column_label is not None:
             header_row = target['rows'][0]
             target_col = None
@@ -252,9 +266,13 @@ class FileDocument:
             matched = []
             for r in target['rows'][1:]:
                 cell = r['cells'].get(f'{target_col}{r["row"]}')
-                if equals is None or str(cell) == str(equals): matched.append({'row': r['row'], 'cells': r['cells']})
+                if not self._match(cell, equals, contains, in_values): continue
+                matched.append({'row': r['row'], 'cells': r['cells']})
+            total = len(matched)
             if limit: matched = matched[:limit]
-            return {'sheet': target['name'], 'column_label': column_label, 'equals': equals, 'count': len(matched), 'rows': matched, 'complete': True}
+            if count_only:
+                return {'sheet': target['name'], 'column_label': column_label, 'equals': equals, 'contains': contains, 'in': in_values, 'count': total, 'complete': True}
+            return {'sheet': target['name'], 'column_label': column_label, 'equals': equals, 'contains': contains, 'in': in_values, 'count': total, 'rows': matched, 'complete': True}
         return {'error': 'query requires row_label or column_label', 'complete': False}
     def tabular_fetch(self, sheet=None, start='A1', end=None, max_chars=100000):
         parsed = self._tabular_parsed()

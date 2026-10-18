@@ -53,7 +53,7 @@ def main(a):
   try:
    if action=='catalog': return doc.tabular_catalog()
    if action=='describe': return doc.tabular_describe(sheet=a.get('sheet'), rows=int(a.get('rows') or 5), cols=int(a.get('cols') or 10))
-   if action=='query': return doc.tabular_query(sheet=a.get('sheet'), row_label=a.get('row_label'), column_label=a.get('column_label'), equals=a.get('equals'), limit=int(a['limit']) if a.get('limit') else None)
+   if action=='query': return doc.tabular_query(sheet=a.get('sheet'), row_label=a.get('row_label'), column_label=a.get('column_label'), equals=a.get('equals'), contains=a.get('contains'), in_values=a.get('in_values'), limit=int(a['limit']) if a.get('limit') else None, count_only=bool(a.get('count_only')))
    if action=='fetch': return doc.tabular_fetch(sheet=a.get('sheet'), start=a.get('start') or 'A1', end=a.get('end'), max_chars=int(a.get('max_chars') or 100000))
   except Exception as e:
    return {'error':type(e).__name__+': '+str(e),'complete':False}

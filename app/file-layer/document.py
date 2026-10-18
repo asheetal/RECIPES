@@ -246,7 +246,41 @@ class FileDocument:
             import re as _re
             if not _re.search(regex, sv, _re.IGNORECASE): return False
         return True
-    def tabular_query(self, sheet=None, row_label=None, column_label=None, equals=None, contains=None, contains_any=None, in_values=None, regex=None, limit=None, count_only=False):
+    @staticmethod
+    def _cell_value(v, field=None):
+        if not isinstance(v, dict): return v
+        if field: return v.get(field)
+        if 'value' in v: return v['value']
+        return v
+    @staticmethod
+    def _aggregate(values, aggregate, field=None):
+        # Aggregate a list of cell values or cell dicts.
+        # Backend-neutral names: aggregate in {count,sum,avg,min,max}.
+        # MySQL: SELECT <agg>(<field>) ... GROUP BY ...
+        if aggregate == 'count':
+            return len(values)
+        nums = []
+        for v in values:
+            raw = FileDocument._cell_value(v, field)
+            try: nums.append(float(raw))
+            except (TypeError, ValueError): continue
+        if not nums: return None
+        if aggregate == 'sum': return sum(nums)
+        if aggregate == 'avg': return sum(nums) / len(nums)
+        if aggregate == 'min': return min(nums)
+        if aggregate == 'max': return max(nums)
+        return None
+    def _group_by_value(self, values, aggregate, field=None):
+        # values is a list of cell values (scalars) or cell dicts.
+        buckets = {}
+        for v in values:
+            key = self._cell_value(v, field)
+            buckets.setdefault(str(key) if key is not None else '', []).append(v)
+        groups = []
+        for key, members in buckets.items():
+            groups.append({'value': key, 'aggregate': self._aggregate(members, aggregate, field)})
+        return groups
+    def tabular_query(self, sheet=None, row_label=None, column_label=None, equals=None, contains=None, contains_any=None, in_values=None, regex=None, aggregate=None, group_by=None, field=None, limit=None, count_only=False):
         parsed = self._tabular_parsed()
         sheets = parsed['sheets']
         if not sheets: return {'error': 'no sheets', 'complete': False}
@@ -271,6 +305,10 @@ class FileDocument:
                 header = header_row['cells'].get(f'{col_letter}{header_row["row"]}')
                 cols.append({'column': col_letter, 'header': header, 'value': val})
             total = len(cols)
+            if aggregate and group_by == 'value':
+                return {'sheet': target['name'], 'row_label': row_label, 'aggregate': aggregate, 'group_by': 'value', 'groups': self._group_by_value(cols, aggregate, field), 'total_matched': total, 'complete': True}
+            if aggregate:
+                return {'sheet': target['name'], 'row_label': row_label, 'aggregate': aggregate, 'field': field, 'result': self._aggregate(cols, aggregate, field), 'total_matched': total, 'complete': True}
             if limit: cols = cols[:limit]
             if count_only:
                 return {'sheet': target['name'], 'row_label': row_label, 'equals': equals, 'contains': contains, 'in': in_values, 'contains_any': contains_any, 'regex': regex, 'count': total, 'complete': True}
@@ -289,6 +327,11 @@ class FileDocument:
                 if not self._match(cell, equals=equals, contains=contains, contains_any=contains_any, in_values=in_values, regex=regex): continue
                 matched.append({'row': r['row'], 'cells': r['cells']})
             total = len(matched)
+            if aggregate and group_by == 'value':
+                vals = [r['cells'].get(f'{target_col}{r["row"]}') for r in matched]
+                return {'sheet': target['name'], 'column_label': column_label, 'aggregate': aggregate, 'group_by': 'value', 'groups': self._group_by_value(vals, aggregate, field), 'total_matched': total, 'complete': True}
+            if aggregate:
+                return {'sheet': target['name'], 'column_label': column_label, 'aggregate': aggregate, 'field': field, 'result': self._aggregate(matched, aggregate, field), 'total_matched': total, 'complete': True}
             if limit: matched = matched[:limit]
             if count_only:
                 return {'sheet': target['name'], 'column_label': column_label, 'equals': equals, 'contains': contains, 'in': in_values, 'contains_any': contains_any, 'regex': regex, 'count': total, 'complete': True}

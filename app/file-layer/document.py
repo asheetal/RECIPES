@@ -216,17 +216,37 @@ class FileDocument:
                 if pr and pr[1] <= cols: sample[ref] = val
         return {'sheet': target['name'], 'rows': target['row_count'], 'columns': target['columns'], 'sample': sample, 'sheets': [{'name': s['name'], 'rows': s['row_count'], 'columns': s['columns']} for s in sheets], 'note': 'Transposed sheets have labels in column A (use query with row_label and equals). Normal sheets have headers in row 1 (use query with column_label and equals). Use fetch(start,end) for cell ranges.', 'complete': True}
     @staticmethod
-    def _match(val, equals, contains, in_values):
+    def _as_list(value):
+        if value is None: return None
+        if isinstance(value, str): return [value]
+        if isinstance(value, (list, tuple, set)): return [str(x) for x in value]
+        return None
+    @staticmethod
+    def _match(val, equals=None, contains=None, contains_any=None, in_values=None, regex=None, stem=False):
+        # FUTURE MATCH MODES go here. Each filter is an independent AND check; add a
+        # parameter, add a branch, done. Keep names backend-neutral so MySQL/JSON
+        # backends translate without agent-visible change:
+        #   equals       -> = 'x'
+        #   contains     -> LIKE '%x%'
+        #   contains_any -> LIKE ANY(ARRAY['%x%', '%y%', ...])
+        #   in_values    -> IN ('a','b')
+        #   regex        -> REGEXP 'pattern'
+        #   stem=True    -> apply stemmer to both needle and haystack before compare
         if val is None: return False
         sv = str(val)
+        svl = sv.lower()
         if equals is not None and sv != str(equals): return False
-        if contains is not None and str(contains).lower() not in sv.lower(): return False
-        if in_values is not None:
-            try:
-                if sv not in [str(x) for x in in_values]: return False
-            except TypeError: return False
+        if contains is not None and str(contains).lower() not in svl: return False
+        ca = FileDocument._as_list(contains_any)
+        if ca is not None:
+            if not any(x.lower() in svl for x in ca): return False
+        iv = FileDocument._as_list(in_values)
+        if iv is not None and sv not in iv: return False
+        if regex is not None:
+            import re as _re
+            if not _re.search(regex, sv, _re.IGNORECASE): return False
         return True
-    def tabular_query(self, sheet=None, row_label=None, column_label=None, equals=None, contains=None, in_values=None, limit=None, count_only=False):
+    def tabular_query(self, sheet=None, row_label=None, column_label=None, equals=None, contains=None, contains_any=None, in_values=None, regex=None, limit=None, count_only=False):
         parsed = self._tabular_parsed()
         sheets = parsed['sheets']
         if not sheets: return {'error': 'no sheets', 'complete': False}
@@ -246,14 +266,14 @@ class FileDocument:
             for ref, val in target_row['cells'].items():
                 pr = self._parse_ref(ref)
                 if not pr or pr[1] == 1: continue
-                if not self._match(val, equals, contains, in_values): continue
+                if not self._match(val, equals=equals, contains=contains, contains_any=contains_any, in_values=in_values, regex=regex): continue
                 col_letter = self._n_to_col(pr[1])
                 header = header_row['cells'].get(f'{col_letter}{header_row["row"]}')
                 cols.append({'column': col_letter, 'header': header, 'value': val})
             total = len(cols)
             if limit: cols = cols[:limit]
             if count_only:
-                return {'sheet': target['name'], 'row_label': row_label, 'equals': equals, 'contains': contains, 'in': in_values, 'count': total, 'complete': True}
+                return {'sheet': target['name'], 'row_label': row_label, 'equals': equals, 'contains': contains, 'in': in_values, 'contains_any': contains_any, 'regex': regex, 'count': total, 'complete': True}
             return {'sheet': target['name'], 'row_label': row_label, 'equals': equals, 'contains': contains, 'in': in_values, 'count': total, 'columns': [c['header'] for c in cols], 'matches': cols, 'complete': True}
         if column_label is not None:
             header_row = target['rows'][0]
@@ -266,12 +286,12 @@ class FileDocument:
             matched = []
             for r in target['rows'][1:]:
                 cell = r['cells'].get(f'{target_col}{r["row"]}')
-                if not self._match(cell, equals, contains, in_values): continue
+                if not self._match(cell, equals=equals, contains=contains, contains_any=contains_any, in_values=in_values, regex=regex): continue
                 matched.append({'row': r['row'], 'cells': r['cells']})
             total = len(matched)
             if limit: matched = matched[:limit]
             if count_only:
-                return {'sheet': target['name'], 'column_label': column_label, 'equals': equals, 'contains': contains, 'in': in_values, 'count': total, 'complete': True}
+                return {'sheet': target['name'], 'column_label': column_label, 'equals': equals, 'contains': contains, 'in': in_values, 'contains_any': contains_any, 'regex': regex, 'count': total, 'complete': True}
             return {'sheet': target['name'], 'column_label': column_label, 'equals': equals, 'contains': contains, 'in': in_values, 'count': total, 'rows': matched, 'complete': True}
         return {'error': 'query requires row_label or column_label', 'complete': False}
     def tabular_fetch(self, sheet=None, start='A1', end=None, max_chars=100000):

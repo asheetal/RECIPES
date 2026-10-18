@@ -49,7 +49,7 @@ function receipt(content,artifact,tool,messageStatus){
   const existing=check(p.result);
   return check({...existing,tool});
  }
- const value=p.result;
+ let value=p.result;
  const failed=messageStatus==='error'||Boolean(value?.error)||
   ['error','invalid_arguments','failed'].includes(value?.status)||
   value?.code==='SEARCH_FAILED'||/Traceback \(most recent call last\):/.test(p.stdout+p.stderr);

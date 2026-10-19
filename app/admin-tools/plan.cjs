@@ -55,4 +55,19 @@ function stripMessages(messages){
  }
  return messages;
 }
-module.exports = { TOKEN, extract, strip, get, set, stripMessages, getMessageContent };
+function formatFromStructured(p){
+ if(!p||typeof p!=='object')return null;
+ const lines = ['[PLAN]'];
+ lines.push('outputs: '+String(p.outputs||''));
+ lines.push('steps:');
+ for(const step of (p.steps||[])){
+  const mark = step.done ? '\u2713' : '\u2610';
+  let line = '  '+mark+' '+step.n+'. '+String(step.text||'');
+  if(step.done && step.established) line += ' \u2014 '+String(step.established);
+  lines.push(line);
+ }
+ lines.push('current: step '+p.current);
+ lines.push('changed: '+String(p.changed||'no change'));
+ return lines.join('\n');
+}
+module.exports = { TOKEN, extract, strip, get, set, stripMessages, getMessageContent, formatFromStructured };

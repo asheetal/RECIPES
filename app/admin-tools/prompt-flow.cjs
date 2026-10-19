@@ -232,7 +232,7 @@ function wrapHandlers(req,handlers){
  }return out;
 }
 function modelCallbacks(req){return {
- handleChatModelStart(serialized,messages,runId,parentRunId,extra,tags,metadata){var compact=messages;try{compact=labApplyToolExtraction(messages);}catch(_e){}gateway.audit(req,'LLM_SURGERY','model_input',{serialized,messages:compact,runId,parentRunId,extra,tags,metadata});},
+ handleChatModelStart(serialized,messages,runId,parentRunId,extra,tags,metadata){var compact=messages;try{compact=labApplyToolExtraction(messages);}catch(_e){}try{const P=require('./plan.cjs');P.stripMessages(compact);const cur=P.get(req);if(cur&&cur.raw){const hasInj=compact.some(m=>{const c=(m&&m.kwargs&&typeof m.kwargs.content==='string')?m.kwargs.content:(typeof m.content==='string'?m.content:'');return c.startsWith('CURRENT CASE PLAN');});if(!hasInj)compact.unshift({lc:1,type:'constructor',id:['langchain_core','messages','SystemMessage'],kwargs:{content:'CURRENT CASE PLAN (authoritative):\n'+cur.raw}});}}catch(_e){}gateway.audit(req,'LLM_SURGERY','model_input',{serialized,messages:compact,runId,parentRunId,extra,tags,metadata});},
  handleLLMEnd(output,runId){gateway.audit(req,'LLM_SURGERY','model_output',{output,runId});try{const g=output?.generations?.[0]?.[0];const c=g?.message?.kwargs?.content||'';const raw=require('./plan.cjs').extract(c);if(raw)require('./plan.cjs').set(req,raw);}catch(_e){}},
  handleLLMError(error,runId){gateway.audit(req,'LLM_SURGERY','model_error',{name:error.name,code:error.code,message:error.message,runId});}
 };}
@@ -255,11 +255,6 @@ async function captureRun(client,run,messages){
     })();
     await context.tokenCalculationPromise;
    }
-  }
-  require('./plan.cjs').stripMessages(messages);
-  const currentPlan = require('./plan.cjs').get(req);
-  if(currentPlan && currentPlan.raw){
-   messages.unshift({lc:1,type:'constructor',id:['langchain_core','messages','SystemMessage'],kwargs:{content:'CURRENT CASE PLAN (authoritative):\n'+currentPlan.raw}});
   }
   const assembled=context.systemRunnable?await context.systemRunnable.invoke(messages):messages;
   gateway.audit(req,'LLM_SURGERY','assembled_input',{messages:assembled,tools:context.toolDefinitions,agentId:"LLM_SURGERY"});

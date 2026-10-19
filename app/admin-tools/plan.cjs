@@ -20,14 +20,32 @@ function set(req, raw){
  req.__workflow.plan = {version:(req.__workflow.plan?.version||0)+1, raw, updatedAt:new Date().toISOString()};
  return req.__workflow.plan;
 }
+function getContent(m){
+ if(!m||typeof m!=='object')return null;
+ if(m.kwargs&&typeof m.kwargs.content==='string')return m.kwargs.content;
+ if(typeof m.content==='string')return m.content;
+ return null;
+}
+function setContent(m,v){
+ if(!m||typeof m!=='object')return;
+ if(m.kwargs&&typeof m.kwargs.content==='string'){m.kwargs.content=v;return;}
+ if(typeof m.content==='string'){m.content=v;}
+}
+function isInjectedPlan(m){
+ const c=getContent(m);
+ return typeof c==='string'&&c.startsWith('CURRENT CASE PLAN');
+}
 function stripMessages(messages){
  if(!Array.isArray(messages))return messages;
+ // Drop any previously injected plan SystemMessages, then strip [PLAN] blocks from remaining messages.
+ for(let i=messages.length-1;i>=0;i--){
+  if(isInjectedPlan(messages[i]))messages.splice(i,1);
+ }
  for(const m of messages){
-  if(!m||typeof m!=='object')continue;
-  if(typeof m.content==='string'){
-   const s = strip(m.content);
-   if(s!==m.content){ try{ m.content=s; }catch(_e){} }
-  }
+  const c=getContent(m);
+  if(c==null)continue;
+  const s=strip(c);
+  if(s!==c)setContent(m,s);
  }
  return messages;
 }

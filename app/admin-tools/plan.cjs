@@ -2,6 +2,12 @@
 // One live plan per triage. Stored in req.__workflow.plan.
 // Authoritative version = latest. Prior blocks are stripped from history.
 const TOKEN = '[PLAN]';
+function getMessageContent(msg){
+ if(!msg||typeof msg!=='object')return '';
+ if(typeof msg.content==='string')return msg.content;
+ if(msg.kwargs&&typeof msg.kwargs.content==='string')return msg.kwargs.content;
+ return '';
+}
 function extract(content){
  if(typeof content!=='string')return null;
  const i = content.indexOf(TOKEN);
@@ -49,4 +55,4 @@ function stripMessages(messages){
  }
  return messages;
 }
-module.exports = { TOKEN, extract, strip, get, set, stripMessages };
+module.exports = { TOKEN, extract, strip, get, set, stripMessages, getMessageContent };

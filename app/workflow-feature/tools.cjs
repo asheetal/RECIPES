@@ -165,10 +165,11 @@ function argumentError(a){
 }
 function repairResult(error){return [JSON.stringify({status:'invalid_arguments',retryable:true,error,instruction:'Correct the typed tool arguments and retry. No files were changed.'}),{}];}
 function planError(a,req){
- const prior=req?.__workflow?.plan;
- if(!prior)return null;
- if(!a.plan)return 'Missing required field: plan. Every tool call after your first must carry your current case plan in the plan field. See the LIVE CASE PLAN instruction.';
- const p=a.plan;
+ if(!req?.__workflow)return null;
+ let p=a.plan;
+ if(p===undefined||p===null)return 'Missing required field: plan. Every tool call (including your first) must carry your current case plan in the plan field. See the LIVE CASE PLAN instruction.';
+ if(typeof p==='string'){try{p=JSON.parse(p);a.plan=p;}catch(_e){return 'plan must be an object or a JSON-stringified object';}}
+ if(typeof p!=='object'||Array.isArray(p))return 'plan must be an object';
  if(typeof p.outputs!=='string'||!p.outputs.trim())return 'plan.outputs must be a non-empty string';
  if(!Array.isArray(p.steps)||!p.steps.length)return 'plan.steps must be a non-empty array';
  for(const st of p.steps){

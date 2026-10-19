@@ -154,6 +154,7 @@ async function complete(client,payload,opts,operate){
  const parts=result?.completion||client.contentParts||[];
  let lastTool=-1;parts.forEach((part,i)=>{if(part.type==='tool_call')lastTool=i;});
  let draft=parts.filter((part,i)=>part.type==='text'&&i>lastTool).map(p=>p.text||'').join('\n');
+ if(draft.trim()){try{draft=require('./plan.cjs').strip(draft);}catch(_e){}}
  if(draft.trim()){try{const _s=require('./json-contract.cjs').schemas.LLM_SURGERY;if(_s)draft=require('./json-contract.cjs').parse(draft,_s).text;}catch(_e){}}
  const errors=parts.filter(p=>p.type==='error');
  const files=(await Promise.allSettled(client.artifactPromises||[])).filter(x=>x.status==='fulfilled'&&x.value).map(x=>x.value);

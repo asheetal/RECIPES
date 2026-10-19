@@ -240,6 +240,21 @@ async function captureRun(client,run,messages){
  director.attach(req,run);
  for(const context of run.Graph.agentContexts.values()){
  gateway.configureContext(req,'LLM_SURGERY',context);
+  const scratchpad = 'SCRATCHPAD (mandatory): Before every tool call, write a block in your message content that begins with the literal token [PLAN]. Format:\n[PLAN]\nlearned: <one fact per line, what you have established this turn so far>\nnext: <what this specific tool call will establish>\nRules: (a) Before writing a new [PLAN] block, re-read every prior [PLAN] block and every prior tool result in this conversation. (b) Never list a fact already listed in a prior [PLAN] block. (c) Never call a tool whose result is already present in your prior [PLAN] blocks or tool results. (d) When your [PLAN] blocks already contain enough facts to complete a portion of the task, call edit_text on the target file instead of further querying.';
+  if(!String(context.instructions||'').includes('[PLAN]')){
+   context.instructions=[context.instructions,scratchpad].filter(Boolean).join('\n\n');
+   context.systemRunnableStale=true;
+   if(context.tokenCounter){
+    const prior=context.tokenCalculationPromise;
+    context.tokenCalculationPromise=(async()=>{
+     if(prior)await prior;
+     context.initializeSystemRunnable();
+     await context.calculateInstructionTokens(context.tokenCounter);
+     context.updateTokenMapWithInstructions(context.baseIndexTokenCountMap);
+    })();
+    await context.tokenCalculationPromise;
+   }
+  }
   const assembled=context.systemRunnable?await context.systemRunnable.invoke(messages):messages;
   gateway.audit(req,'LLM_SURGERY','assembled_input',{messages:assembled,tools:context.toolDefinitions,agentId:"LLM_SURGERY"});
  }

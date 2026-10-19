@@ -128,7 +128,8 @@ async function executeOPD(req,{conversation=[],handoff=null,signal}={}){
  const state=req.__workflow;
  if(state.opdCalls!==0)throw Error('OPD already called for this prompt');
  state.opdCalls=1;state.stage='LLM_OPD';
- const input={currentPrompt:req.body.text||'',clock:clock(),conversation,handoff};
+ const plan = require('./plan.cjs').get(req);
+ const input={currentPrompt:req.body.text||'',clock:clock(),conversation,handoff,...(plan && plan.raw ? {surgeonPlan:plan.raw} : {})};
  gateway.audit(req,'LLM_OPD','boundary_input',input);
  try{
   const out=await gateway.complete('LLM_OPD',[{role:'system',content:OPD},{role:'user',content:JSON.stringify(input)}],{ctx:req,signal,max_tokens:4096});
@@ -232,7 +233,7 @@ function wrapHandlers(req,handlers){
 }
 function modelCallbacks(req){return {
  handleChatModelStart(serialized,messages,runId,parentRunId,extra,tags,metadata){var compact=messages;try{compact=labApplyToolExtraction(messages);}catch(_e){}gateway.audit(req,'LLM_SURGERY','model_input',{serialized,messages:compact,runId,parentRunId,extra,tags,metadata});},
- handleLLMEnd(output,runId){gateway.audit(req,'LLM_SURGERY','model_output',{output,runId});},
+ handleLLMEnd(output,runId){gateway.audit(req,'LLM_SURGERY','model_output',{output,runId});try{const g=output?.generations?.[0]?.[0];const c=g?.message?.kwargs?.content||'';const raw=require('./plan.cjs').extract(c);if(raw)require('./plan.cjs').set(req,raw);}catch(_e){}},
  handleLLMError(error,runId){gateway.audit(req,'LLM_SURGERY','model_error',{name:error.name,code:error.code,message:error.message,runId});}
 };}
 async function captureRun(client,run,messages){
@@ -240,9 +241,9 @@ async function captureRun(client,run,messages){
  director.attach(req,run);
  for(const context of run.Graph.agentContexts.values()){
  gateway.configureContext(req,'LLM_SURGERY',context);
-  const scratchpad = 'SCRATCHPAD (mandatory): Before every tool call, write a block in your message content that begins with the literal token [PLAN]. Format:\n[PLAN]\nlearned: <one fact per line, what you have established this turn so far>\nnext: <what this specific tool call will establish>\nRules: (a) Before writing a new [PLAN] block, re-read every prior [PLAN] block and every prior tool result in this conversation. (b) Never list a fact already listed in a prior [PLAN] block. (c) Never call a tool whose result is already present in your prior [PLAN] blocks or tool results. (d) When your [PLAN] blocks already contain enough facts to complete a portion of the task, call edit_text on the target file instead of further querying.';
-  if(!String(context.instructions||'').includes('[PLAN]')){
-   context.instructions=[context.instructions,scratchpad].filter(Boolean).join('\n\n');
+  const planInstruction = 'LIVE CASE PLAN (mandatory). You are one surgeon working one case. The case has exactly one plan. Before every tool call, replace that plan with an updated version. Format:\n[PLAN]\noutputs: <the concrete artifacts this case must produce, in order>\nsteps:\n  \u2713 1. <completed step — what it established>\n  \u2610 2. <next evidence step — what it must establish>\n  \u2610 3. <write/edit step>\ncurrent: <step N, why this specific tool call serves it>\nchanged: <what changed since the last plan — or "no change">\n\nRules:\n- The plan replaces the previous plan. The latest version is authoritative. Older plans are history and are not shown to you again.\n- Completed steps carry \u2713 and name what they established. Do not re-do them.\n- You may revise steps at any time — say what changed and why. Silent deviation is forbidden.\n- When all evidence steps are \u2713, execute the write/edit step. Do not keep ordering tests after the diagnosis is complete.\n- The Director sees your plan when ERP presents your case at round expiry. A plan-less surgeon is overruled.';
+  if(!String(context.instructions||'').includes('LIVE CASE PLAN')){
+   context.instructions=[context.instructions,planInstruction].filter(Boolean).join('\n\n');
    context.systemRunnableStale=true;
    if(context.tokenCounter){
     const prior=context.tokenCalculationPromise;
@@ -254,6 +255,11 @@ async function captureRun(client,run,messages){
     })();
     await context.tokenCalculationPromise;
    }
+  }
+  require('./plan.cjs').stripMessages(messages);
+  const currentPlan = require('./plan.cjs').get(req);
+  if(currentPlan && currentPlan.raw){
+   messages.unshift({lc:1,type:'constructor',id:['langchain_core','messages','SystemMessage'],kwargs:{content:'CURRENT CASE PLAN (authoritative):\n'+currentPlan.raw}});
   }
   const assembled=context.systemRunnable?await context.systemRunnable.invoke(messages):messages;
   gateway.audit(req,'LLM_SURGERY','assembled_input',{messages:assembled,tools:context.toolDefinitions,agentId:"LLM_SURGERY"});

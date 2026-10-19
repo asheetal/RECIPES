@@ -128,9 +128,11 @@ async function review(req){
  if(s.steps.length<s.settings.uninterruptedIterations)return;
  abort(req);
  audit(req,'iteration_set_waiting',{set:s.set});
+ const plan = require('./plan.cjs').get(req);
  const ledger={
   taskContextForClerk:s.brief,set:s.set,
-  beginningState:s.beginning,iterationStates:s.steps
+  beginningState:s.beginning,iterationStates:s.steps,
+  ...(plan && plan.raw ? {surgeonPlan:plan.raw} : {})
  };
  gateway.audit(req,'LLM_ERP','progress_input',ledger);
  let report;

@@ -19,7 +19,7 @@ def read(p):
 def main(a):
  action=a.get('action')
  if action=='read_all':
-  names=a.get('names') or ([a['input']] if a.get('input') else None)
+  names=a.get('names') or ([a['input']] if a.get('input') else None) or ([a['name']] if a.get('name') else None)
   if names:
    big=[]
    for n in names:
@@ -45,7 +45,7 @@ def main(a):
    p=path(name);r=read(p);r.pop('text',None);result.append(r)
   return {'verified_files':result}
  if action in ('catalog','describe','query','fetch'):
-  names=a.get('names') or ([a['input']] if a.get('input') else [])
+  names=a.get('names') or ([a['input']] if a.get('input') else []) or ([a['name']] if a.get('name') else [])
   if not names: return {'error':action+' requires names=[<file>]','complete':False}
   p_=path(names[0])
   if not p_.is_file(): return {'error':'file not found: '+names[0],'complete':False}

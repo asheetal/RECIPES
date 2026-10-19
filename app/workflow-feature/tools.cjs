@@ -141,7 +141,7 @@ function normalizeTyped(raw){
   if(a&&typeof a==='object'&&!Array.isArray(a)&&a.request!==undefined){if(Object.keys(a).length!==1)throw Error('Do not combine request wrapper with other fields');a=typeof a.request==='string'?JSON.parse(a.request):a.request;}
   if(a&&typeof a.action==='string'&&a.action.trim().startsWith('{')){const inner=JSON.parse(a.action);for(const k of Object.keys(a))if(k!=='action'&&JSON.stringify(a[k])!==JSON.stringify(inner[k]))throw Error('Conflicting action wrapper');a=inner;}
   if(!a||typeof a!=='object'||Array.isArray(a))throw Error('Expected an object');
-  a={...a};for(const k of ['names','edits','plan'])if(typeof a[k]==='string')a[k]=JSON.parse(a[k]);
+  a={...a};for(const k of ['names','edits','plan']){if(typeof a[k]==='string'){try{a[k]=JSON.parse(a[k]);}catch(e){let s=a[k].trim();let rep=null;while(s.length>2){try{rep=JSON.parse(s);break;}catch(_){s=s.slice(0,-1).trim();}}if(rep)a[k]=rep;else console.error('[normalizeTyped-parse-fail]',k,e.message,'| len:',a[k].length,'| tail:',String(a[k]).slice(-100));}}}
   return a;
  }catch(e){return {__inputError:e.message};}
 }

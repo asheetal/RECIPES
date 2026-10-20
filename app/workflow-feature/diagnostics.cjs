@@ -19,9 +19,7 @@ function reads(req,data,reason){
   const old=st.reads.get(f.name);const n=old?.hash===f.sha256?old.n+1:1;
   st.reads.set(f.name,{hash:f.sha256,n});if(n>=3&&!reason)repeated.push(f.name);
  }
- if(repeated.length){log(req,'repeated_read',{count:repeated.length});data.workflow_notice='These unchanged files have already been returned in full repeatedly: '+repeated.join(', ')+'. Use the earlier content and perform the requested work. If context was lost or a targeted reread is necessary, repeat with reread_reason explaining why.';
-  data.files=data.files.map(f=>repeated.includes(f.name)?{name:f.name,sha256:f.sha256,already_read:true,text_omitted:true}:f);
- }
+ if(repeated.length){log(req,'repeated_read',{count:repeated.length,files:repeated});}
  return data;
 }
 function observe(bash,req){
@@ -43,10 +41,9 @@ function observe(bash,req){
  if((st.failures.get(key)||0)>=2){log(req,'repeated_failure_blocked',{call:n});const previous=st.failedResults.get(key);return Object.assign(Object.create(Object.getPrototypeOf(previous)),previous,{content:'WORKFLOW ERROR: This identical command has failed twice. Correct the command or use successful research_files results; do not repeat the same failure.',status:'error'});}
  log(req,'tool_start',{tool:'bash_tool',call:n,commandHash:key});
  try{const r=await invoke(...args),err=failure(r);st.sinceSave++;
- if(err){require('/app/crash-admin/runtime.cjs').report(req,'tool_failure',new Error(err),{tool:'bash_tool',call:n,command,output:text(r)},st.id+':tool:'+n);st.failures.set(key,(st.failures.get(key)||0)+1);st.failedResults.set(key,r);r.status='error';annotate(r,'Command failed ('+err+'). Successful transport is not successful execution. Use the error above to correct the next action.');}
+ if(err){require('/app/crash-admin/runtime.cjs').report(req,'tool_failure',new Error(err),{tool:'bash_tool',call:n,command,output:text(r)},st.id+':tool:'+n);st.failures.set(key,(st.failures.get(key)||0)+1);st.failedResults.set(key,r);r.status='error';}
  else {st.failures.delete(key);st.failedResults.delete(key);saved(req,r);}
  log(req,'tool_end',{tool:'bash_tool',call:n,elapsedMs:Date.now()-start,status:r.status==='error'?'error':'success',errorType:err});
- if(st.sinceSave>=6&&st.sinceSave%3===0)annotate(r,'No confirmed manuscript save in the last '+st.sinceSave+' tool calls. Reuse successful reads. For an editing request, apply the edit and deliver it; for research-only work continue necessary research. State any specific blocker instead of repeating inspection.');
  return r;
  }catch(e){require('/app/crash-admin/runtime.cjs').report(req,'tool_failure',e,{tool:'bash_tool',call:n,command},st.id+':tool:'+n);log(req,'tool_error',{call:n,elapsedMs:Date.now()-start,errorType:e?.name});throw e;}
  };
@@ -77,15 +74,6 @@ function timedConfig(config,req,requestSignal){
  return {...config,callbacks};
 }
 module.exports={state,log,failure,reads,saved,observe,timedConfig,markUserStop,isUserStop,abortDetails};
-function annotate(r,msg){
- if(!r||typeof r!=='object')return r;
- const h=require('/app/admin-tools/json-handshake.cjs');
- const receipt=h.receipt(r.content,r.artifact,r.name||'bash_tool',r.status);
- const value=receipt.result;
- receipt.result=value&&typeof value==='object'&&!Array.isArray(value)?{...value}:{value};
- receipt.result.workflow_notices=[...(Array.isArray(value?.workflow_notices)?value.workflow_notices:[]),msg];
- h.check(receipt);r.content=JSON.stringify(receipt);return r;
-}
 function saved(req,result){
  const h=require('/app/admin-tools/json-handshake.cjs');
  const receipt=h.receipt(result.content,result.artifact,result.name||'bash_tool',result.status);

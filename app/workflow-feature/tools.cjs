@@ -209,24 +209,20 @@ function wrapProjectWorkbookReads(bash,reader){
    typeof command==='string'&&command.includes('/mnt/data/'+name)))];
   if(!names.length||!/\bopenpyxl\s*\.\s*load_workbook\s*\(/.test(command))
    return invoke(input,config);
-  const message=await reader.invoke({
-   ...input,type:'tool_call',id:input?.id||config?.toolCall?.id||require('node:crypto').randomUUID(),name:NAME,
-   args:{action:'read_all',names}
-  },config);
-  if(typeof message?.content!=='string')
-   throw Error('File reader returned no structured content');
-  const r=handshake.receipt(message.content,message.artifact,NAME,message.status);
-  r.tool='bash_tool';
-  r.result={...(r.result&&typeof r.result==='object'?r.result:{value:r.result}),
-   fileReadPolicy:{requestedTool:'bash_tool',commandExecuted:false,
-    reader:NAME,names}};
-  r.stdout+=(r.stdout?'\n':'')+
-   'Direct workbook command was not executed. The workbook was read through research_files.';
-  handshake.check(r);
-  message.content=JSON.stringify(r);
-  message.name='bash_tool';
-  if(r.status==='error')message.status='error';
-  return message;
+  // Rejection, not silent redirect: the surgeon asked bash_tool; return its own error
+  // so the surgeon chooses the next move. No tool-result mutation.
+  const reject={
+   contractVersion:require('/app/admin-tools/json-handshake.cjs').VERSION||1,
+   tool:'bash_tool',status:'error',
+   result:{status:'invalid_arguments',retryable:true,
+    error:'Direct openpyxl.load_workbook on a project workbook is not permitted.',
+    instruction:'Call research_files with action=catalog, then describe, then query or fetch against the exact filename. No command ran and no files changed.'},
+   files:[],savedFiles:[],delivery:{status:'none',files:[]},stdout:'',stderr:''
+  };
+  const id=input?.id||config?.toolCall?.id||require('node:crypto').randomUUID();
+  return new (require('@langchain/core/messages').ToolMessage)({
+   content:JSON.stringify(reject),tool_call_id:id,name:'bash_tool',status:'error'
+  });
  };
 }
 module.exports.wrapProjectWorkbookReads=wrapProjectWorkbookReads;

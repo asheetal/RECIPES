@@ -26,8 +26,8 @@ services:
       EMAIL_FROM: ${EMAIL_FROM}
       EMAIL_FROM_NAME: Abhishek
       ALLOW_PASSWORD_RESET: 'true'
-      DOMAIN_CLIENT: https://tryfind.me/ai
-      DOMAIN_SERVER: https://tryfind.me/ai
+      DOMAIN_CLIENT: ${DOMAIN_CLIENT}
+      DOMAIN_SERVER: ${DOMAIN_SERVER}
       TZ: America/Los_Angeles
       OPENALEX_API_KEY: ${OPENALEX_API_KEY}
       NODE_OPTIONS: --require=/app/resource-usage/preload.cjs

@@ -226,7 +226,7 @@ function assertOutputFilenameAllowed(name: string): void {
     throw new EgressGrantError('malformed', 'Output filename must be canonical');
   }
   if (!isDirkeepName(name)) {
-    if (!isSupportedBridgeArtifactName(name)) {
+    if (!isSupportedBridgeArtifactName(name) && !new Set(['.bib','.bst','.cls','.sty','.bbl','.bbx','.cbx']).has(path.posix.extname(name).toLowerCase()) && path.posix.basename(name) !== 'Makefile') {
       throw new EgressGrantError('scope_mismatch', 'Output filename extension is not supported');
     }
   }

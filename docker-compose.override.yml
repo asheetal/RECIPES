@@ -16,7 +16,7 @@ services:
       OPENID_REUSE_TOKENS: ${OPENID_REUSE_TOKENS}
       RAG_API_URL: http://rag_api:8000
       REQUESTY_API_KEY: ${REQUESTY_API_KEY}
-      CUSTOM_FOOTER: Tryfind.Me - Online tools to work wherever you are
+      CUSTOM_FOOTER: RA.recipes - Let the assistant do the mundane tasks
       VERCEL_AI_GATEWAY_API_KEY: ${VERCEL_AI_GATEWAY_API_KEY}
       EMAIL_HOST: ${EMAIL_HOST}
       EMAIL_PORT: ${EMAIL_PORT}

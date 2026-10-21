@@ -1,5 +1,16 @@
 services:
   api:
+    restart: always
     environment:
       UPLOAD_LIMIT_WINDOW: "300000"
       UPLOAD_MAX_REQUESTS: "300"
+  service-worker:
+    restart: always
+  egress_gateway:
+    restart: always
+  tool_call_server:
+    restart: always
+  file_server:
+    restart: always
+  redis:
+    restart: always

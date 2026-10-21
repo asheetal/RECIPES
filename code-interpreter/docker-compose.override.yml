@@ -15,6 +15,6 @@ services:
   redis:
     restart: always
 volumes:
-  code-interpreter_garage_data:
+  garage_data:
     external: true
     name: code-interpreter_garage_data

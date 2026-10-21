@@ -61,7 +61,7 @@ services:
       target: /app/api/server/routes/memories.js
       read_only: true
     - type: bind
-      source: /home/sheetal/librechat/uploads
+      source: /var/lib/librechat/uploads
       target: /app/uploads
     - type: bind
       source: /home/sheetal/librechat-src/app/api/server/services/Endpoints/assistants/title.js

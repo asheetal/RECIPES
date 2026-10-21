@@ -1,0 +1,35 @@
+services:
+  api:
+    container_name: librechat
+    depends_on:
+    - mongodb
+    environment:
+    - HOST=0.0.0.0
+    - MONGO_URI=mongodb://mongodb:27017/LibreChat
+    - ENDPOINTS=google
+    - GOOGLE_KEY=AQ.Ab8RN6JcqmXKOZG2kZwrtTvxXQ0mymz54WOOn3jvslT2wfIiHA
+    - JWT_SECRET=1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef
+    - JWT_REFRESH_SECRET=abcdef1234567890abcdef1234567890abcdef1234567890abcdef
+    - CREDS_KEY=1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef
+    - CREDS_IV=1234567890abcdef1234567890abcdef
+    image: ghcr.io/danny-avila/librechat:latest
+    ports:
+    - 3080:3080
+    restart: always
+    volumes:
+    - ./librechat.yaml:/app/librechat.yaml
+  code_interpreter:
+    environment:
+    - PORT=8000
+    image: ghcr.io/danny-avila/librechat-code-interpreter:latest
+    networks:
+    - default
+    restart: always
+  mongodb:
+    container_name: ChatMongoDB
+    image: mongo:latest
+    restart: always
+    volumes:
+    - mongodb_data:/data/db
+volumes:
+  mongodb_data: null

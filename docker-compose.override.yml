@@ -1,0 +1,380 @@
+services:
+  api:
+    environment:
+      TAVILY_API_KEY: ${TAVILY_API_KEY}
+      NODE_ENV: production
+      LIBRECHAT_CODE_BASEURL: ${LIBRECHAT_CODE_BASEURL}
+      CODEAPI_AUTH_PROVIDER: ${CODEAPI_AUTH_PROVIDER}
+      CODEAPI_JWT_PRIVATE_JWK_JSON: ${CODEAPI_JWT_PRIVATE_JWK_JSON}
+      CODEAPI_JWT_KID: ${CODEAPI_JWT_KID}
+      CODEAPI_JWT_ALGORITHM: ${CODEAPI_JWT_ALGORITHM}
+      CODEAPI_JWT_ISSUER: ${CODEAPI_JWT_ISSUER}
+      CODEAPI_JWT_AUDIENCE: ${CODEAPI_JWT_AUDIENCE}
+      CODEAPI_JWT_TTL_SECONDS: ${CODEAPI_JWT_TTL_SECONDS}
+      CODEAPI_JWT_MINT_CACHE_SECONDS: ${CODEAPI_JWT_MINT_CACHE_SECONDS}
+      CODEAPI_JWT_SINGLE_TENANT_ID: ${CODEAPI_JWT_SINGLE_TENANT_ID}
+      OPENID_REUSE_TOKENS: ${OPENID_REUSE_TOKENS}
+      RAG_API_URL: http://rag_api:8000
+      REQUESTY_API_KEY: ${REQUESTY_API_KEY}
+      CUSTOM_FOOTER: Tryfind.Me - Online tools to work wherever you are
+      VERCEL_AI_GATEWAY_API_KEY: ${VERCEL_AI_GATEWAY_API_KEY}
+      EMAIL_HOST: ${EMAIL_HOST}
+      EMAIL_PORT: ${EMAIL_PORT}
+      EMAIL_ENCRYPTION: ${EMAIL_ENCRYPTION}
+      EMAIL_USERNAME: ${EMAIL_USERNAME}
+      EMAIL_PASSWORD: ${EMAIL_PASSWORD}
+      EMAIL_FROM: ${EMAIL_FROM}
+      EMAIL_FROM_NAME: Abhishek
+      ALLOW_PASSWORD_RESET: 'true'
+      DOMAIN_CLIENT: https://tryfind.me/ai
+      DOMAIN_SERVER: https://tryfind.me/ai
+      TZ: America/Los_Angeles
+      OPENALEX_API_KEY: ${OPENALEX_API_KEY}
+      NODE_OPTIONS: '--require=/app/resource-usage/preload.cjs'
+      PYTHONPATH: /app/pylibs
+      RESOURCE_USAGE_DIR: /app/resource-usage-data
+    depends_on:
+      - rag_api
+    volumes:
+      - /home/sheetal/librechat-src/app/librechat.yaml:/app/librechat.yaml:ro
+      - /home/sheetal/librechat/search-integration-fix-2WGee5oW/patched/policy.cjs:/app/workflow-feature/search-mode/policy.cjs:ro
+      - /home/sheetal/librechat/search-integration-fix-2WGee5oW/patched/flow.cjs:/app/workflow-feature/search-mode/flow.cjs:ro
+      - /home/sheetal/librechat-src/app/api/server/routes/files/multer.js:/app/api/server/routes/files/multer.js:ro
+      - /home/sheetal/librechat-src/app/api/server/routes/files/index.js:/app/api/server/routes/files/index.js:ro
+      - /home/sheetal/librechat-src/app/api/server/services/Files/process.js:/app/api/server/services/Files/process.js:ro
+      - type: bind
+        source: /home/sheetal/librechat-src/app/project-files-feature/project-files.cjs
+        target: /app/project-files-feature/project-files.cjs
+        read_only: true
+      - /home/sheetal/librechat-src/app/file-layer:/app/file-layer:ro
+      - /home/sheetal/librechat/tool-dedup-20261007T073902Z/init.cjs:/app/node_modules/@librechat/agents/dist/cjs/llm/init.cjs:ro
+      - type: bind
+        source: /home/sheetal/librechat-src/app/writing-instructions
+        target: /app/writing-instructions
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/api/server/routes/projects.js
+        target: /app/api/server/routes/projects.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/api/server/routes/memories.js
+        target: /app/api/server/routes/memories.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat/persistent-uploads-20261003T135617Z
+        target: /app/uploads
+      - type: bind
+        source: /home/sheetal/librechat-src/app/api/server/services/Endpoints/assistants/title.js
+        target: /app/api/server/services/Endpoints/assistants/title.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/server-time/clock.cjs
+        target: /app/server-time/clock.cjs
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/ra-tools
+        target: /app/ra-tools
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/word-passes
+        target: /app/word-passes
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/chat-progress
+        target: /app/chat-progress
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/api/server/routes/convos.js
+        target: /app/api/server/routes/convos.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/compression-admin
+        target: /app/compression-admin
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/compression-admin/settings
+        target: /app/compression-admin/settings
+        read_only: false
+      - type: bind
+        source: /home/sheetal/librechat-src/app/node_modules/@librechat/agents/dist/cjs/summarization/node.cjs
+        target: /app/node_modules/@librechat/agents/dist/cjs/summarization/node.cjs
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/friends
+        target: /app/friends
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/api/server/utils/emails
+        target: /app/api/server/utils/emails
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/api/server/routes/auth.js
+        target: /app/api/server/routes/auth.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/api/server/middleware/requireJwtAuth.js
+        target: /app/api/server/middleware/requireJwtAuth.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/api/server/middleware/requireLocalAuth.js
+        target: /app/api/server/middleware/requireLocalAuth.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/auto-memory-feature
+        target: /app/auto-memory-feature
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/admin-tools/cleanup.cjs
+        target: /app/admin-tools/cleanup.cjs
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/lab-research-tools
+        target: /app/lab-research-tools
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/project-files-feature
+        target: /app/project-files-feature
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/workflow-feature
+        target: /app/workflow-feature
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/api/server/services/ToolService.js
+        target: /app/api/server/services/ToolService.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/api/server/services/Files/Code/process.js
+        target: /app/api/server/services/Files/Code/process.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/node_modules/@librechat/agents/dist/cjs/utils/truncation.cjs
+        target: /app/node_modules/@librechat/agents/dist/cjs/utils/truncation.cjs
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/resource-usage
+        target: /app/resource-usage
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat/resource-usage-data
+        target: /app/resource-usage-data
+        read_only: false
+      - type: bind
+        source: /var/lib/tryfind-resource-status
+        target: /app/resource-host
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat/crash-reports
+        target: /app/crash-reports
+        read_only: false
+      - type: bind
+        source: /var/lib/tryfind-crash-host
+        target: /app/crash-host
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/api/server/index.js
+        target: /app/api/server/index.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/file-redeliver.cjs
+        target: /app/file-redeliver.cjs
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/api/server/middleware/abortMiddleware.js
+        target: /app/api/server/middleware/abortMiddleware.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/api/server/routes/agents/index.js
+        target: /app/api/server/routes/agents/index.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/project-files-feature/workflow-files.cjs
+        target: /app/project-files-feature/workflow-files.cjs
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/project-files-feature/core.cjs
+        target: /app/project-files-feature/core.cjs
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/api/server/services/Files/Code/crud.js
+        target: /app/api/server/services/Files/Code/crud.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/word-passes/tools.cjs
+        target: /app/word-passes/tools.cjs
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/workflow-feature/research_files.py
+        target: /app/workflow-feature/research_files.py
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/workflow-feature/diagnostics.cjs
+        target: /app/workflow-feature/diagnostics.cjs
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/node_modules/@librechat/agents/dist/cjs/messages/prune.cjs
+        target: /app/node_modules/@librechat/agents/dist/cjs/messages/prune.cjs
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/node_modules/@librechat/agents/dist/cjs/agents/AgentContext.cjs
+        target: /app/node_modules/@librechat/agents/dist/cjs/agents/AgentContext.cjs
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/node_modules/@langchain/openai/dist/converters/responses.cjs
+        target: /app/node_modules/@langchain/openai/dist/converters/responses.cjs
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/node_modules/@librechat/agents/dist/cjs/llm/openai/index.cjs
+        target: /app/node_modules/@librechat/agents/dist/cjs/llm/openai/index.cjs
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/node_modules/@librechat/agents/dist/cjs/messages/format.cjs
+        target: /app/node_modules/@librechat/agents/dist/cjs/messages/format.cjs
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/compression-admin/runtime.cjs
+        target: /app/compression-admin/runtime.cjs
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/auto-memory-feature/runtime.cjs
+        target: /app/auto-memory-feature/runtime.cjs
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/api/server/routes/agents/chat.js
+        target: /app/api/server/routes/agents/chat.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/api/server/controllers/agents/responses.js
+        target: /app/api/server/controllers/agents/responses.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/api/server/controllers/agents/request.js
+        target: /app/api/server/controllers/agents/request.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/api/server/controllers/agents/openai.js
+        target: /app/api/server/controllers/agents/openai.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/api/server/controllers/agents/callbacks.js
+        target: /app/api/server/controllers/agents/callbacks.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/api/server/services/Endpoints/agents/initialize.js
+        target: /app/api/server/services/Endpoints/agents/initialize.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat/layered-workflow-20261006T101935Z/private-prompt-dumps
+        target: /app/admin-tools/prompt-dumps
+        read_only: false
+      - type: bind
+        source: /home/sheetal/librechat-src/app/node_modules/@librechat/agents/dist/cjs/graphs/Graph.cjs
+        target: /app/node_modules/@librechat/agents/dist/cjs/graphs/Graph.cjs
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/api/server/controllers/agents/client.js
+        target: /app/api/server/controllers/agents/client.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/api/server/middleware/config/app.js
+        target: /app/api/server/middleware/config/app.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/api/server/services/Config/getEndpointsConfig.js
+        target: /app/api/server/services/Config/getEndpointsConfig.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/api/server/controllers/ModelController.js
+        target: /app/api/server/controllers/ModelController.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/project-files-feature/chat-files.cjs
+        target: /app/project-files-feature/chat-files.cjs
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/crash-admin
+        target: /app/crash-admin
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/usr/local/bin/file
+        target: /usr/local/bin/file
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/admin-tools/role-gateway.cjs
+        target: /app/admin-tools/role-gateway.cjs
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/admin-tools/director.cjs
+        target: /app/admin-tools/director.cjs
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/admin-tools/prompt-flow.cjs
+        target: /app/admin-tools/prompt-flow.cjs
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/workflow-feature/tools.cjs
+        target: /app/workflow-feature/tools.cjs
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/admin-tools/model-access.cjs
+        target: /app/admin-tools/model-access.cjs
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/admin-tools/llm-roles.cjs
+        target: /app/admin-tools/llm-roles.cjs
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat/pylibs
+        target: /app/pylibs
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/api/server/routes/messages.js
+        target: /app/api/server/routes/messages.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/api/app/clients/BaseClient.js
+        target: /app/api/app/clients/BaseClient.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/client/dist
+        target: /app/client/dist
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/admin-tools
+        target: /app/admin-tools
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/api/server/routes/admin/users.js
+        target: /app/api/server/routes/admin/users.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/api/server/controllers/UserController.js
+        target: /app/api/server/controllers/UserController.js
+        read_only: true
+      - type: bind
+        source: /home/sheetal/librechat-src/app/api/server/middleware/checkInviteUser.js
+        target: /app/api/server/middleware/checkInviteUser.js
+        read_only: true
+  rag_api:
+    image: ghcr.io/danny-avila/librechat-rag-api-dev:latest
+    environment:
+      - TAVILY_API_KEY=${TAVILY_API_KEY}
+      - DB_HOST=vectordb
+      - DB_PORT=5432
+      - POSTGRES_USER=rag_user
+      - POSTGRES_PASSWORD=rag_password_secure
+      - POSTGRES_DB=rag_db
+      - RAG_PORT=8000
+      - EMBEDDINGS_PROVIDER=huggingface
+      - VECTOR_DB_TYPE=pgvector
+    depends_on:
+      - vectordb
+    restart: always
+  vectordb:
+    image: pgvector/pgvector:pg16
+    environment:
+      - TAVILY_API_KEY=${TAVILY_API_KEY}
+      - POSTGRES_USER=rag_user
+      - POSTGRES_PASSWORD=rag_password_secure
+      - POSTGRES_DB=rag_db
+    restart: always

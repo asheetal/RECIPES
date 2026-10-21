@@ -382,4 +382,5 @@ services:
     - librechat_vectordb_data:/var/lib/postgresql/data
 volumes:
   librechat_vectordb_data:
+    external: true
     name: librechat_vectordb_data

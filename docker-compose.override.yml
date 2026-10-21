@@ -28,6 +28,7 @@ services:
       ALLOW_PASSWORD_RESET: 'true'
       DOMAIN_CLIENT: ${DOMAIN_CLIENT}
       DOMAIN_SERVER: ${DOMAIN_SERVER}
+      APP_TITLE: ${APP_TITLE}
       TZ: America/Los_Angeles
       OPENALEX_API_KEY: ${OPENALEX_API_KEY}
       NODE_OPTIONS: --require=/app/resource-usage/preload.cjs

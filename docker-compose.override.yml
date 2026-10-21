@@ -379,7 +379,9 @@ services:
     - POSTGRES_DB=rag_db
     restart: always
     volumes:
-    - librechat_vectordb_data:/var/lib/postgresql/data
+    - type: bind
+      source: /var/lib/librechat/vectordb
+      target: /var/lib/postgresql/data
 volumes:
   librechat_vectordb_data:
     external: true

@@ -31,6 +31,8 @@ services:
     image: mongo:latest
     restart: always
     volumes:
-    - mongodb_data:/data/db
+    - type: bind
+      source: /var/lib/librechat/mongodb
+      target: /data/db
 volumes:
   mongodb_data: null

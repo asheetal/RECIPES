@@ -1,0 +1,17 @@
+services:
+  egress_gateway:
+    volumes:
+      - type: bind
+        source: /home/sheetal/librechat/workflow-gateway-20261005T050102Z/egress-gateway.ts
+        target: /app/src/egress-gateway.ts
+        read_only: true
+  sandbox-runner:
+    volumes:
+      - type: bind
+        source: /home/sheetal/librechat/workflow-20261005T044049Z/sandbox-rootfs.img
+        target: /sandbox-rootfs.img
+        read_only: true
+  api:
+    environment:
+      UPLOAD_LIMIT_WINDOW: "300000"
+      UPLOAD_MAX_REQUESTS: "300"

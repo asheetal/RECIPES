@@ -37,8 +37,8 @@ services:
       - rag_api
     volumes:
       - /home/sheetal/librechat-src/app/librechat.yaml:/app/librechat.yaml:ro
-      - /home/sheetal/librechat/search-integration-fix-2WGee5oW/patched/policy.cjs:/app/workflow-feature/search-mode/policy.cjs:ro
-      - /home/sheetal/librechat/search-integration-fix-2WGee5oW/patched/flow.cjs:/app/workflow-feature/search-mode/flow.cjs:ro
+      - /home/sheetal/librechat-src/app/workflow-feature/search-mode/policy.cjs:/app/workflow-feature/search-mode/policy.cjs:ro
+      - /home/sheetal/librechat-src/app/workflow-feature/search-mode/flow.cjs:/app/workflow-feature/search-mode/flow.cjs:ro
       - /home/sheetal/librechat-src/app/api/server/routes/files/multer.js:/app/api/server/routes/files/multer.js:ro
       - /home/sheetal/librechat-src/app/api/server/routes/files/index.js:/app/api/server/routes/files/index.js:ro
       - /home/sheetal/librechat-src/app/api/server/services/Files/process.js:/app/api/server/services/Files/process.js:ro
@@ -47,7 +47,7 @@ services:
         target: /app/project-files-feature/project-files.cjs
         read_only: true
       - /home/sheetal/librechat-src/app/file-layer:/app/file-layer:ro
-      - /home/sheetal/librechat/tool-dedup-20261007T073902Z/init.cjs:/app/node_modules/@librechat/agents/dist/cjs/llm/init.cjs:ro
+      - /home/sheetal/librechat-src/app/node_modules/@librechat/agents/dist/cjs/llm/init.cjs:/app/node_modules/@librechat/agents/dist/cjs/llm/init.cjs:ro
       - type: bind
         source: /home/sheetal/librechat-src/app/writing-instructions
         target: /app/writing-instructions
@@ -61,7 +61,7 @@ services:
         target: /app/api/server/routes/memories.js
         read_only: true
       - type: bind
-        source: /home/sheetal/librechat/persistent-uploads-20261003T135617Z
+        source: /home/sheetal/librechat/uploads
         target: /app/uploads
       - type: bind
         source: /home/sheetal/librechat-src/app/api/server/services/Endpoints/assistants/title.js
@@ -264,7 +264,7 @@ services:
         target: /app/api/server/services/Endpoints/agents/initialize.js
         read_only: true
       - type: bind
-        source: /home/sheetal/librechat/layered-workflow-20261006T101935Z/private-prompt-dumps
+        source: /home/sheetal/librechat/prompt-dumps
         target: /app/admin-tools/prompt-dumps
         read_only: false
       - type: bind

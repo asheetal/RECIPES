@@ -1,6 +1,6 @@
 from pathlib import Path
 import subprocess,json,datetime,shutil,time,re,os,hashlib
-ROOT=Path('/home/sheetal/librechat');CODE=Path('/home/sheetal/code-interpreter');B=Path(__file__).resolve().parent
+ROOT=Path('/home/sheetal/librechat');CODE=Path('/home/sheetal/librechat-src/code-interpreter');B=Path(__file__).resolve().parent
 os.chdir(ROOT)
 def run(a,**kw):return subprocess.run(a,check=True,**kw)
 def out(a,**kw):return subprocess.check_output(a,text=True,**kw)

@@ -21,7 +21,8 @@ services:
   code_interpreter:
     environment:
     - PORT=8000
-    image: ghcr.io/danny-avila/librechat-code-interpreter:latest
+    image: python:3.11-slim
+    command: ["python","-m","http.server","8000"]
     networks:
     - default
     restart: always

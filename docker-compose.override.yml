@@ -156,7 +156,7 @@ services:
       target: /app/resource-usage
       read_only: true
     - type: bind
-      source: /home/sheetal/librechat/resource-usage-data
+      source: /var/log/librechat/resource-usage-data
       target: /app/resource-usage-data
       read_only: false
     - type: bind
@@ -164,7 +164,7 @@ services:
       target: /app/resource-host
       read_only: true
     - type: bind
-      source: /home/sheetal/librechat/crash-reports
+      source: /var/log/librechat/crash-reports
       target: /app/crash-reports
       read_only: false
     - type: bind
@@ -264,7 +264,7 @@ services:
       target: /app/api/server/services/Endpoints/agents/initialize.js
       read_only: true
     - type: bind
-      source: /home/sheetal/librechat/prompt-dumps
+      source: /var/log/librechat/prompt-dumps
       target: /app/admin-tools/prompt-dumps
       read_only: false
     - type: bind

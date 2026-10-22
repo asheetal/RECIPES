@@ -178,7 +178,9 @@ export default defineConfig(({ command }) => ({
       threshold: 10240,
     }),
   ],
-  publicDir: command === 'serve' ? './public' : false,
+  // Serve and build both use ./public. With publicDir disabled at build time,
+  // Workbox ran before the PWA icons existed and precached none of them.
+  publicDir: './public',
   build: {
     sourcemap: buildSourceMap,
     outDir: './dist',

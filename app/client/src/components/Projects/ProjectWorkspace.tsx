@@ -193,7 +193,7 @@ export default function ProjectWorkspace() {
         <section className="mt-8 flex min-h-0 flex-1 flex-col">
           <div className="mb-2 flex items-center justify-between gap-3">
             <h2 className="flex items-baseline gap-2 text-sm font-medium text-text-primary">
-              {localize('com_ui_chats')}
+              {localize('com_ui_recipe_outcomes')}
               <span className="text-text-secondary">{project.conversationCount}</span>
             </h2>
             <DropdownPopup

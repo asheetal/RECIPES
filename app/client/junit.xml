@@ -1,29 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="jest tests" tests="30" failures="0" errors="0" time="4.178">
-  <testsuite name="createChatSearchParams" errors="0" failures="0" skipped="0" timestamp="2026-10-22T02:51:45" time="3.451" tests="30">
-    <testcase classname="createChatSearchParams conversation inputs handles basic conversation properties" name="createChatSearchParams conversation inputs handles basic conversation properties" time="0.003">
+<testsuites name="jest tests" tests="39" failures="0" errors="0" time="33.007">
+  <testsuite name="createChatSearchParams" errors="0" failures="0" skipped="0" timestamp="2026-10-22T02:59:10" time="4.975" tests="30">
+    <testcase classname="createChatSearchParams conversation inputs handles basic conversation properties" name="createChatSearchParams conversation inputs handles basic conversation properties" time="0.008">
     </testcase>
     <testcase classname="createChatSearchParams conversation inputs applies only the endpoint property when other conversation fields are absent" name="createChatSearchParams conversation inputs applies only the endpoint property when other conversation fields are absent" time="0.001">
     </testcase>
-    <testcase classname="createChatSearchParams conversation inputs applies only the model property when other conversation fields are absent" name="createChatSearchParams conversation inputs applies only the model property when other conversation fields are absent" time="0.001">
+    <testcase classname="createChatSearchParams conversation inputs applies only the model property when other conversation fields are absent" name="createChatSearchParams conversation inputs applies only the model property when other conversation fields are absent" time="0.002">
     </testcase>
-    <testcase classname="createChatSearchParams conversation inputs includes assistant_id when endpoint is assistants" name="createChatSearchParams conversation inputs includes assistant_id when endpoint is assistants" time="0">
+    <testcase classname="createChatSearchParams conversation inputs includes assistant_id when endpoint is assistants" name="createChatSearchParams conversation inputs includes assistant_id when endpoint is assistants" time="0.001">
     </testcase>
-    <testcase classname="createChatSearchParams conversation inputs includes agent_id when endpoint is agents" name="createChatSearchParams conversation inputs includes agent_id when endpoint is agents" time="0">
+    <testcase classname="createChatSearchParams conversation inputs includes agent_id when endpoint is agents" name="createChatSearchParams conversation inputs includes agent_id when endpoint is agents" time="0.001">
     </testcase>
     <testcase classname="createChatSearchParams conversation inputs excludes all parameters except assistant_id when endpoint is assistants" name="createChatSearchParams conversation inputs excludes all parameters except assistant_id when endpoint is assistants" time="0.001">
     </testcase>
-    <testcase classname="createChatSearchParams conversation inputs excludes all parameters except agent_id when endpoint is agents" name="createChatSearchParams conversation inputs excludes all parameters except agent_id when endpoint is agents" time="0">
+    <testcase classname="createChatSearchParams conversation inputs excludes all parameters except agent_id when endpoint is agents" name="createChatSearchParams conversation inputs excludes all parameters except agent_id when endpoint is agents" time="0.001">
     </testcase>
     <testcase classname="createChatSearchParams conversation inputs returns empty params when agent endpoint has no agent_id" name="createChatSearchParams conversation inputs returns empty params when agent endpoint has no agent_id" time="0.001">
     </testcase>
-    <testcase classname="createChatSearchParams conversation inputs returns empty params when assistants endpoint has no assistant_id" name="createChatSearchParams conversation inputs returns empty params when assistants endpoint has no assistant_id" time="0">
+    <testcase classname="createChatSearchParams conversation inputs returns empty params when assistants endpoint has no assistant_id" name="createChatSearchParams conversation inputs returns empty params when assistants endpoint has no assistant_id" time="0.001">
     </testcase>
-    <testcase classname="createChatSearchParams conversation inputs ignores agent_id when it matches EPHEMERAL_AGENT_ID" name="createChatSearchParams conversation inputs ignores agent_id when it matches EPHEMERAL_AGENT_ID" time="0.011">
+    <testcase classname="createChatSearchParams conversation inputs ignores agent_id when it matches EPHEMERAL_AGENT_ID" name="createChatSearchParams conversation inputs ignores agent_id when it matches EPHEMERAL_AGENT_ID" time="0.001">
     </testcase>
     <testcase classname="createChatSearchParams conversation inputs handles stop arrays correctly by joining with commas" name="createChatSearchParams conversation inputs handles stop arrays correctly by joining with commas" time="0.001">
     </testcase>
-    <testcase classname="createChatSearchParams conversation inputs filters out non-supported array properties" name="createChatSearchParams conversation inputs filters out non-supported array properties" time="0">
+    <testcase classname="createChatSearchParams conversation inputs filters out non-supported array properties" name="createChatSearchParams conversation inputs filters out non-supported array properties" time="0.001">
     </testcase>
     <testcase classname="createChatSearchParams conversation inputs includes empty arrays in output params" name="createChatSearchParams conversation inputs includes empty arrays in output params" time="0">
     </testcase>
@@ -39,9 +39,9 @@
     </testcase>
     <testcase classname="createChatSearchParams preset inputs handles preset objects correctly" name="createChatSearchParams preset inputs handles preset objects correctly" time="0.001">
     </testcase>
-    <testcase classname="createChatSearchParams preset inputs never emits spec in the URL (security: model identity must not leak)" name="createChatSearchParams preset inputs never emits spec in the URL (security: model identity must not leak)" time="0">
+    <testcase classname="createChatSearchParams preset inputs never emits spec in the URL (security: model identity must not leak)" name="createChatSearchParams preset inputs never emits spec in the URL (security: model identity must not leak)" time="0.001">
     </testcase>
-    <testcase classname="createChatSearchParams preset inputs never emits spec for plain Record inputs" name="createChatSearchParams preset inputs never emits spec for plain Record inputs" time="0.001">
+    <testcase classname="createChatSearchParams preset inputs never emits spec for plain Record inputs" name="createChatSearchParams preset inputs never emits spec for plain Record inputs" time="0">
     </testcase>
     <testcase classname="createChatSearchParams record inputs includes allowed parameters from Record inputs" name="createChatSearchParams record inputs includes allowed parameters from Record inputs" time="0.001">
     </testcase>
@@ -51,15 +51,39 @@
     </testcase>
     <testcase classname="createChatSearchParams record inputs excludes null or undefined values from Record inputs" name="createChatSearchParams record inputs excludes null or undefined values from Record inputs" time="0.001">
     </testcase>
-    <testcase classname="createChatSearchParams record inputs handles generic object without endpoint or model properties" name="createChatSearchParams record inputs handles generic object without endpoint or model properties" time="0">
+    <testcase classname="createChatSearchParams record inputs handles generic object without endpoint or model properties" name="createChatSearchParams record inputs handles generic object without endpoint or model properties" time="0.001">
     </testcase>
     <testcase classname="createChatSearchParams edge cases returns an empty URLSearchParams instance when input is null" name="createChatSearchParams edge cases returns an empty URLSearchParams instance when input is null" time="0">
     </testcase>
-    <testcase classname="createChatSearchParams edge cases returns an empty URLSearchParams instance for an empty object input" name="createChatSearchParams edge cases returns an empty URLSearchParams instance for an empty object input" time="0">
+    <testcase classname="createChatSearchParams edge cases returns an empty URLSearchParams instance for an empty object input" name="createChatSearchParams edge cases returns an empty URLSearchParams instance for an empty object input" time="0.001">
     </testcase>
-    <testcase classname="createChatSearchParams processValidSettings (reader) ignores spec from the URL (security: model identity must not leak)" name="createChatSearchParams processValidSettings (reader) ignores spec from the URL (security: model identity must not leak)" time="0.001">
+    <testcase classname="createChatSearchParams processValidSettings (reader) ignores spec from the URL (security: model identity must not leak)" name="createChatSearchParams processValidSettings (reader) ignores spec from the URL (security: model identity must not leak)" time="0.002">
     </testcase>
     <testcase classname="createChatSearchParams processValidSettings (reader) still parses ordinary settings from the URL" name="createChatSearchParams processValidSettings (reader) still parses ordinary settings from the URL" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="useApplyNewAgentTemplate" errors="0" failures="0" skipped="0" timestamp="2026-10-22T02:59:10" time="5.459" tests="1">
+    <testcase classname="useApplyNewAgentTemplate applies an explicit ephemeral agent when optimistic hydration makes source and target match" name="useApplyNewAgentTemplate applies an explicit ephemeral agent when optimistic hydration makes source and target match" time="0.04">
+    </testcase>
+  </testsuite>
+  <testsuite name="PluginPagination" errors="0" failures="0" skipped="0" timestamp="2026-10-22T02:59:10" time="31.438" tests="5">
+    <testcase classname="PluginPagination should render the previous button as enabled when not on the first page" name="PluginPagination should render the previous button as enabled when not on the first page" time="0.413">
+    </testcase>
+    <testcase classname="PluginPagination should call onChangePage with the previous page number when the previous button is clicked" name="PluginPagination should call onChangePage with the previous page number when the previous button is clicked" time="0.071">
+    </testcase>
+    <testcase classname="PluginPagination should call onChangePage with the next page number when the next button is clicked" name="PluginPagination should call onChangePage with the next page number when the next button is clicked" time="0.02">
+    </testcase>
+    <testcase classname="PluginPagination should render the page numbers" name="PluginPagination should render the page numbers" time="0.01">
+    </testcase>
+    <testcase classname="PluginPagination should call onChangePage with the correct page number when a page number button is clicked" name="PluginPagination should call onChangePage with the correct page number when a page number button is clicked" time="0.018">
+    </testcase>
+  </testsuite>
+  <testsuite name="PluginAuthForm" errors="0" failures="0" skipped="0" timestamp="2026-10-22T02:59:10" time="31.532" tests="3">
+    <testcase classname="PluginAuthForm renders the form with the correct fields" name="PluginAuthForm renders the form with the correct fields" time="0.422">
+    </testcase>
+    <testcase classname="PluginAuthForm masks fields by default and renders non-sensitive fields as plain text" name="PluginAuthForm masks fields by default and renders non-sensitive fields as plain text" time="0.018">
+    </testcase>
+    <testcase classname="PluginAuthForm calls the onSubmit function with the form data when submitted" name="PluginAuthForm calls the onSubmit function with the form data when submitted" time="0.21">
     </testcase>
   </testsuite>
 </testsuites>

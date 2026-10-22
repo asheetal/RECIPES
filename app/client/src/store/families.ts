@@ -15,7 +15,6 @@ import type { EModelEndpoint, TConversation, TSubmission, TPreset } from 'librec
 import type { TOptionSettings, ExtendedFile } from '~/common';
 import {
   clearModelForNonEphemeralAgent,
-  createChatSearchParams,
   storeEndpointSettings,
   logger,
 } from '~/utils';
@@ -92,12 +91,16 @@ const conversationByIndex = atomFamily<TConversation | null, string | number>({
           (oldValue as TConversation)?.conversationId === Constants.NEW_CONVO;
 
         if (shouldUpdateParams) {
-          const newParams = createChatSearchParams(newValue);
+          // SECURITY: never serialize endpoint/model/tuning into the URL.
+          // Only the project scope is persisted; everything else is restored
+          // from localStorage (LAST_CONVO_SETUP) by the conversation store.
+          const newParams = new URLSearchParams();
           if (newValue.chatProjectId) {
             newParams.set('projectId', newValue.chatProjectId);
           }
           const searchParams = createSearchParams(newParams);
-          const url = `${window.location.pathname}?${searchParams.toString()}`;
+          const qs = searchParams.toString();
+          const url = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
           window.history.pushState({}, '', url);
         }
       });

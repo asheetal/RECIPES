@@ -49,7 +49,7 @@ const INLINE_CHAT_LIMIT = 8;
 const iconButtonClassName =
   'flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-text-secondary outline-none transition-colors hover:bg-surface-active-alt hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-black dark:focus-visible:ring-white';
 
-function ProjectRenameDialog({
+export function ProjectRenameDialog({
   open,
   onOpenChange,
   project,
@@ -129,7 +129,7 @@ function ProjectRenameDialog({
   );
 }
 
-function ProjectDeleteDialog({
+export function ProjectDeleteDialog({
   open,
   onOpenChange,
   project,

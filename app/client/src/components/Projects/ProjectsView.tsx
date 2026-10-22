@@ -2,13 +2,17 @@ import { serverLocaleDate } from '~/utils/serverTime';
 import { useDeferredValue, useEffect, useId, useMemo, useState } from 'react';
 import * as Ariakit from '@ariakit/react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowUpDown, Check, Folder, Plus, Search } from 'lucide-react';
+import { ArrowUpDown, Check, Ellipsis, Folder, Plus, Search } from 'lucide-react';
 import { Input, Button, Spinner, DropdownPopup, useMediaQuery } from '@librechat/client';
 import type { TChatProject } from 'librechat-data-provider';
 import type { MenuItemProps, RenderProp } from '~/common';
 import OpenSidebar from '~/components/Chat/Menus/OpenSidebar';
 import { useProjectsInfiniteQuery } from '~/data-provider';
 import ProjectCreateDialog from './ProjectCreateDialog';
+import {
+  ProjectRenameDialog,
+  ProjectDeleteDialog,
+} from '~/components/Conversations/ProjectsSection';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
@@ -39,6 +43,119 @@ function formatActivity(project: TChatProject) {
     return null;
   }
   return serverLocaleDate(date, undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function ProjectTile({
+  project,
+  activity,
+  onOpen,
+}: {
+  project: TChatProject;
+  activity: string | null;
+  onOpen: () => void;
+}) {
+  const localize = useLocalize();
+  const menuId = useId();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isRenameOpen, setIsRenameOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+
+  const menuItems = useMemo<MenuItemProps[]>(
+    () => [
+      {
+        id: 'rename',
+        label: localize('com_ui_rename'),
+        icon: null,
+        onClick: () => setIsRenameOpen(true),
+      },
+      {
+        id: 'delete',
+        label: localize('com_ui_delete'),
+        icon: null,
+        onClick: () => setIsDeleteOpen(true),
+      },
+    ],
+    [localize],
+  );
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onOpen();
+        }
+      }}
+      className={cn(
+        'group/project relative flex min-h-[8.5rem] cursor-pointer flex-col rounded-xl border border-border-medium bg-surface-secondary p-4 text-left transition-colors',
+        'hover:border-border-heavy hover:bg-surface-tertiary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary',
+      )}
+    >
+      <span className="flex min-w-0 items-center gap-2 pr-8">
+        <Folder className="h-4 w-4 shrink-0 text-text-secondary" aria-hidden="true" />
+        <span className="truncate text-base font-semibold text-text-primary">{project.name}</span>
+      </span>
+
+      <div
+        className="absolute right-2 top-2"
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.stopPropagation()}
+      >
+        <DropdownPopup
+          portal={true}
+          focusLoop={true}
+          unmountOnHide={true}
+          menuId={menuId}
+          isOpen={isMenuOpen}
+          setIsOpen={setIsMenuOpen}
+          className="z-[125] min-w-40"
+          iconClassName="mr-2 text-text-secondary"
+          trigger={
+            <Ariakit.MenuButton
+              aria-label={localize('com_ui_more_options')}
+              className={cn(
+                'flex h-8 w-8 items-center justify-center rounded-lg text-text-secondary transition-colors',
+                'hover:bg-surface-hover hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary',
+                isMenuOpen && 'bg-surface-active-alt text-text-primary',
+              )}
+            >
+              <Ellipsis className="h-4 w-4" aria-hidden="true" />
+            </Ariakit.MenuButton>
+          }
+          items={menuItems}
+        />
+      </div>
+
+      {project.description ? (
+        <span className="mt-2 line-clamp-2 text-sm leading-relaxed text-text-secondary">
+          {project.description}
+        </span>
+      ) : null}
+
+      <span className="mt-auto flex items-center justify-between gap-2 pt-4 text-xs text-text-secondary">
+        <span>
+          {project.conversationCount === 1
+            ? localize('com_ui_project_chat_count_single')
+            : localize('com_ui_project_chat_count', { count: project.conversationCount })}
+        </span>
+        {activity ? <span className="shrink-0 truncate">{activity}</span> : null}
+      </span>
+
+      <ProjectRenameDialog
+        open={isRenameOpen}
+        onOpenChange={setIsRenameOpen}
+        project={project}
+      />
+      <ProjectDeleteDialog
+        open={isDeleteOpen}
+        onOpenChange={setIsDeleteOpen}
+        project={project}
+      />
+    </div>
+  );
 }
 
 export default function ProjectsView() {
@@ -183,42 +300,14 @@ export default function ProjectsView() {
           </div>
         ) : (
           <div className="grid gap-3 md:grid-cols-2 md:gap-4">
-            {projects.map((project) => {
-              const activity = formatActivity(project);
-              return (
-                <button
-                  key={project._id}
-                  type="button"
-                  className={cn(
-                    'group/project flex min-h-[8.5rem] flex-col rounded-xl border border-border-medium bg-surface-secondary p-4 text-left transition-colors',
-                    'hover:border-border-heavy hover:bg-surface-tertiary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary',
-                  )}
-                  onClick={() => navigate(`/projects/${project._id}`)}
-                >
-                  <span className="flex min-w-0 items-center gap-2">
-                    <Folder className="h-4 w-4 shrink-0 text-text-secondary" aria-hidden="true" />
-                    <span className="truncate text-base font-semibold text-text-primary">
-                      {project.name}
-                    </span>
-                  </span>
-                  {project.description ? (
-                    <span className="mt-2 line-clamp-2 text-sm leading-relaxed text-text-secondary">
-                      {project.description}
-                    </span>
-                  ) : null}
-                  <span className="mt-auto flex items-center justify-between gap-2 pt-4 text-xs text-text-secondary">
-                    <span>
-                      {project.conversationCount === 1
-                        ? localize('com_ui_project_chat_count_single')
-                        : localize('com_ui_project_chat_count', {
-                            count: project.conversationCount,
-                          })}
-                    </span>
-                    {activity ? <span className="shrink-0 truncate">{activity}</span> : null}
-                  </span>
-                </button>
-              );
-            })}
+            {projects.map((project) => (
+              <ProjectTile
+                key={project._id}
+                project={project}
+                activity={formatActivity(project)}
+                onOpen={() => navigate(`/projects/${project._id}`)}
+              />
+            ))}
           </div>
         )}
 

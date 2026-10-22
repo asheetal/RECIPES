@@ -1,0 +1,133 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for src/components/UnifiedSidebar/CompressionSettings.tsx</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../../prettify.css" />
+    <link rel="stylesheet" href="../../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../../index.html">All files</a> / <a href="index.html">src/components/UnifiedSidebar</a> CompressionSettings.tsx</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>0/32</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/15</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/9</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>0/8</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import React,{useEffect,useState} from 'react';
+import {Button} from '@librechat/client';
+import {request,apiBaseUrl} from 'librechat-data-provider';
+type Policy={triggerMode:'tokens';triggerValue:number;targetRatio:number;revision:number};
+const url=<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >()</span>=&gt;<span class="cstat-no" title="statement not covered" >`${apiBaseUrl()}/api/admin/users/compression`;</span></span>
+export default function <span class="fstat-no" title="function not covered" >CompressionSettings(</span>){
+ const [policy,setPolicy]=<span class="cstat-no" title="statement not covered" >useState&lt;Policy|null&gt;(null),</span>[trigger,setTrigger]=<span class="cstat-no" title="statement not covered" >useState(''),</span>[target,setTarget]=<span class="cstat-no" title="statement not covered" >useState(''),</span>[busy,setBusy]=<span class="cstat-no" title="statement not covered" >useState(false),</span>[message,setMessage]=<span class="cstat-no" title="statement not covered" >useState('');</span>
+<span class="cstat-no" title="statement not covered" > useEffect(<span class="fstat-no" title="function not covered" >()</span>=&gt;{let active=<span class="cstat-no" title="statement not covered" >true;<span class="cstat-no" title="statement not covered" ></span>request.get&lt;Policy&gt;(url()).then(<span class="fstat-no" title="function not covered" >p=</span>&gt;{<span class="cstat-no" title="statement not covered" >if(active){<span class="cstat-no" title="statement not covered" >setPolicy(p);<span class="cstat-no" title="statement not covered" >s</span>etTrigger(String(p.triggerValue/1000));<span class="cstat-no" title="statement not covered" >s</span>etTarget(String(p.targetRatio));}</span>}</span>).catch(<span class="fstat-no" title="function not covered" >()</span>=&gt;{<span class="cstat-no" title="statement not covered" >if(active)<span class="cstat-no" title="statement not covered" >setMessage('Could not load compression settings.');}</span></span>);<span class="cstat-no" title="statement not covered" >r</span>eturn<span class="fstat-no" title="function not covered" >()</span>=&gt;{<span class="cstat-no" title="statement not covered" >active=false;}</span>;}</span>,[]);</span>
+ async function <span class="fstat-no" title="function not covered" >save(</span>){<span class="cstat-no" title="statement not covered" >if(!policy)<span class="cstat-no" title="statement not covered" >return;<span class="cstat-no" title="statement not covered" >s</span></span>etBusy(true);<span class="cstat-no" title="statement not covered" >s</span>etMessage('');<span class="cstat-no" title="statement not covered" >t</span>ry{const p=<span class="cstat-no" title="statement not covered" >await request.post(url(),{...policy,triggerValue:Math.round(Number(trigger)*1000),targetRatio:Number(target)});<span class="cstat-no" title="statement not covered" ></span>setPolicy(p);<span class="cstat-no" title="statement not covered" >s</span>etMessage('Saved. Applies from the next message.');}</span>catch(e:any){<span class="cstat-no" title="statement not covered" >setMessage(e?.response?.data?.message||'Could not save settings.');}</span>finally{<span class="cstat-no" title="statement not covered" >setBusy(false);}</span>}</span>
+ const field=<span class="cstat-no" title="statement not covered" >'w-full rounded-lg border border-border-medium bg-surface-primary px-3 py-2 text-text-primary';</span>
+<span class="cstat-no" title="statement not covered" > return &lt;section className="mt-5 space-y-2 border-t border-border-light pt-3"&gt;&lt;h3 className="font-semibold"&gt;Chat compression&lt;/h3&gt;{policy&amp;&amp;&lt;&gt;</span>
+ &lt;label htmlFor="compression-trigger" className="block text-sm"&gt;Compression trigger&lt;/label&gt;&lt;div className="flex items-center gap-2"&gt;&lt;input id="compression-trigger" type="number" className={field} value={trigger} onChange={<span class="fstat-no" title="function not covered" >e=</span>&gt;<span class="cstat-no" title="statement not covered" >setTrigger(e.target.value)}</span> disabled={busy} min="1" max="10000" step="0.001"/&gt;&lt;span className="shrink-0"&gt;K tokens&lt;/span&gt;&lt;/div&gt;
+ &lt;label htmlFor="compression-target" className="block text-sm"&gt;Compression ratio of the chat&lt;/label&gt;&lt;input id="compression-target" type="number" min="0.01" max="0.99" step="0.01" className={field} value={target} onChange={<span class="fstat-no" title="function not covered" >e=</span>&gt;<span class="cstat-no" title="statement not covered" >setTarget(e.target.value)}</span> disabled={busy}/&gt;
+ &lt;p className="text-xs text-text-secondary"&gt;A ratio of 0.5 compresses a 510K chat to approximately 255K. Instructions and the latest turn are preserved.&lt;/p&gt;
+ &lt;Button onClick={save} disabled={busy||!trigger||!target}&gt;Save compression settings&lt;/Button&gt;&lt;/&gt;}{message&amp;&amp;&lt;p role="status" className="text-sm"&gt;{message}&lt;/p&gt;}&lt;/section&gt;;
+}
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-10-22T02:45:06.856Z
+            </div>
+        <script src="../../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../../sorter.js"></script>
+        <script src="../../../block-navigation.js"></script>
+    </body>
+</html>
+    

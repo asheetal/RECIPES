@@ -1,0 +1,265 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for src/components/SidePanel/Memories/MemoryPanel.tsx</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../../../prettify.css" />
+    <link rel="stylesheet" href="../../../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../../../index.html">All files</a> / <a href="index.html">src/components/SidePanel/Memories</a> MemoryPanel.tsx</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>0/33</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/23</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/13</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>0/27</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a>
+<a name='L56'></a><a href='#L56'>56</a>
+<a name='L57'></a><a href='#L57'>57</a>
+<a name='L58'></a><a href='#L58'>58</a>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a>
+<a name='L61'></a><a href='#L61'>61</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { serverLocale } from '~/utils/serverTime';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { request, apiBaseUrl, QueryKeys } from 'librechat-data-provider';
+import { Button, Spinner } from '@librechat/client';
+import { useAuthContext } from '~/hooks';
+&nbsp;
+type Entry = { key: string; value: string; updated_at: string };
+type MemoryState = { memories: Entry[]; enabled: boolean; resetAt: number };
+const root = <span class="cstat-no" title="statement not covered" >`${apiBaseUrl().replace(/\/$/, '')}/api/memories`;</span>
+export default function <span class="fstat-no" title="function not covered" >MemoryPanel(</span>) {
+  const { user } = <span class="cstat-no" title="statement not covered" >useAuthContext();</span>
+  const cache = <span class="cstat-no" title="statement not covered" >useQueryClient();</span>
+  const queryKey = <span class="cstat-no" title="statement not covered" >['lab-user-memory', user?.id];</span>
+  const { data, isLoading, isError } = <span class="cstat-no" title="statement not covered" >useQuery&lt;MemoryState&gt;(queryKey,</span>
+<span class="fstat-no" title="function not covered" >    ()</span> =&gt; <span class="cstat-no" title="statement not covered" >request.get&lt;MemoryState&gt;(root),</span> { enabled: !!user, refetchInterval: 5000 });
+  const [busy, setBusy] = <span class="cstat-no" title="statement not covered" >useState(false);</span>
+  const [error, setError] = <span class="cstat-no" title="statement not covered" >useState('');</span>
+  const [editing, setEditing] = <span class="cstat-no" title="statement not covered" >useState&lt;string | null&gt;(null);</span>
+  const [value, setValue] = <span class="cstat-no" title="statement not covered" >useState('');</span>
+  async function <span class="fstat-no" title="function not covered" >act(</span>fn: () =&gt; Promise&lt;unknown&gt;) {
+<span class="cstat-no" title="statement not covered" >    setBusy(true); <span class="cstat-no" title="statement not covered" ></span>setError('');</span>
+<span class="cstat-no" title="statement not covered" >    try {</span>
+<span class="cstat-no" title="statement not covered" >      await fn(); <span class="cstat-no" title="statement not covered" ></span>setEditing(null);</span>
+<span class="cstat-no" title="statement not covered" >      await cache.invalidateQueries(queryKey);</span>
+<span class="cstat-no" title="statement not covered" >      await cache.invalidateQueries([QueryKeys.user]);</span>
+    } catch { <span class="cstat-no" title="statement not covered" >setError('Could not save the change. Please retry.'); </span>}
+    finally { <span class="cstat-no" title="statement not covered" >setBusy(false); </span>}
+  }
+<span class="cstat-no" title="statement not covered" >  return &lt;section className="space-y-3 p-3 text-text-primary" aria-label="My persona" data-testid="my-memory-panel"&gt;</span>
+    &lt;p className="text-sm text-text-secondary"&gt;View, edit or delete your lasting preferences and personal details.&lt;/p&gt;
+    {isLoading &amp;&amp; &lt;Spinner /&gt;}
+    {(error || isError) &amp;&amp; &lt;p role="alert" className="text-sm"&gt;{error || 'Could not load persona. Please retry.'}&lt;/p&gt;}
+    {data &amp;&amp; &lt;&gt;
+      &lt;Button variant="outline" disabled={busy} onClick={<span class="fstat-no" title="function not covered" >()</span> =&gt; {
+<span class="cstat-no" title="statement not covered" >        if(window.confirm('Delete your persona and learned patterns? Learning restarts from new messages only. Your chats and files stay intact.'))</span>
+<span class="cstat-no" title="statement not covered" >          void act(<span class="fstat-no" title="function not covered" >()</span> =&gt; <span class="cstat-no" title="statement not covered" >request.post(`${root}/reset`, {}))</span>;</span>
+      }}&gt;Delete all and start fresh&lt;/Button&gt;
+      {data.resetAt &gt; 0 &amp;&amp; &lt;p className="text-xs text-text-secondary"&gt;Fresh learning started {serverLocale(new Date(data.resetAt))}. Older messages will not be re-read.&lt;/p&gt;}
+      {data.memories.length===0 &amp;&amp; &lt;p className="text-sm"&gt;No persona preferences saved yet. Lasting preferences appear here automatically.&lt;/p&gt;}
+      {data.memories.map(<span class="fstat-no" title="function not covered" >e=</span>&gt;
+<span class="cstat-no" title="statement not covered" >        &lt;article key={e.key} className="space-y-2 rounded border border-border-light p-3"&gt;</span>
+          {editing===e.key ? &lt;label className="block text-sm"&gt;Edit persona
+            &lt;textarea className="mt-1 w-full rounded bg-surface-primary p-2" maxLength={600}
+              value={value} onChange={<span class="fstat-no" title="function not covered" >ev</span>ent=&gt;<span class="cstat-no" title="statement not covered" >setValue(event.target.value)}</span> /&gt;
+          &lt;/label&gt; : &lt;p className="whitespace-pre-wrap text-sm"&gt;{e.value}&lt;/p&gt;}
+          &lt;div className="flex flex-wrap gap-2"&gt;
+            {editing===e.key ? &lt;&gt;
+              &lt;Button size="sm" disabled={busy||!value.trim()} onClick={<span class="fstat-no" title="function not covered" >()</span>=&gt;<span class="cstat-no" title="statement not covered" >act(<span class="fstat-no" title="function not covered" >()</span>=&gt;<span class="cstat-no" title="statement not covered" >request.patch(`${root}/${encodeURIComponent(e.key)}`,{value}))</span>}</span>&gt;Save&lt;/Button&gt;
+              &lt;Button size="sm" variant="outline" disabled={busy} onClick={<span class="fstat-no" title="function not covered" >()</span>=&gt;<span class="cstat-no" title="statement not covered" >setEditing(null)}</span>&gt;Cancel&lt;/Button&gt;
+            &lt;/&gt; : &lt;Button size="sm" variant="outline" disabled={busy} onClick={<span class="fstat-no" title="function not covered" >()</span>=&gt;{<span class="cstat-no" title="statement not covered" >setEditing(e.key);<span class="cstat-no" title="statement not covered" >s</span>etValue(e.value);}</span>}&gt;Edit&lt;/Button&gt;}
+            &lt;Button size="sm" variant="outline" disabled={busy} onClick={<span class="fstat-no" title="function not covered" >()</span>=&gt;{
+<span class="cstat-no" title="statement not covered" >              if(window.confirm('Delete this persona entry? This entry will not be learned again until you start fresh.'))</span>
+<span class="cstat-no" title="statement not covered" >                void act(<span class="fstat-no" title="function not covered" >()</span>=&gt;<span class="cstat-no" title="statement not covered" >request.delete(`${root}/${encodeURIComponent(e.key)}`))</span>;</span>
+            }}&gt;Delete&lt;/Button&gt;
+          &lt;/div&gt;
+        &lt;/article&gt;)}
+    &lt;/&gt;}
+  &lt;/section&gt;;
+}
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-10-22T02:45:06.856Z
+            </div>
+        <script src="../../../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../../../sorter.js"></script>
+        <script src="../../../../block-navigation.js"></script>
+    </body>
+</html>
+    

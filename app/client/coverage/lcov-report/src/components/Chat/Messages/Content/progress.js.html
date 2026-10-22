@@ -1,0 +1,340 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for src/components/Chat/Messages/Content/progress.js</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../../../../prettify.css" />
+    <link rel="stylesheet" href="../../../../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../../../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../../../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../../../../index.html">All files</a> / <a href="index.html">src/components/Chat/Messages/Content</a> progress.js</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>0/117</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/162</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/37</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>0/63</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a>
+<a name='L56'></a><a href='#L56'>56</a>
+<a name='L57'></a><a href='#L57'>57</a>
+<a name='L58'></a><a href='#L58'>58</a>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a>
+<a name='L61'></a><a href='#L61'>61</a>
+<a name='L62'></a><a href='#L62'>62</a>
+<a name='L63'></a><a href='#L63'>63</a>
+<a name='L64'></a><a href='#L64'>64</a>
+<a name='L65'></a><a href='#L65'>65</a>
+<a name='L66'></a><a href='#L66'>66</a>
+<a name='L67'></a><a href='#L67'>67</a>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a>
+<a name='L78'></a><a href='#L78'>78</a>
+<a name='L79'></a><a href='#L79'>79</a>
+<a name='L80'></a><a href='#L80'>80</a>
+<a name='L81'></a><a href='#L81'>81</a>
+<a name='L82'></a><a href='#L82'>82</a>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a>
+<a name='L86'></a><a href='#L86'>86</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import {toolArgs, selectDeliverables, cleanDeliveryText} from './delivery';
+export function <span class="fstat-no" title="function not covered" >textOf(</span>p) { <span class="cstat-no" title="statement not covered" >return typeof p?.text === 'string' ? p.text : p?.text?.value || ''; </span>}
+const argsOf = <span class="cstat-no" title="statement not covered" >toolArgs;</span>
+function <span class="fstat-no" title="function not covered" >outputOf(</span>t) {<span class="cstat-no" title="statement not covered" >return typeof t.output==='string'?t.output:JSON.stringify(t.output??'');}</span>
+export function <span class="fstat-no" title="function not covered" >toolProblem(</span>t) {
+<span class="cstat-no" title="statement not covered" > if(['error','failed'].includes(t.status)||t.isError===true)<span class="cstat-no" title="statement not covered" >return true;</span></span>
+ const s=<span class="cstat-no" title="statement not covered" >outputOf(t);</span>
+<span class="cstat-no" title="statement not covered" > if(t.name==='research_files'&amp;&amp;argsOf(t).action==='read_all'){</span>
+<span class="cstat-no" title="statement not covered" >  try {const v=<span class="cstat-no" title="statement not covered" >JSON.parse(s);<span class="cstat-no" title="statement not covered" ></span>return Boolean(v.error)||v.complete===false||(v.files||[]).some(<span class="fstat-no" title="function not covered" >f=</span>&gt;<span class="cstat-no" title="statement not covered" >f.error)</span>;}</span>catch{<span class="cstat-no" title="statement not covered" >return true;}</span></span>
+ }
+ // Source-code text can itself contain error strings; it is not an execution result.
+<span class="cstat-no" title="statement not covered" > if(t.name==='project_files'&amp;&amp;argsOf(t).action==='read'){</span>
+<span class="cstat-no" title="statement not covered" >  try{const v=<span class="cstat-no" title="statement not covered" >JSON.parse(s);<span class="cstat-no" title="statement not covered" ></span>if(typeof v.content==='string'&amp;&amp;!v.error)<span class="cstat-no" title="statement not covered" >return false;}</span></span>catch{}</span>
+ }
+<span class="cstat-no" title="statement not covered" > if(/Traceback \(most recent call last\)|\[sandbox\] stdout length exceeded|^Error:|^.*HTTP (?:4\d\d|5\d\d)\b/m.test(s))<span class="cstat-no" title="statement not covered" >return true;</span></span>
+ // Never scan manuscript prose for error/partial keywords.
+<span class="cstat-no" title="statement not covered" > if(t.name==='manuscript_word'&amp;&amp;argsOf(t).action==='read')<span class="cstat-no" title="statement not covered" >return false;</span></span>
+<span class="cstat-no" title="statement not covered" > try{</span>
+  const v=<span class="cstat-no" title="statement not covered" >JSON.parse(s.replace(/^stdout:\s*/, '').split(/\n\s*(?:Generated files:|stderr:)/)[0].trim());</span>
+<span class="cstat-no" title="statement not covered" >  return Boolean(v.error)||v.status==='partial'||v.status==='error'||v.status==='failed'||v.rejected_edits?.length&gt;0;</span>
+ }catch{<span class="cstat-no" title="statement not covered" >return /^\s*(?:Error|ValueError|RuntimeError|PermissionError):/m.test(s)||/"status"\s*:\s*"partial"/.test(s);}</span>
+}
+function <span class="fstat-no" title="function not covered" >label(</span>t) {
+ const a=<span class="cstat-no" title="statement not covered" >argsOf(t),</span>name=<span class="cstat-no" title="statement not covered" >t.name||'';</span>
+<span class="cstat-no" title="statement not covered" > if(name==='research_files')<span class="cstat-no" title="statement not covered" >return a.action==='read_all'?'Reading research files…':a.action==='verify'?'Checking deliverables…':'Revising manuscript…';</span></span>
+<span class="cstat-no" title="statement not covered" > if(name==='manuscript_word'){</span>
+<span class="cstat-no" title="statement not covered" >  if(a.action==='apply')<span class="cstat-no" title="statement not covered" >return 'Applying tracked edits…';</span></span>
+<span class="cstat-no" title="statement not covered" >  if(a.action==='read')<span class="cstat-no" title="statement not covered" >return /pass\d|copyedit|revised|_final/i.test(a.input||'')?'Checking revised document…':'Reading manuscript…';</span></span>
+ }
+<span class="cstat-no" title="statement not covered" > if(/verify_references/.test(name))<span class="cstat-no" title="statement not covered" >return 'Checking references…';</span></span>
+<span class="cstat-no" title="statement not covered" > if(/research_search|web_search|search/i.test(name))<span class="cstat-no" title="statement not covered" >return 'Searching sources…';</span></span>
+<span class="cstat-no" title="statement not covered" > if(/read_file/.test(name))<span class="cstat-no" title="statement not covered" >return 'Reading file…';</span></span>
+<span class="cstat-no" title="statement not covered" > if(/project_files/.test(name))<span class="cstat-no" title="statement not covered" >return 'Working with project files…';</span></span>
+<span class="cstat-no" title="statement not covered" > if(/bash|execute_code/.test(name))<span class="cstat-no" title="statement not covered" >return 'Running document tools…';</span></span>
+<span class="cstat-no" title="statement not covered" > if(/write|edit|create/.test(name))<span class="cstat-no" title="statement not covered" >return 'Updating files…';</span></span>
+<span class="cstat-no" title="statement not covered" > return 'Calling tools…';</span>
+}
+export function <span class="fstat-no" title="function not covered" >progressState(</span>content=<span class="branch-0 cbranch-no" title="branch not covered" >[],</span>attachments=<span class="branch-0 cbranch-no" title="branch not covered" >[],</span>messageError=<span class="branch-0 cbranch-no" title="branch not covered" >false,</span>unfinished=<span class="branch-0 cbranch-no" title="branch not covered" >false)</span>{
+ const parts=<span class="cstat-no" title="statement not covered" >content.filter(Boolean);</span>const calls=<span class="cstat-no" title="statement not covered" >parts.map(<span class="fstat-no" title="function not covered" >(p</span>,i)=&gt;(<span class="cstat-no" title="statement not covered" >{t:p.tool_call,i})</span>).filter(<span class="fstat-no" title="function not covered" >x=</span>&gt;<span class="cstat-no" title="statement not covered" >x.t)</span>;</span>
+ const last=<span class="cstat-no" title="statement not covered" >calls.at(-1)?.i??-1;</span>
+ let finalParts=<span class="cstat-no" title="statement not covered" >parts.map(<span class="fstat-no" title="function not covered" >(p</span>art,idx)=&gt;(<span class="cstat-no" title="statement not covered" >{part,idx})</span>).filter(<span class="fstat-no" title="function not covered" >({</span>part,idx})=&gt;<span class="cstat-no" title="statement not covered" >idx&gt;last&amp;&amp;!['think','reasoning'].includes(part.type))</span>;</span>
+ const finalText=<span class="cstat-no" title="statement not covered" >finalParts.map(<span class="fstat-no" title="function not covered" >({</span>part})=&gt;<span class="cstat-no" title="statement not covered" >textOf(part))</span>.join('\n');</span>
+ const problem=<span class="cstat-no" title="statement not covered" >Boolean(messageError||unfinished||parts.some(<span class="fstat-no" title="function not covered" >p=</span>&gt;<span class="cstat-no" title="statement not covered" >p.type==='error')</span>||calls.some(<span class="fstat-no" title="function not covered" >({</span>t})=&gt;<span class="cstat-no" title="statement not covered" >toolProblem(t))</span>||/\b(?:could not|couldn’t|couldn't|unable to)\b.{0,100}\b(?:verify|edit|save|attach|complete)\b/i.test(finalText));</span>
+ const meaningful=<span class="cstat-no" title="statement not covered" >parts.map(<span class="fstat-no" title="function not covered" >(p</span>,i)=&gt;(<span class="cstat-no" title="statement not covered" >{p,i})</span>).filter(<span class="fstat-no" title="function not covered" >({</span>p})=&gt;<span class="cstat-no" title="statement not covered" >p.tool_call||(p.type==='text'&amp;&amp;textOf(p).trim()))</span>;</span>
+ const recent=<span class="cstat-no" title="statement not covered" >meaningful.at(-1)?.p;</span>
+ const status=<span class="cstat-no" title="statement not covered" >recent?.tool_call?(recent.tool_call.output!==undefined?'Waiting for model response…':label(recent.tool_call)):recent?textOf(recent).replace(/\s+/g,' ').slice(0,220):'Working…';</span>
+ const delivery=<span class="cstat-no" title="statement not covered" >selectDeliverables(calls,attachments,finalText);</span>
+ const finalFiles=<span class="cstat-no" title="statement not covered" >delivery.files;</span>
+<span class="cstat-no" title="statement not covered" > finalParts=finalParts.map(<span class="fstat-no" title="function not covered" >({</span>part,idx})=&gt;(<span class="cstat-no" title="statement not covered" >{idx,part:part.type==='text'&amp;&amp;typeof part.text==='string'?{...part,text:cleanDeliveryText(part.text)}:part})</span>);</span>
+ const recoveryWarnings=<span class="cstat-no" title="statement not covered" >calls.flatMap(<span class="fstat-no" title="function not covered" >({</span>t})=&gt;{<span class="cstat-no" title="statement not covered" >try{const v=<span class="cstat-no" title="statement not covered" >JSON.parse(outputOf(t));<span class="cstat-no" title="statement not covered" ></span>return Array.isArray(v.warnings)?v.warnings.filter(<span class="fstat-no" title="function not covered" >x=</span>&gt;<span class="cstat-no" title="statement not covered" >typeof x==='string'&amp;&amp;x.startsWith('RECOVERY:'))</span>:[];}</span>catch{<span class="cstat-no" title="statement not covered" >return [];}</span>}</span>);</span>
+<span class="cstat-no" title="statement not covered" > return {parts,finalParts,finalFiles,missingFiles:delivery.missing,status,problem,lastTool:last,recoveryWarnings:[...new Set(recoveryWarnings)]};</span>
+}
+&nbsp;
+export function <span class="fstat-no" title="function not covered" >diagnosticSummary(</span>content=<span class="branch-0 cbranch-no" title="branch not covered" >[],</span>messageError=<span class="branch-0 cbranch-no" title="branch not covered" >false,</span>unfinished=<span class="branch-0 cbranch-no" title="branch not covered" >false)</span>{
+ const parts=<span class="cstat-no" title="statement not covered" >content.filter(Boolean);</span>
+ const calls=<span class="cstat-no" title="statement not covered" >parts.map(<span class="fstat-no" title="function not covered" >(p</span>,index)=&gt;(<span class="cstat-no" title="statement not covered" >{t:p.tool_call,index})</span>).filter(<span class="fstat-no" title="function not covered" >x=</span>&gt;<span class="cstat-no" title="statement not covered" >x.t)</span>;</span>
+ const last=<span class="cstat-no" title="statement not covered" >calls.at(-1)?.index??-1;</span>
+ const hasFinalResponse=<span class="cstat-no" title="statement not covered" >parts.some(<span class="fstat-no" title="function not covered" >(p</span>,i)=&gt;<span class="cstat-no" title="statement not covered" >i&gt;last&amp;&amp;p.type==='text'&amp;&amp;textOf(p).trim())</span>;</span>
+ const fatal=<span class="cstat-no" title="statement not covered" >Boolean(messageError||parts.some(<span class="fstat-no" title="function not covered" >p=</span>&gt;<span class="cstat-no" title="statement not covered" >p.type==='error')</span>);</span>
+ const toolErrors=<span class="cstat-no" title="statement not covered" >calls.filter(<span class="fstat-no" title="function not covered" >({</span>t})=&gt;<span class="cstat-no" title="statement not covered" >toolProblem(t))</span>.map(<span class="fstat-no" title="function not covered" >({</span>t,index})=&gt;(<span class="cstat-no" title="statement not covered" >{contentIndex:index,toolCallId:t.id,tool:t.name,status:t.status??null,output:outputOf(t)})</span>);</span>
+ const paused=<span class="cstat-no" title="statement not covered" >Boolean(pauseInfo(content));</span>
+ const outcome=<span class="cstat-no" title="statement not covered" >paused&amp;&amp;!fatal&amp;&amp;!unfinished?'paused':fatal?'failed':unfinished?'interrupted':hasFinalResponse?'response_completed':'no_final_response';</span>
+ const title=<span class="cstat-no" title="statement not covered" >paused&amp;&amp;!fatal&amp;&amp;!unfinished?'Paused: work remaining':fatal?'Task failed — diagnostic log':unfinished?'Task interrupted — diagnostic log':hasFinalResponse?'Response completed with reported problems — diagnostic log':'Task needs review — diagnostic log';</span>
+<span class="cstat-no" title="statement not covered" > return {outcome,title,hasFinalResponse,fatal,toolErrors,toolCallCount:calls.length};</span>
+}
+export function <span class="fstat-no" title="function not covered" >buildDiagnostic(</span>{messageId,conversationId,content=<span class="branch-0 cbranch-no" title="branch not covered" >[],</span>attachments=<span class="branch-0 cbranch-no" title="branch not covered" >[],</span>messageError=<span class="branch-0 cbranch-no" title="branch not covered" >false,</span>unfinished=<span class="branch-0 cbranch-no" title="branch not covered" >false,</span>metadata=<span class="branch-0 cbranch-no" title="branch not covered" >{}}</span>){
+ const summary=<span class="cstat-no" title="statement not covered" >diagnosticSummary(content,messageError,unfinished);</span>
+<span class="cstat-no" title="statement not covered" > return {schemaVersion:2,exportedAt:new Date().toISOString(),messageId,conversationId,</span>
+  metadata,error:messageError??false,unfinished:Boolean(unfinished),...summary,
+  limitations:['Provider request IDs, HTTP status and per-call timing are not available in this browser export unless present in the saved error content.','A final response does not verify the correctness or delivery of its files.'],
+  attachments:attachments.map(<span class="fstat-no" title="function not covered" >f=</span>&gt;(<span class="cstat-no" title="statement not covered" >{file_id:f.file_id,filename:f.filename,bytes:f.bytes,source:f.source,toolCallId:f.toolCallId})</span>),
+  toolCalls:content.map(<span class="fstat-no" title="function not covered" >(p</span>,index)=&gt;(<span class="cstat-no" title="statement not covered" >{t:p?.tool_call,index})</span>).filter(<span class="fstat-no" title="function not covered" >x=</span>&gt;<span class="cstat-no" title="statement not covered" >x.t)</span>.map(<span class="fstat-no" title="function not covered" >({</span>t,index})=&gt;(<span class="cstat-no" title="statement not covered" >{contentIndex:index,id:t.id,name:t.name,status:t.status??null,progress:t.progress??null,hasOutput:t.output!==undefined,argsCharacters:typeof t.args==='string'?t.args.length:JSON.stringify(t.args??{}).length,outputCharacters:outputOf(t).length,reportedError:toolProblem(t)})</span>),content};
+}
+&nbsp;
+export function <span class="fstat-no" title="function not covered" >pauseInfo(</span>content=<span class="branch-0 cbranch-no" title="branch not covered" >[])</span>{
+ const calls=<span class="cstat-no" title="statement not covered" >content.filter(<span class="fstat-no" title="function not covered" >p=</span>&gt;<span class="cstat-no" title="statement not covered" >p?.tool_call)</span>.map(<span class="fstat-no" title="function not covered" >p=</span>&gt;<span class="cstat-no" title="statement not covered" >p.tool_call)</span>;</span>
+ const last=<span class="cstat-no" title="statement not covered" >content.map(<span class="fstat-no" title="function not covered" >(p</span>,i)=&gt;<span class="cstat-no" title="statement not covered" >p?.tool_call?i:-1)</span>.reduce(<span class="fstat-no" title="function not covered" >(a</span>,b)=&gt;<span class="cstat-no" title="statement not covered" >Math.max(a,b),</span>-1);</span>
+ const finalText=<span class="cstat-no" title="statement not covered" >content.slice(last+1).map(textOf).join('\n');</span>
+ let checkpoint=<span class="cstat-no" title="statement not covered" >null;</span>
+<span class="cstat-no" title="statement not covered" > for(const t of calls){<span class="cstat-no" title="statement not covered" >try{const v=<span class="cstat-no" title="statement not covered" >JSON.parse(outputOf(t));<span class="cstat-no" title="statement not covered" ></span>if(v.workflow_pause)<span class="cstat-no" title="statement not covered" >checkpoint=v.workflow_pause;}</span></span>catch{}}</span></span>
+ const legacy=<span class="cstat-no" title="statement not covered" >calls.some(<span class="fstat-no" title="function not covered" >t=</span>&gt;<span class="cstat-no" title="statement not covered" >/Final verification phase: only verify is allowed/.test(outputOf(t)))</span>;</span>
+<span class="cstat-no" title="statement not covered" > if(!checkpoint&amp;&amp;!legacy)<span class="cstat-no" title="statement not covered" >return null;</span></span>
+<span class="cstat-no" title="statement not covered" > return {remaining:checkpoint?.remaining??['Complete the unfinished edits listed in the previous response.'],finalText};</span>
+}
+export function <span class="fstat-no" title="function not covered" >continuationPrompt(</span>pause){<span class="cstat-no" title="statement not covered" >return 'Continue only the unfinished work from the previous response, using the latest saved chat files. Preserve completed edits and numerical values. Keep the same filenames; do not overwrite project masters. Do not repeat completed research or perform an unsolicited accuracy audit. Remaining work: '+pause.remaining.join('; ')+'. Save and attach the updated files. If unfinished, explicitly list what remains.';}</span>
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-10-22T02:45:06.856Z
+            </div>
+        <script src="../../../../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../../../../sorter.js"></script>
+        <script src="../../../../../block-navigation.js"></script>
+    </body>
+</html>
+    

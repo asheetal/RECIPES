@@ -1,0 +1,151 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for src/components/UnifiedSidebar/CrashAdmin.tsx</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../../prettify.css" />
+    <link rel="stylesheet" href="../../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../../index.html">All files</a> / <a href="index.html">src/components/UnifiedSidebar</a> CrashAdmin.tsx</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>0/49</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/20</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/16</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>0/11</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { useEffect, useState } from 'react';
+import { request, apiBaseUrl } from 'librechat-data-provider';
+import { Button } from '@librechat/client';
+import { useAuthContext } from '~/hooks/AuthContext';
+type Group={id:string;label:string;count:number;scope?:string;kinds:Record&lt;string,number&gt;};
+type Data={groups:Group[];pending:number;warning:string|null};
+export default function <span class="fstat-no" title="function not covered" >CrashAdmin(</span>){
+ const {user}=<span class="cstat-no" title="statement not covered" >useAuthContext();</span>const [data,setData]=<span class="cstat-no" title="statement not covered" >useState&lt;Data|null&gt;(null),</span>[busy,setBusy]=<span class="cstat-no" title="statement not covered" >useState(false),</span>[error,setError]=<span class="cstat-no" title="statement not covered" >useState(''),</span>[confirm,setConfirm]=<span class="cstat-no" title="statement not covered" >useState&lt;string|null&gt;(null);</span>
+ const base=<span class="cstat-no" title="statement not covered" >`${apiBaseUrl()}/api/admin/users/crashes`;</span>
+ async function <span class="fstat-no" title="function not covered" >load(</span>){<span class="cstat-no" title="statement not covered" >setBusy(true);<span class="cstat-no" title="statement not covered" >s</span>etError('');<span class="cstat-no" title="statement not covered" >t</span>ry{<span class="cstat-no" title="statement not covered" >setData(await request.get&lt;Data&gt;(base));}</span>catch{<span class="cstat-no" title="statement not covered" >setError('Unable to load crash reports.');}</span>finally{<span class="cstat-no" title="statement not covered" >setBusy(false);}</span>}</span>
+<span class="cstat-no" title="statement not covered" > useEffect(<span class="fstat-no" title="function not covered" >()</span>=&gt;{<span class="cstat-no" title="statement not covered" >if(user?.role==='ADMIN')<span class="cstat-no" title="statement not covered" >void load();}</span></span>,[user?.role]);</span>
+ async function <span class="fstat-no" title="function not covered" >download(</span>g:Group){<span class="cstat-no" title="statement not covered" >setBusy(true);<span class="cstat-no" title="statement not covered" >s</span>etError('');<span class="cstat-no" title="statement not covered" >t</span>ry{const x=<span class="cstat-no" title="statement not covered" >await request.get&lt;unknown&gt;(`${base}/${g.id}/download`);</span>const url=<span class="cstat-no" title="statement not covered" >URL.createObjectURL(new Blob([JSON.stringify(x,null,2)],{type:'application/json'}));</span>const a=<span class="cstat-no" title="statement not covered" >document.createElement('a');<span class="cstat-no" title="statement not covered" ></span>a.href=url;<span class="cstat-no" title="statement not covered" >a</span>.download='crashlogs-'+g.id.slice(0,12)+'.json';<span class="cstat-no" title="statement not covered" >a</span>.click();<span class="cstat-no" title="statement not covered" >s</span>etTimeout(<span class="fstat-no" title="function not covered" >()</span>=&gt;<span class="cstat-no" title="statement not covered" >URL.revokeObjectURL(url),</span>1000);}</span>catch{<span class="cstat-no" title="statement not covered" >setError('Download failed.');}</span>finally{<span class="cstat-no" title="statement not covered" >setBusy(false);}</span>}</span>
+ async function <span class="fstat-no" title="function not covered" >remove(</span>g:Group){<span class="cstat-no" title="statement not covered" >setBusy(true);<span class="cstat-no" title="statement not covered" >s</span>etError('');<span class="cstat-no" title="statement not covered" >t</span>ry{<span class="cstat-no" title="statement not covered" >await request.post(`${base}/${g.id}/delete`,{});<span class="cstat-no" title="statement not covered" >s</span>etConfirm(null);<span class="cstat-no" title="statement not covered" >a</span>wait load();}</span>catch{<span class="cstat-no" title="statement not covered" >setError('Delete failed.');}</span>finally{<span class="cstat-no" title="statement not covered" >setBusy(false);}</span>}</span>
+<span class="cstat-no" title="statement not covered" > if(user?.role!=='ADMIN')<span class="cstat-no" title="statement not covered" >return null;</span></span>
+<span class="cstat-no" title="statement not covered" > return &lt;section className="h-full overflow-y-auto p-3 text-text-primary" aria-label="Crash reports"&gt;&lt;div className="mb-4 flex items-center justify-between"&gt;&lt;h2 className="font-semibold"&gt;Crash reports&lt;/h2&gt;&lt;Button variant="ghost" disabled={busy} onClick={load}&gt;Refresh&lt;/Button&gt;&lt;/div&gt;</span>
+ &lt;div className="mb-3 flex flex-wrap gap-2"&gt;&lt;Button variant="outline" disabled={busy} onClick={<span class="fstat-no" title="function not covered" >()</span>=&gt;<span class="cstat-no" title="statement not covered" >download({id:'all',label:'All',count:0,kinds:{}})}</span>&gt;Dump all&lt;/Button&gt;&lt;Button variant="ghost" disabled={busy} onClick={<span class="fstat-no" title="function not covered" >()</span>=&gt;<span class="cstat-no" title="statement not covered" >setConfirm('all')}</span>&gt;Delete all crashlogs&lt;/Button&gt;&lt;/div&gt;
+ {confirm==='all'&amp;&amp;&lt;div className="mb-3 text-sm"&gt;&lt;p&gt;Delete all current crashlogs and their labels? This cannot be undone.&lt;/p&gt;&lt;Button disabled={busy} onClick={<span class="fstat-no" title="function not covered" >()</span>=&gt;<span class="cstat-no" title="statement not covered" >remove({id:'all',label:'All',count:0,kinds:{}})}</span>&gt;Delete all&lt;/Button&gt;&lt;Button variant="ghost" onClick={<span class="fstat-no" title="function not covered" >()</span>=&gt;<span class="cstat-no" title="statement not covered" >setConfirm(null)}</span>&gt;Cancel&lt;/Button&gt;&lt;/div&gt;}
+ {error&amp;&amp;&lt;p role="alert"&gt;{error}&lt;/p&gt;}{data?.warning&amp;&amp;&lt;p role="alert"&gt;{data.warning}&lt;/p&gt;}
+ {data?.groups.length===0&amp;&amp;&lt;p className="text-sm text-text-secondary"&gt;No crash reports.&lt;/p&gt;}
+ {data?.groups.map(<span class="fstat-no" title="function not covered" >g=</span>&gt;<span class="cstat-no" title="statement not covered" >&lt;article key={g.id} className="border-b border-border-light py-3"&gt;&lt;div className="flex justify-between gap-2"&gt;&lt;h3 className="break-words font-medium"&gt;&lt;span className="mb-1 block text-xs text-text-secondary"&gt;{g.scope==='chat'?'Chat failure':g.scope==='interface'?'Interface error':g.scope==='server'?'Server alert · not linked to a chat':'Mixed sources'}&lt;/span&gt;{g.label}&lt;/h3&gt;&lt;span className="tabular-nums"&gt;{g.count}&lt;/span&gt;&lt;/div&gt;&lt;p className="mt-1 text-xs text-text-secondary"&gt;{Object.entries(g.kinds).map(<span class="fstat-no" title="function not covered" >([</span>k,n])=&gt;<span class="cstat-no" title="statement not covered" >`${k.replaceAll('_',' ')}: ${n}`)</span>.join(' · ')}&lt;/p&gt;&lt;div className="mt-2 flex gap-2"&gt;&lt;Button variant="outline" disabled={busy} onClick={<span class="fstat-no" title="function not covered" >()</span>=&gt;<span class="cstat-no" title="statement not covered" >download(g)}</span>&gt;Download&lt;/Button&gt;&lt;Button variant="ghost" disabled={busy} onClick={<span class="fstat-no" title="function not covered" >()</span>=&gt;<span class="cstat-no" title="statement not covered" >setConfirm(g.id)}</span>&gt;Delete&lt;/Button&gt;&lt;/div&gt;{confirm===g.id&amp;&amp;&lt;div className="mt-2 text-sm"&gt;&lt;p&gt;Delete these {g.count} reports? Their label will also be deleted.&lt;/p&gt;&lt;Button disabled={busy} onClick={<span class="fstat-no" title="function not covered" >()</span>=&gt;<span class="cstat-no" title="statement not covered" >remove(g)}</span>&gt;Delete reports&lt;/Button&gt;&lt;Button variant="ghost" onClick={<span class="fstat-no" title="function not covered" >()</span>=&gt;<span class="cstat-no" title="statement not covered" >setConfirm(null)}</span>&gt;Cancel&lt;/Button&gt;&lt;/div&gt;}&lt;/article&gt;)</span>}
+ &lt;/section&gt;;
+}
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-10-22T02:45:06.856Z
+            </div>
+        <script src="../../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../../sorter.js"></script>
+        <script src="../../../block-navigation.js"></script>
+    </body>
+</html>
+    

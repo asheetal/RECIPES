@@ -255,6 +255,8 @@ export default function useQueryParams({
       delete queryParams.q;
       delete queryParams.submit;
       delete queryParams[PROJECT_ID_SEARCH_PARAM];
+      // SECURITY: drop model spec from the URL if present (legacy/bookmarked links)
+      delete queryParams.spec;
       const validSettings = processValidSettings(queryParams);
 
       return { decodedPrompt, validSettings, shouldAutoSubmit };

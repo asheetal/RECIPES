@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="jest tests" tests="30" failures="0" errors="0" time="4.178">
+  <testsuite name="createChatSearchParams" errors="0" failures="0" skipped="0" timestamp="2026-10-22T02:51:45" time="3.451" tests="30">
+    <testcase classname="createChatSearchParams conversation inputs handles basic conversation properties" name="createChatSearchParams conversation inputs handles basic conversation properties" time="0.003">
+    </testcase>
+    <testcase classname="createChatSearchParams conversation inputs applies only the endpoint property when other conversation fields are absent" name="createChatSearchParams conversation inputs applies only the endpoint property when other conversation fields are absent" time="0.001">
+    </testcase>
+    <testcase classname="createChatSearchParams conversation inputs applies only the model property when other conversation fields are absent" name="createChatSearchParams conversation inputs applies only the model property when other conversation fields are absent" time="0.001">
+    </testcase>
+    <testcase classname="createChatSearchParams conversation inputs includes assistant_id when endpoint is assistants" name="createChatSearchParams conversation inputs includes assistant_id when endpoint is assistants" time="0">
+    </testcase>
+    <testcase classname="createChatSearchParams conversation inputs includes agent_id when endpoint is agents" name="createChatSearchParams conversation inputs includes agent_id when endpoint is agents" time="0">
+    </testcase>
+    <testcase classname="createChatSearchParams conversation inputs excludes all parameters except assistant_id when endpoint is assistants" name="createChatSearchParams conversation inputs excludes all parameters except assistant_id when endpoint is assistants" time="0.001">
+    </testcase>
+    <testcase classname="createChatSearchParams conversation inputs excludes all parameters except agent_id when endpoint is agents" name="createChatSearchParams conversation inputs excludes all parameters except agent_id when endpoint is agents" time="0">
+    </testcase>
+    <testcase classname="createChatSearchParams conversation inputs returns empty params when agent endpoint has no agent_id" name="createChatSearchParams conversation inputs returns empty params when agent endpoint has no agent_id" time="0.001">
+    </testcase>
+    <testcase classname="createChatSearchParams conversation inputs returns empty params when assistants endpoint has no assistant_id" name="createChatSearchParams conversation inputs returns empty params when assistants endpoint has no assistant_id" time="0">
+    </testcase>
+    <testcase classname="createChatSearchParams conversation inputs ignores agent_id when it matches EPHEMERAL_AGENT_ID" name="createChatSearchParams conversation inputs ignores agent_id when it matches EPHEMERAL_AGENT_ID" time="0.011">
+    </testcase>
+    <testcase classname="createChatSearchParams conversation inputs handles stop arrays correctly by joining with commas" name="createChatSearchParams conversation inputs handles stop arrays correctly by joining with commas" time="0.001">
+    </testcase>
+    <testcase classname="createChatSearchParams conversation inputs filters out non-supported array properties" name="createChatSearchParams conversation inputs filters out non-supported array properties" time="0">
+    </testcase>
+    <testcase classname="createChatSearchParams conversation inputs includes empty arrays in output params" name="createChatSearchParams conversation inputs includes empty arrays in output params" time="0">
+    </testcase>
+    <testcase classname="createChatSearchParams conversation inputs handles non-stop arrays correctly in paramMap" name="createChatSearchParams conversation inputs handles non-stop arrays correctly in paramMap" time="0.001">
+    </testcase>
+    <testcase classname="createChatSearchParams conversation inputs includes empty non-stop arrays as serialized empty arrays" name="createChatSearchParams conversation inputs includes empty non-stop arrays as serialized empty arrays" time="0.001">
+    </testcase>
+    <testcase classname="createChatSearchParams conversation inputs excludes parameters with null or undefined values from the output" name="createChatSearchParams conversation inputs excludes parameters with null or undefined values from the output" time="0.001">
+    </testcase>
+    <testcase classname="createChatSearchParams conversation inputs handles float parameter values correctly" name="createChatSearchParams conversation inputs handles float parameter values correctly" time="0.001">
+    </testcase>
+    <testcase classname="createChatSearchParams conversation inputs handles integer parameter values correctly" name="createChatSearchParams conversation inputs handles integer parameter values correctly" time="0.001">
+    </testcase>
+    <testcase classname="createChatSearchParams preset inputs handles preset objects correctly" name="createChatSearchParams preset inputs handles preset objects correctly" time="0.001">
+    </testcase>
+    <testcase classname="createChatSearchParams preset inputs never emits spec in the URL (security: model identity must not leak)" name="createChatSearchParams preset inputs never emits spec in the URL (security: model identity must not leak)" time="0">
+    </testcase>
+    <testcase classname="createChatSearchParams preset inputs never emits spec for plain Record inputs" name="createChatSearchParams preset inputs never emits spec for plain Record inputs" time="0.001">
+    </testcase>
+    <testcase classname="createChatSearchParams record inputs includes allowed parameters from Record inputs" name="createChatSearchParams record inputs includes allowed parameters from Record inputs" time="0.001">
+    </testcase>
+    <testcase classname="createChatSearchParams record inputs excludes disallowed parameters from Record inputs" name="createChatSearchParams record inputs excludes disallowed parameters from Record inputs" time="0.001">
+    </testcase>
+    <testcase classname="createChatSearchParams record inputs includes valid values from Record inputs" name="createChatSearchParams record inputs includes valid values from Record inputs" time="0">
+    </testcase>
+    <testcase classname="createChatSearchParams record inputs excludes null or undefined values from Record inputs" name="createChatSearchParams record inputs excludes null or undefined values from Record inputs" time="0.001">
+    </testcase>
+    <testcase classname="createChatSearchParams record inputs handles generic object without endpoint or model properties" name="createChatSearchParams record inputs handles generic object without endpoint or model properties" time="0">
+    </testcase>
+    <testcase classname="createChatSearchParams edge cases returns an empty URLSearchParams instance when input is null" name="createChatSearchParams edge cases returns an empty URLSearchParams instance when input is null" time="0">
+    </testcase>
+    <testcase classname="createChatSearchParams edge cases returns an empty URLSearchParams instance for an empty object input" name="createChatSearchParams edge cases returns an empty URLSearchParams instance for an empty object input" time="0">
+    </testcase>
+    <testcase classname="createChatSearchParams processValidSettings (reader) ignores spec from the URL (security: model identity must not leak)" name="createChatSearchParams processValidSettings (reader) ignores spec from the URL (security: model identity must not leak)" time="0.001">
+    </testcase>
+    <testcase classname="createChatSearchParams processValidSettings (reader) still parses ordinary settings from the URL" name="createChatSearchParams processValidSettings (reader) still parses ordinary settings from the URL" time="0.001">
+    </testcase>
+  </testsuite>
+</testsuites>

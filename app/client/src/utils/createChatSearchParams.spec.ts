@@ -1,6 +1,6 @@
 import { EModelEndpoint, Constants } from 'librechat-data-provider';
 import type { TConversation, TPreset } from 'librechat-data-provider';
-import createChatSearchParams from './createChatSearchParams';
+import createChatSearchParams, { processValidSettings } from './createChatSearchParams';
 
 describe('createChatSearchParams', () => {
   describe('conversation inputs', () => {
@@ -257,7 +257,7 @@ describe('createChatSearchParams', () => {
       expect(result.get('topP')).toBe('0.8');
     });
 
-    it('returns only spec param when spec property is present', () => {
+    it('never emits spec in the URL (security: model identity must not leak)', () => {
       const preset: Partial<TPreset> = {
         endpoint: EModelEndpoint.google,
         model: 'gemini-pro',
@@ -266,11 +266,16 @@ describe('createChatSearchParams', () => {
       };
 
       const result = createChatSearchParams(preset as TPreset);
-      expect(result.get('spec')).toBe('special_spec');
-      expect(result.has('endpoint')).toBe(false);
-      expect(result.has('model')).toBe(false);
-      expect(result.has('temperature')).toBe(false);
-      expect([...result.entries()].length).toBe(1);
+      expect(result.has('spec')).toBe(false);
+      expect(result.get('endpoint')).toBe(EModelEndpoint.google);
+      expect(result.get('model')).toBe('gemini-pro');
+      expect(result.get('temperature')).toBe('0.5');
+    });
+
+    it('never emits spec for plain Record inputs', () => {
+      const result = createChatSearchParams({ spec: 'special_spec', endpoint: 'openAI' });
+      expect(result.has('spec')).toBe(false);
+      expect(result.get('endpoint')).toBe('openAI');
     });
   });
 
@@ -358,6 +363,24 @@ describe('createChatSearchParams', () => {
       const result = createChatSearchParams({});
       expect(result.toString()).toBe('');
       expect(result instanceof URLSearchParams).toBe(true);
+    });
+  });
+
+  describe('processValidSettings (reader)', () => {
+    it('ignores spec from the URL (security: model identity must not leak)', () => {
+      const settings = processValidSettings({
+        spec: 'special_spec',
+        endpoint: 'openAI',
+        model: 'gpt-4',
+      });
+      expect(settings).not.toHaveProperty('spec');
+      expect(settings.endpoint).toBe('openAI');
+      expect(settings.model).toBe('gpt-4');
+    });
+
+    it('still parses ordinary settings from the URL', () => {
+      const settings = processValidSettings({ temperature: '0.5' });
+      expect(settings.temperature).toBe(0.5);
     });
   });
 });

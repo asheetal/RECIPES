@@ -30,6 +30,10 @@ export function processValidSettings(queryParams: Record<string, string>) {
   const validSettings = {} as TPreset;
 
   for (const [key, value] of Object.entries(queryParams)) {
+    // SECURITY: never accept model spec from URL (would expose model identity)
+    if (key === 'spec') {
+      continue;
+    }
     try {
       const schema = tQueryParamsSchema.shape[key] as ZodAny | undefined;
       if (schema) {
@@ -72,7 +76,7 @@ export default function createChatSearchParams(
 
   if (input && typeof input === 'object' && !('endpoint' in input) && !('model' in input)) {
     Object.entries(input as Record<string, string>).forEach(([key, value]) => {
-      if (value != null && allowedParams.includes(key)) {
+      if (value != null && key !== 'spec' && allowedParams.includes(key)) {
         params.set(key, value);
       }
     });
@@ -81,9 +85,6 @@ export default function createChatSearchParams(
 
   const conversation = input as TConversation | TPreset;
   const endpoint = conversation.endpoint;
-  if (conversation.spec) {
-    return new URLSearchParams({ spec: conversation.spec });
-  }
   if (
     isAgentsEndpoint(endpoint) &&
     conversation.agent_id &&
@@ -108,6 +109,10 @@ export default function createChatSearchParams(
   const paramMap: Record<string, any> = {};
   allowedParams.forEach((key) => {
     if (key === 'agent_id' && isEphemeralAgent(conversation.agent_id)) {
+      return;
+    }
+    // SECURITY: model spec must never be serialized into the URL
+    if (key === 'spec') {
       return;
     }
     if (key !== 'endpoint' && key !== 'model') {

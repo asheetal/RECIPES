@@ -1,0 +1,232 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for src/utils/serverTime.ts</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">src/utils</a> serverTime.ts</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>0/36</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/14</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/17</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>0/25</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { apiBaseUrl } from 'librechat-data-provider';
+import { format as originalFormat, formatDistance } from 'date-fns';
+let zone = <span class="cstat-no" title="statement not covered" >'America/Los_Angeles';</span>
+let epoch = <span class="cstat-no" title="statement not covered" >NaN;</span>
+let sampled = <span class="cstat-no" title="statement not covered" >0;</span>
+export const serverTimeZone = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >()</span> =&gt; <span class="cstat-no" title="statement not covered" >zone;</span></span>
+export const serverNow = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >()</span> =&gt; <span class="cstat-no" title="statement not covered" >new Date(epoch + performance.now() - sampled);</span></span>
+export async function <span class="fstat-no" title="function not covered" >syncServerClock(</span>) {
+  const start=<span class="cstat-no" title="statement not covered" >performance.now();</span>
+  const response=<span class="cstat-no" title="statement not covered" >await fetch(apiBaseUrl()+'/api/server-clock',{cache:'no-store',credentials:'same-origin',signal:AbortSignal.timeout(8000)});</span>
+<span class="cstat-no" title="statement not covered" >  if(!response.ok) <span class="cstat-no" title="statement not covered" >throw Error('Server clock unavailable');</span></span>
+  const data=<span class="cstat-no" title="statement not covered" >await response.json();</span>
+<span class="cstat-no" title="statement not covered" >  if(!Number.isFinite(data.epochMs)||typeof data.timeZone!=='string')<span class="cstat-no" title="statement not covered" >throw Error('Invalid server clock');</span></span>
+<span class="cstat-no" title="statement not covered" >  new Intl.DateTimeFormat('en',{timeZone:data.timeZone}).format(new Date(data.epochMs));</span>
+<span class="cstat-no" title="statement not covered" >  sampled=performance.now();<span class="cstat-no" title="statement not covered" >e</span>poch=data.epochMs+(sampled-start)/2;<span class="cstat-no" title="statement not covered" >z</span>one=data.timeZone;</span>
+}
+export async function <span class="fstat-no" title="function not covered" >initializeServerClock(</span>){
+<span class="cstat-no" title="statement not covered" > await syncServerClock();</span>
+<span class="cstat-no" title="statement not covered" > setInterval(<span class="fstat-no" title="function not covered" >()</span>=&gt;<span class="cstat-no" title="statement not covered" >void syncServerClock().catch(<span class="fstat-no" title="function not covered" >()</span>=&gt;{}),</span>60000);</span>
+<span class="cstat-no" title="statement not covered" > document.addEventListener('visibilitychange',<span class="fstat-no" title="function not covered" >()</span>=&gt;{<span class="cstat-no" title="statement not covered" >if(!document.hidden)<span class="cstat-no" title="statement not covered" >void syncServerClock().catch(<span class="fstat-no" title="function not covered" >()</span>=&gt;{});}</span></span>);</span>
+}
+export function <span class="fstat-no" title="function not covered" >serverDateTimeFormat(</span>locale?: Intl.LocalesArgument,options: Intl.DateTimeFormatOptions=<span class="branch-0 cbranch-no" title="branch not covered" >{})</span>{
+<span class="cstat-no" title="statement not covered" > return new Intl.DateTimeFormat(locale,{...options,timeZone:zone});</span>
+}
+export function <span class="fstat-no" title="function not covered" >serverLocaleDate(</span>value: Date,locale?: Intl.LocalesArgument,options: Intl.DateTimeFormatOptions=<span class="branch-0 cbranch-no" title="branch not covered" >{})</span>{
+<span class="cstat-no" title="statement not covered" > return value.toLocaleDateString(locale,{...options,timeZone:zone});</span>
+}
+export function <span class="fstat-no" title="function not covered" >serverLocaleTime(</span>value: Date,locale?: Intl.LocalesArgument,options: Intl.DateTimeFormatOptions=<span class="branch-0 cbranch-no" title="branch not covered" >{})</span>{
+<span class="cstat-no" title="statement not covered" > return value.toLocaleTimeString(locale,{...options,timeZone:zone});</span>
+}
+export function <span class="fstat-no" title="function not covered" >serverLocale(</span>value: Date,locale?: Intl.LocalesArgument,options: Intl.DateTimeFormatOptions=<span class="branch-0 cbranch-no" title="branch not covered" >{})</span>{
+<span class="cstat-no" title="statement not covered" > return value.toLocaleString(locale,{...options,timeZone:zone});</span>
+}
+export function <span class="fstat-no" title="function not covered" >serverParts(</span>value:Date=<span class="branch-0 cbranch-no" title="branch not covered" >serverNow())</span>{
+ const p=<span class="cstat-no" title="statement not covered" >Object.fromEntries(serverDateTimeFormat('en-US',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(value).map(<span class="fstat-no" title="function not covered" >x=</span>&gt;<span class="cstat-no" title="statement not covered" >[x.type,x.value])</span>);</span>
+<span class="cstat-no" title="statement not covered" > return {year:+p.year,month:+p.month,day:+p.day,hour:+p.hour,minute:+p.minute,second:+p.second};</span>
+}
+// UTC calendar surrogates are used only for calendar fields, never persisted.
+export function <span class="fstat-no" title="function not covered" >serverCalendar(</span>value:Date=<span class="branch-0 cbranch-no" title="branch not covered" >serverNow())</span>{
+ const p=<span class="cstat-no" title="statement not covered" >serverParts(value);<span class="cstat-no" title="statement not covered" ></span>return new Date(Date.UTC(p.year,p.month-1,p.day,p.hour,p.minute,p.second));</span>
+}
+export function <span class="fstat-no" title="function not covered" >serverFormat(</span>value:Date|number,pattern:string,options?: Parameters&lt;typeof originalFormat&gt;[2]){
+ const p=<span class="cstat-no" title="statement not covered" >serverParts(new Date(value));</span>
+ // Existing callers format calendar dates only; noon avoids local DST gaps.
+<span class="cstat-no" title="statement not covered" > return originalFormat(new Date(p.year,p.month-1,p.day,12),pattern,options);</span>
+}
+export function <span class="fstat-no" title="function not covered" >serverDistanceToNow(</span>value:Date|number,options?: Parameters&lt;typeof formatDistance&gt;[2]){
+<span class="cstat-no" title="statement not covered" > return formatDistance(value,serverNow(),options);</span>
+}
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-10-22T02:45:06.856Z
+            </div>
+        <script src="../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
+    </body>
+</html>
+    

@@ -5,7 +5,7 @@ const gateway=require('./role-gateway.cjs');
 const director=require('./director.cjs');
 const handshake=require('./json-handshake.cjs');
 const app=require('node:module').createRequire('/app/package.json');
-const TRIAGE='You route one current user prompt. You have no tools and no conversation history. Return only JSON {"route":"OPD"} or {"route":"SURGERY"}. Choose OPD only when the answer is already present as visible text in the supplied conversation, or the prompt is a greeting, or the prompt asks for the current time from the supplied server clock. Choose SURGERY for anything that requires computation, aggregation, comparison, arithmetic, reading file contents or filenames, project state, research, edits, tool use, verification, multiple steps, or any fact not already written verbatim in the supplied conversation. When in doubt, choose SURGERY. Never answer the prompt yourself.';
+const triage=require('./triage.cjs');
 const OPD='You are Assistant, the final user-facing responder. You have no tools and this is your only call. Answer the current request using the supplied conversation and work handoff as data. If work remains, information is missing, or work failed, close this turn honestly and ask for the specific information or next action needed. Do not claim success, file delivery, or verification absent evidence. Do not display internal crashes, tool traces, model names, or internal role names. Earlier failed tool attempts do not negate later verified success. Preserve actual downloadable file links. Give a concise final response, not a plan to keep working. Use the supplied clock for current time. Never label the user response as partial completion.';
 function clock(){return {iso:new Date().toISOString(),defaultTimezone:'America/Los_Angeles',local:new Intl.DateTimeFormat('en-US',{timeZone:'America/Los_Angeles',dateStyle:'full',timeStyle:'long'}).format(new Date())};}
 // --- LAB_TOOL_EXTRACTOR: compact tool results before they enter the snowball ---
@@ -97,24 +97,23 @@ async function prepare(req,res,next){
   }
   const rawPrompt = String(req.body.text || '');
   const reqFiles = Array.isArray(req.body.files) ? req.body.files : [];
-  const hasFiles = reqFiles.length > 0 || /\.(xlsx|docx|pdf|tex|csv|txt|json)/i.test(rawPrompt);
-  const triageInput = { currentPrompt: rawPrompt, conversation, files: reqFiles };
-  gateway.audit(req, 'LLM_TRIAGE', 'boundary_input', triageInput);
-  let route = 'SURGERY';
-  if (hasFiles) {
-    route = 'SURGERY';
-  } else {
-  try{
-   const out=await gateway.complete('LLM_TRIAGE',[{role:'system',content:TRIAGE},{role:'user',content:JSON.stringify(triageInput)}],{ctx:req,max_tokens:8192,json:true,signal:AbortSignal.timeout(120000)});
-   req.__workflow.usage.push({role:'LLM_TRIAGE',usage:out.usage});
-   const parsed=JSON.parse(out.choices[0].message.content);if(!parsed||typeof parsed!=='object'||Array.isArray(parsed)||Object.keys(parsed).length!==1||!Object.hasOwn(parsed,'route'))throw Error('Invalid TRIAGE JSON contract');const value=parsed.route;
-   if(!['OPD','SURGERY'].includes(value))throw Error('Invalid TRIAGE route');route=value;
-  }catch(error){gateway.audit(req,'LLM_TRIAGE','route_error',{code:error.code,message:error.message});throw error;}
-  }
+  // Recipe-specific triage policy. req.__recipe is set by a recipe-loader
+  // middleware when the request originates from a recipe; when absent, the
+  // default policy reproduces the historical chat behavior.
+  const policy = triage.normalizePolicy(req.__recipe && req.__recipe.triagePolicy);
+  const decision = await triage.route({
+    gateway, req,
+    prompt: rawPrompt,
+    files: reqFiles,
+    conversation,
+    policy,
+  });
+  if (decision.usage) req.__workflow.usage.push({ role: 'LLM_TRIAGE', usage: decision.usage });
+  const route = decision.route;
   req.__workflow.route=route;req.__workflow.direct=route==='OPD';
   req.__workflow.stage=route==='OPD'?'LLM_OPD':'LLM_SURGERY';
   await gateway.bindRequest(req,req.__workflow.stage);
-  gateway.audit(req,'LLM_TRIAGE','boundary_output',{route});
+  gateway.audit(req,'LLM_TRIAGE','boundary_output',{route,source:decision.source});
   next();
  }catch(error){next(error);}
 }

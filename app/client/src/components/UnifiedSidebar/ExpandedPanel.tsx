@@ -1,69 +1,17 @@
 import { useAuthContext } from '~/hooks/AuthContext';
 import { memo, useCallback, lazy, Suspense } from 'react';
-import { useRecoilValue } from 'recoil';
-import { Bug, Activity, SquarePen, LayoutGrid } from 'lucide-react';
-import { QueryKeys } from 'librechat-data-provider';
-import { useQueryClient } from '@tanstack/react-query';
+import { Bug, Activity, LayoutGrid } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Skeleton, Sidebar, Button, TooltipAnchor } from '@librechat/client';
 import type { NavLink } from '~/common';
 import { useShortcutAriaKey, useShortcutHint } from '~/hooks/useKeyboardShortcuts';
 import { useActivePanel, resolveActivePanel, DEFAULT_PANEL } from '~/Providers';
 import { CLOSE_SIDEBAR_ID } from '~/components/Chat/Menus/OpenSidebar';
-import { useLocalize, useNewConvo } from '~/hooks';
-import { clearMessagesCache, cn } from '~/utils';
-import store from '~/store';
+import { useLocalize } from '~/hooks';
+import { cn } from '~/utils';
 import AdminTools from './AdminTools';
 
 const AccountSettings = lazy(() => import('~/components/Nav/AccountSettings'));
-
-const NewChatButton = memo(function NewChatButton({
-  setActive,
-}: {
-  setActive: (id: string) => void;
-}) {
-  const localize = useLocalize();
-  const queryClient = useQueryClient();
-  const { newConversation } = useNewConvo();
-  const conversation = useRecoilValue(store.conversationByIndex(0));
-  const switchToHistory = useRecoilValue(store.newChatSwitchToHistory);
-  const tooltipDescription = useShortcutHint('newChat', localize('com_ui_new_chat'));
-  const ariaKey = useShortcutAriaKey('newChat');
-
-  const handleClick = useCallback(
-    (e: React.MouseEvent<HTMLAnchorElement>) => {
-      if (e.button === 0 && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault();
-        clearMessagesCache(queryClient, conversation?.conversationId);
-        queryClient.invalidateQueries([QueryKeys.messages]);
-        newConversation();
-        if (switchToHistory) {
-          setActive(DEFAULT_PANEL);
-        }
-      }
-    },
-    [queryClient, conversation?.conversationId, newConversation, switchToHistory, setActive],
-  );
-
-  return (
-    <TooltipAnchor
-      side="right"
-      description={tooltipDescription}
-      render={
-        <a
-          href="/c/new"
-          data-testid="new-chat-button"
-          aria-label={localize('com_ui_new_chat')}
-          aria-keyshortcuts={ariaKey}
-          className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-surface-hover"
-          onClick={handleClick}
-        >
-          <SquarePen className="h-5 w-5 text-text-primary" />
-        </a>
-      }
-    />
-  );
-});
 
 const AllProjectsButton = memo(function AllProjectsButton({
   onCollapse,
@@ -204,21 +152,6 @@ function ExpandedPanel({
       />
       <div className="mx-2 border-b border-border-light" />
       <AllProjectsButton onCollapse={onCollapse} />
-      <div className="flex flex-col gap-1 overflow-y-auto">
-        {links.slice(0, 1).map((link) => (
-          <NavIconButton
-            key={link.id}
-            link={link}
-            isActive={link.id === effectiveActive}
-            expanded={expanded ?? true}
-            setActive={setActive}
-            onExpand={onExpand}
-            onCollapse={onCollapse}
-          />
-        ))}
-      </div>
-      <div className="mx-2 border-b border-border-light" />
-      <NewChatButton setActive={setActive} />
       <div className="mx-2 border-b border-border-light" />
       <div className="flex flex-col gap-1 overflow-y-auto">
         {links.slice(1).map((link) => (

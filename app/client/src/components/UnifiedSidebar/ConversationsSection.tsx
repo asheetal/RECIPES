@@ -1,4 +1,3 @@
-import OtherConversations from '~/components/Conversations/OtherConversations';
 import { useCallback, useEffect, useState, useMemo, memo, lazy, Suspense, useRef } from 'react';
 import { useSetRecoilState, useRecoilValue } from 'recoil';
 import { useMediaQuery } from '@librechat/client';
@@ -125,11 +124,6 @@ const ConversationsSection = memo(() => {
         </div>
       )}
       {!search.query && <ProjectsSection toggleNav={toggleNav} isAuthenticated={isAuthenticated} />}
-      {!search.query && isAuthenticated && (
-        <div className="min-h-0 flex-1 overflow-y-auto px-3">
-          <OtherConversations toggleNav={toggleNav} />
-        </div>
-      )}
       {!!search.query && <div className="flex min-h-0 flex-grow flex-col overflow-hidden">
         <Conversations
           conversations={conversations}

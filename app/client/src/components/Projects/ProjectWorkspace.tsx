@@ -2,7 +2,7 @@ import { useCallback, useId, useMemo, useState } from 'react';
 import * as Ariakit from '@ariakit/react';
 import { useRecoilValue } from 'recoil';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, ArrowUpDown, Check, Folder, Plus } from 'lucide-react';
+import { ArrowLeft, ArrowUpDown, Check, Folder, MessageSquare } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { QueryKeys } from 'librechat-data-provider';
 import type { ConversationListResponse } from 'librechat-data-provider';
@@ -154,22 +154,39 @@ export default function ProjectWorkspace() {
           </div>
         </header>
 
-        <button
-          type="button"
-          onClick={startProjectChat}
-          className={cn(
-            'mt-6 flex w-full items-center gap-3 rounded-[26px] border border-border-medium bg-surface-secondary px-3.5 py-3 text-left shadow-sm transition-colors',
-            'hover:bg-surface-tertiary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary',
-          )}
-          aria-label={localize('com_ui_new_chat_in_project', { name: project.name })}
-        >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-tertiary text-text-primary">
-            <Plus className="h-4 w-4" aria-hidden="true" />
-          </span>
-          <span className="min-w-0 flex-1 truncate text-text-secondary">
-            {localize('com_ui_new_chat_in_project', { name: project.name })}
-          </span>
-        </button>
+        <section className="mt-6" aria-labelledby="project-recipes-heading">
+          <h2
+            id="project-recipes-heading"
+            className="mb-2 text-sm font-medium text-text-primary"
+          >
+            {localize('com_ui_recipes')}
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <button
+              type="button"
+              onClick={startProjectChat}
+              data-testid="recipe-tile-chat"
+              aria-label={localize('com_ui_new_chat_in_project', { name: project.name })}
+              className={cn(
+                'group/recipe flex min-h-[6.5rem] flex-col rounded-xl border border-border-medium bg-surface-secondary p-4 text-left transition-colors',
+                'hover:border-border-heavy hover:bg-surface-tertiary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary',
+              )}
+            >
+              <span className="flex min-w-0 items-center gap-2">
+                <MessageSquare
+                  className="h-4 w-4 shrink-0 text-text-secondary"
+                  aria-hidden="true"
+                />
+                <span className="truncate text-base font-semibold text-text-primary">
+                  {localize('com_ui_chat_recipe')}
+                </span>
+              </span>
+              <span className="mt-2 line-clamp-2 text-sm text-text-secondary">
+                {localize('com_ui_chat_recipe_description')}
+              </span>
+            </button>
+          </div>
+        </section>
 
         <ProjectFiles projectId={project._id} />
 

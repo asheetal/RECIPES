@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="t d">
+  <title id="t">RA.recipes</title>
+  <desc id="d">AI consuming mundane repetitive work, resting on a foundation of hard work.</desc>
+  <rect width="512" height="512" rx="96" fill="#111111"/>
+  <g fill="none" stroke="#ffffff" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 144 240 L 208 64 L 272 240"/>
+    <path d="M 172 192 L 244 192"/>
+    <path d="M 304 64 L 368 64"/>
+    <path d="M 336 64 L 336 240"/>
+    <path d="M 304 240 L 368 240"/>
+  </g>
+  <g fill="#ffffff">
+    <rect x="72"  y="304" width="48" height="48" rx="8"/>
+    <rect x="136" y="304" width="48" height="48" rx="8"/>
+    <rect x="200" y="304" width="48" height="48" rx="8"/>
+    <rect x="264" y="304" width="48" height="48" rx="8" opacity="0.45"/>
+    <rect x="328" y="304" width="48" height="48" rx="8" opacity="0.25"/>
+    <rect x="392" y="304" width="48" height="48" rx="8" opacity="0.15"/>
+    <rect x="72"  y="368" width="48" height="48" rx="8" opacity="0.45"/>
+    <rect x="136" y="368" width="48" height="48" rx="8" opacity="0.45"/>
+    <rect x="200" y="368" width="48" height="48" rx="8" opacity="0.25"/>
+    <rect x="264" y="368" width="48" height="48" rx="8" opacity="0.25"/>
+    <rect x="328" y="368" width="48" height="48" rx="8" opacity="0.15"/>
+    <rect x="392" y="368" width="48" height="48" rx="8" opacity="0.15"/>
+  </g>
+  <rect x="72" y="448" width="368" height="64" rx="12" fill="#e8b44a"/>
+</svg>

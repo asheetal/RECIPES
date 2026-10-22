@@ -1,0 +1,109 @@
+/* lab-project-chat-indent */
+
+[data-testid^="project-chats-"] {
+  padding-inline-start: 12px;
+  box-sizing: border-box;
+}
+
+
+/* lab-hide-duplicate-web-search */
+
+#tools-dropdown-menu [role^="menuitem"]:has(svg.lucide-globe) {
+  display: none !important;
+}
+
+
+/* lab-skills-contact-label */
+
+[data-testid="tools-menu-skills"] > div:first-child > span {
+  font-size: 0;
+}
+[data-testid="tools-menu-skills"] > div:first-child > span::after {
+  content: "Skills (contact Abhishek for more skills)";
+  font-size: 0.875rem;
+}
+
+
+/* lab-simple-model-menu */
+
+/* lab-model-pin-fix */
+div.sticky:has(input#model-search),
+.animate-popover:has(input#model-search) button[aria-label*="pin" i] {
+  display: none !important;
+}
+
+
+/* lab-warm-theme */
+
+html:not(.dark), html:not(.dark) .gizmo:not(.dark) {
+  --presentation: #FAF7F2;
+  --text-primary: #302B27;
+  --text-secondary: #665C52;
+  --text-secondary-alt: #665C52;
+  --text-tertiary: #665C52;
+  --ring-primary: #94543D;
+  --header-primary: #FAF7F2;
+  --header-hover: #EEE7DD;
+  --header-button-hover: #E5DACE;
+  --surface-primary: #FAF7F2;
+  --surface-primary-alt: #F4EEE6;
+  --surface-primary-contrast: #EEE7DD;
+  --surface-secondary: #EEE7DD;
+  --surface-secondary-alt: #E5DACE;
+  --surface-tertiary: #EEE7DD;
+  --surface-tertiary-alt: #FAF7F2;
+  --surface-dialog: #FAF7F2;
+  --surface-chat: #FAF7F2;
+  --surface-active: #E9D8CB;
+  --surface-active-alt: #DEC3B1;
+  --surface-hover: #E5DACE;
+  --surface-hover-alt: #DCCDBE;
+  --surface-submit: #94543D;
+  --surface-submit-hover: #784330;
+  --border-light: #D8CFC2;
+  --border-medium: #C8BAAA;
+  --border-medium-alt: #C8BAAA;
+  --border-heavy: #A08E7C;
+  --border-xheavy: #806F60;
+
+  --background: 38 44% 96%;
+  --foreground: 27 10% 17%;
+  --card: 38 44% 96%;
+  --card-foreground: 27 10% 17%;
+  --primary: 16 42% 41%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 35 33% 90%;
+  --secondary-foreground: 27 10% 17%;
+  --muted: 35 33% 90%;
+  --muted-foreground: 30 11% 36%;
+  --accent: 26 41% 85%;
+  --accent-foreground: 27 10% 17%;
+  --border: 35 22% 80%;
+  --input: 35 22% 80%;
+  --ring: 16 42% 41%;
+}
+html:not(.dark) ::selection {
+  background: #DEC3B1;
+  color: #302B27;
+}
+
+
+/* lab-warm-prompt */
+
+html:not(.dark) form div.rounded-t-3xl:has(textarea[data-testid="text-input"]) {
+  background-color: #EEE7DD !important;
+  border-color: #D8CFC2 !important;
+  color: #302B27;
+}
+html:not(.dark) textarea[data-testid="text-input"] {
+  background-color: transparent !important;
+  color: #302B27 !important;
+}
+html:not(.dark) textarea[data-testid="text-input"]::placeholder {
+  color: #665C52 !important;
+  opacity: 1;
+}
+
+
+/* lab-progress-warm */
+.agent-turn div[role="status"][aria-live="polite"]{background-color:#EDE3D5!important;color:#5C4B3A!important}

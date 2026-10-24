@@ -57,17 +57,7 @@ function registerRoutes(router, projectFilesService) {
       const started = await svc.startRun(s, fileId, file.name, buffer);
       if (started.status === 'no_new_run') return res.json(started);
       res.json({ status: 'started', state: await svc.getState(s) });
-
-      let cfg = req.config;
-      if (!cfg) {
-        const { getAppConfig } = require('~/server/services/Config');
-        cfg = await getAppConfig({ role: req.user?.role, userId: s.user, tenantId: s.tenant });
-      }
-      const custom = (cfg.endpoints && cfg.endpoints.custom) || [];
-      const spec = (cfg.modelSpecs && cfg.modelSpecs.list && cfg.modelSpecs.list[0]) || null;
-      const endpoint = (spec && spec.endpoint) || (custom[0] && custom[0].name) || null;
       if (!endpoint) { await svc.failRun(s, 'no endpoint in config'); return; }
-      const model = (spec && spec.model) || (custom[0] && custom[0].models && custom[0].models.default && custom[0].models.default[0]) || null;
       const jwt = require('jsonwebtoken');
       const mongoose = require('mongoose');
       const db = mongoose.connection.db;

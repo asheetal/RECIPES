@@ -93,4 +93,17 @@ function wrapLoad(load) {
   };
 }
 
-module.exports = { NAME, def, wrapLoad, invoke };
+function wrapExecution(load) {
+  return async (p) => {
+    const wanted = p.toolNames.includes(NAME);
+    const names = p.toolNames.filter((n) => n !== NAME);
+    const r = await load({ ...p, toolNames: names });
+    if (wanted) {
+      if (!r.loadedTools) r.loadedTools = [];
+      r.loadedTools.push(makeTool(p.req));
+    }
+    return r;
+  };
+}
+
+module.exports = { NAME, def, wrapLoad, wrapExecution, invoke };

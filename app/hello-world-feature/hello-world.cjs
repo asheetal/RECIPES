@@ -63,6 +63,53 @@ function registerRoutes(router, projectFilesService) {
       res.json({ status: 'started', state: await svc.getState(s) });
 
       setImmediate(async () => {
+        const driver = require('/app/admin-tools/triage-driver.cjs');
+        const gateway = require('/app/admin-tools/role-gateway.cjs');
+        const ctx = driver.makeCtx({ user: { id: s.user, tenantId: s.tenant }, routeTag: 'hello_world' });
+        ctx.__helloWorldProjectId = s.projectId;
+        try {
+          const { decision } = await driver.runTriage({
+            req: ctx,
+            prompt: recipe.promptTemplate,
+            files: [{ name: file.name, file_id: fileId }],
+            policy: recipe.triagePolicy,
+            operate: async (r) => {
+              const tool = require('/app/hello-world-feature/tool.cjs');
+              return await tool.invoke(r, { file_id: fileId });
+            },
+          });
+          const opd = await gateway.complete(
+            'LLM_OPD',
+            [
+              { role: 'system', content: 'You are Assistant, the final user-facing responder. You have no tools. Close the turn honestly and concisely.' },
+              { role: 'user', content: JSON.stringify({ recipe: 'Hello World', route: decision.route, result: 'completed' }) },
+            ],
+            { ctx, max_tokens: 512 },
+          );
+          gateway.audit(ctx, 'LLM_OPD', 'boundary_output', { text: opd?.choices?.[0]?.message?.content || '' });
+        } catch (e) {
+          await svc.failRun(s, e.message || String(e));
+        }
+      });
+    } catch (e) { next(e); }
+  });
+
+  router.post('/:projectId/hello-world/start', async (req, res, next) => {
+    try {
+      const s = await svc.scope(req, req.params.projectId);
+      const { fileId } = req.body || {};
+      if (!fileId) return res.status(400).json({ error: 'fileId required' });
+
+      const pfScope = { user: s.user, tenant: s.tenant, projectId: s.projectId };
+      const { file, buffer } = await projectFilesService.read(pfScope, fileId);
+
+      const started = await svc.startRun(s, fileId, file.name, buffer);
+      if (started.status === 'no_new_run') return res.json(started);
+
+      const recipe = require('/app/recipes/loader.cjs').load('hello_world');
+      res.json({ status: 'started', state: await svc.getState(s) });
+
+      setImmediate(async () => {
         const gateway = require('/app/admin-tools/role-gateway.cjs');
         const triage = require('/app/admin-tools/triage.cjs');
         const ctx = {

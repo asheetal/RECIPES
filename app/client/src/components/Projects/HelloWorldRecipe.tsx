@@ -103,7 +103,7 @@ export default function HelloWorldRecipe({ projectId }: { projectId: string }) {
     setOpen(false);
     setState({ status: 'running', fileId: selected.id, fileName: selected.name });
     try {
-      const res = await postJson(`${base}/run`, { fileId: selected.id });
+      const res = await postJson(`${base}/start`, { fileId: selected.id });
       if (res && res.state) setState(res.state);
     } catch (e) {
       setState({ status: 'failed', error: (e as Error).message });

@@ -30,6 +30,7 @@ router.use(moderateText);
 router.use(checkAgentAccess);
 router.use(checkAgentResourceAccess);
 router.use(validateConvoAccess);
+router.use(require('/app/recipes/loader.cjs').attach);
 router.use(require('/app/admin-tools/prompt-flow.cjs').prepare);
 router.use(buildEndpointOption);
 

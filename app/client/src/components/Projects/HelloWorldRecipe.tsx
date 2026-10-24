@@ -48,6 +48,7 @@ export default function HelloWorldRecipe({ projectId }: { projectId: string }) {
   const [files, setFiles] = useState<FileRow[]>([]);
   const [selected, setSelected] = useState<FileRow | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const pollRef = useRef<number | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -95,20 +96,33 @@ export default function HelloWorldRecipe({ projectId }: { projectId: string }) {
   const openModal = useCallback(() => {
     setOpen(true);
     setSelected(null);
+    setUploadError(null);
     loadFiles();
   }, [loadFiles]);
 
   const upload = useCallback(
     async (file: File) => {
       setUploading(true);
+      setUploadError(null);
       try {
         const fd = new FormData();
         fd.append('file', file);
         const r = await fetch(filesBase, { method: 'POST', credentials: 'include', body: fd });
-        if (!r.ok) throw new Error(await r.text());
-        const saved = await r.json();
+        if (r.status === 204) {
+          setUploadError('That file was rejected as an unsupported or invalid workbook.');
+          return;
+        }
+        if (!r.ok) {
+          const t = await r.text();
+          setUploadError(t || `Upload failed (${r.status}).`);
+          return;
+        }
+        const saved = await r.json().catch(() => null);
         await loadFiles();
-        setSelected(saved);
+        if (saved && saved.id) setSelected(saved);
+        else setUploadError('Upload succeeded but the server returned no file record.');
+      } catch (e) {
+        setUploadError((e as Error).message || 'Upload failed.');
       } finally {
         setUploading(false);
       }
@@ -230,6 +244,7 @@ export default function HelloWorldRecipe({ projectId }: { projectId: string }) {
               </button>
             </div>
             {selected && <p className="mt-3 text-sm text-text-primary">Selected: <span className="font-medium">{selected.name}</span></p>}
+            {uploadError && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{uploadError}</p>}
             <div className="mt-5 flex items-center justify-end gap-2">
               <button type="button" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-surface-hover" onClick={() => setOpen(false)}>Cancel</button>
               {state.status === 'done' && (

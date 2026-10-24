@@ -14,7 +14,7 @@ const mongoose = require('mongoose');
   const token = jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: '15m' });
   const body = {
     conversationId: 'new',
-    text: recipe.prompt,
+    text: `${recipe.prompt}\n\nWorkbook file_id: ${fileId}`,
     parentMessageId: null,
     tools: recipe.tools || [],
     files: [{ file_id: fileId, projectFileId: fileId, filename: 'workbook.xlsx' }],

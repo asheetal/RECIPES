@@ -57,7 +57,6 @@ function registerRoutes(router, projectFilesService) {
       const started = await svc.startRun(s, fileId, file.name, buffer);
       if (started.status === 'no_new_run') return res.json(started);
       res.json({ status: 'started', state: await svc.getState(s) });
-      if (!endpoint) { await svc.failRun(s, 'no endpoint in config'); return; }
       const jwt = require('jsonwebtoken');
       const mongoose = require('mongoose');
       const db = mongoose.connection.db;
@@ -67,7 +66,7 @@ function registerRoutes(router, projectFilesService) {
       await db.collection('conversations').insertOne({
         conversationId, title: 'Hello World', user: s.user, tenant: s.tenant,
         chatProjectId: s.projectId, recipeId: recipe.recipeId, recipeName: recipe.name,
-        endpoint, model, createdAt: now, updatedAt: now,
+        createdAt: now, updatedAt: now,
       });
       await db.collection('messages').insertOne({
         messageId: new mongoose.Types.ObjectId().toString(), conversationId,

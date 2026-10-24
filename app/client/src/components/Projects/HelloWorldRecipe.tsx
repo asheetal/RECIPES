@@ -111,8 +111,20 @@ export default function HelloWorldRecipe({ projectId }: { projectId: string }) {
     refresh();
   }, [selected, base, refresh]);
 
-  const download = useCallback(() => {
-    window.open(`${base}/pdf`, '_blank');
+  const download = useCallback(async () => {
+    try {
+      const blob = (await request.get(`${base}/pdf`, { responseType: 'blob' })) as unknown as Blob;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'hello-world.pdf';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      /* surfaced by tile state on next refresh */
+    }
   }, [base]);
 
   const remove = useCallback(async () => {

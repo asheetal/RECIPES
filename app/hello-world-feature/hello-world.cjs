@@ -82,7 +82,8 @@ function registerRoutes(router, projectFilesService) {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'User-Agent': req.headers['user-agent'] || 'LibreChat/0.8.7' },
         body: JSON.stringify({
           conversationId, text: recipe.prompt, parentMessageId: null,
-          endpoint, model, files: [{ file_id: fileId, projectFileId: fileId, filename: file.name }],
+          tools: recipe.tools || [],
+          files: [{ file_id: fileId, projectFileId: fileId, filename: file.name }],
         }),
         signal: AbortSignal.timeout(180000),
       }).then(async (r) => {

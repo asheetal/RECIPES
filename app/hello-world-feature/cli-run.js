@@ -4,11 +4,11 @@ const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 
 (async () => {
-  const [projectId, fileId] = process.argv.slice(2);
+  const [projectId, fileId, userArg] = process.argv.slice(2);
   if (!projectId || !fileId) { console.error('usage: cli-run.js <projectId> <fileId>'); process.exit(2); }
   const db = mongoose.connection.db;
   const run = await db.collection('helloworldruns').findOne({ projectId });
-  const userId = run && run.user;
+  const userId = userArg || (run && run.user);
   if (!userId) { console.error('no user'); process.exit(2); }
   const recipe = require('/app/recipes/hello_world.cjs');
   const token = jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: '15m' });
@@ -16,6 +16,7 @@ const mongoose = require('mongoose');
     conversationId: 'new',
     text: recipe.prompt,
     parentMessageId: null,
+    tools: recipe.tools || [],
     files: [{ file_id: fileId, projectFileId: fileId, filename: 'workbook.xlsx' }],
   };
   const r = await fetch(`http://127.0.0.1:${process.env.PORT || 3080}/api/agents/chat`, {

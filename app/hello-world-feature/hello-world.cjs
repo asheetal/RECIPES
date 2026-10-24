@@ -75,7 +75,28 @@ function registerRoutes(router, projectFilesService) {
             policy: recipe.triagePolicy,
             operate: async (r) => {
               const tool = require('/app/hello-world-feature/tool.cjs');
-              return await tool.invoke(r, { file_id: fileId });
+              const sys = [
+                'You are the surgeon. You have exactly one tool: hello_world_run.',
+                'Call it once with the given file_id. Then state the result.',
+                'Do not call any other tool. Do not ask questions.',
+              ].join(' ');
+              const out = await gateway.complete(
+                'LLM_SURGERY',
+                [
+                  { role: 'system', content: sys },
+                  { role: 'user', content: JSON.stringify({ file_id: fileId, file_name: file.name }) },
+                ],
+                { ctx: r, max_tokens: 1024, tools: [tool.def], tool_choice: { type: 'function', function: { name: tool.NAME } } },
+              );
+              const msg = out?.choices?.[0]?.message || {};
+              const calls = msg.tool_calls || [];
+              if (!calls.length) {
+                gateway.audit(r, 'LLM_SURGERY', 'tool_call_missing', { message: String(msg.content || '').slice(0, 300) });
+                throw new Error('surgeon did not call the tool');
+              }
+              const result = await tool.invoke(r, JSON.parse(calls[0].function.arguments || '{}'));
+              gateway.audit(r, 'LLM_SURGERY', 'boundary_output', { handoff: { status: 'returned', result } });
+              return result;
             },
           });
           const opd = await gateway.complete(

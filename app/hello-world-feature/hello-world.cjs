@@ -60,60 +60,32 @@ function registerRoutes(router, projectFilesService) {
       if (started.status === 'no_new_run') return res.json(started);
 
       const recipe = require('/app/recipes/loader.cjs').load('hello_world');
-      const mongoose = require('mongoose');
-      const conversationId = new mongoose.Types.ObjectId().toString();
-      const now = new Date();
-      await mongoose.connection.db.collection('conversations').insertOne({
-        conversationId,
-        title: 'Hello World',
-        user: s.user,
-        tenant: s.tenant,
-        chatProjectId: s.projectId,
-        recipeId: recipe.recipeId,
-        recipeName: recipe.name,
-        createdAt: now,
-        updatedAt: now,
-      });
-      await mongoose.connection.db.collection('messages').insertOne({
-        messageId: new mongoose.Types.ObjectId().toString(),
-        conversationId,
-        user: s.user,
-        isCreatedByUser: true,
-        sender: 'User',
-        text: recipe.promptTemplate,
-        createdAt: now,
-        updatedAt: now,
-      });
+      res.json({ status: 'started', state: await svc.getState(s) });
 
-      console.error('[HELLO_WORLD] start', { hasAuth: !!req.headers.authorization, hasCookie: !!req.headers.cookie, conversationId });
-      const base = `http://127.0.0.1:${process.env.PORT || 3080}`;
-      const payload = {
-        conversationId,
-        text: recipe.promptTemplate,
-        parentMessageId: null,
-        endpoint: 'agents',
-        files: [{ file_id: fileId, projectFileId: fileId, filename: file.name }],
-      };
-      fetch(`${base}/api/agents/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: req.headers.authorization || '',
-          Cookie: req.headers.cookie || '',
-        },
-        body: JSON.stringify(payload),
-      }).then(async (r) => {
-        if (!r.ok) {
-          const t = await r.text().catch(() => '');
-          console.error('[HELLO_WORLD] chat submit failed', r.status, t.slice(0, 500));
-          await svc.failRun(s, `chat submit ${r.status}: ${t.slice(0, 200)}`);
+      setImmediate(async () => {
+        const gateway = require('/app/admin-tools/role-gateway.cjs');
+        const triage = require('/app/admin-tools/triage.cjs');
+        const ctx = {
+          user: { id: s.user, tenantId: s.tenant },
+          body: { conversationId: 'recipe:' + s.projectId },
+          __workflow: { id: require('node:crypto').randomUUID(), stage: 'LLM_TRIAGE', usage: [] },
+        };
+        try {
+          const decision = await triage.route({
+            gateway,
+            req: ctx,
+            prompt: recipe.promptTemplate,
+            files: [{ name: file.name, file_id: fileId }],
+            conversation: [],
+            policy: recipe.triagePolicy,
+          });
+          if (decision.route !== 'SURGERY') throw Error('unexpected route ' + decision.route);
+          const tool = require('/app/hello-world-feature/tool.cjs');
+          await tool.invoke(ctx, { file_id: fileId });
+        } catch (e) {
+          await svc.failRun(s, e.message || String(e));
         }
-      }).catch(async (e) => {
-        console.error('[HELLO_WORLD] chat submit error', e.message);
-        await svc.failRun(s, e.message);
       });
-
-      res.json({ status: 'started', conversationId, state: await svc.getState(s) });
     } catch (e) { next(e); }
   });
 

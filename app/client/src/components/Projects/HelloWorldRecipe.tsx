@@ -4,6 +4,7 @@ import { Spinner } from '@librechat/client';
 import { useNavigate } from 'react-router-dom';
 import { useRecoilState } from 'recoil';
 import { useQueryClient } from '@tanstack/react-query';
+import { request, apiBaseUrl } from 'librechat-data-provider';
 import type { TFile } from 'librechat-data-provider';
 import { useLocalize, useNewConvo } from '~/hooks';
 import { cn } from '~/utils';
@@ -18,26 +19,9 @@ type RunState = {
   error?: string | null;
 };
 
-async function getJson(url: string) {
-  const r = await fetch(url, { credentials: 'include' });
-  if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
-  return r.json();
-}
-async function postJson(url: string, body: unknown) {
-  const r = await fetch(url, {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!r.ok) throw new Error((await r.text()) || `${r.status}`);
-  return r.json();
-}
-async function delJson(url: string) {
-  const r = await fetch(url, { method: 'DELETE', credentials: 'include' });
-  if (!r.ok) throw new Error(`${r.status}`);
-  return r.json();
-}
+async function getJson(url: string) { return request.get(url); }
+async function postJson(url: string, body: unknown) { return request.post(url, body); }
+async function delJson(url: string) { return request.delete(url); }
 
 export default function HelloWorldRecipe({ projectId }: { projectId: string }) {
   const localize = useLocalize();
@@ -56,8 +40,8 @@ export default function HelloWorldRecipe({ projectId }: { projectId: string }) {
   const [, setText] = useRecoilState(store.text);
   const { newConversation } = useNewConvo();
 
-  const base = `/api/projects/${projectId}/hello-world`;
-  const filesBase = `/api/projects/${projectId}/files`;
+  const base = `${apiBaseUrl()}/api/projects/${encodeURIComponent(projectId)}/hello-world`;
+  const filesBase = `${apiBaseUrl()}/api/projects/${encodeURIComponent(projectId)}/files`;
 
   const refresh = useCallback(async () => {
     try {
@@ -107,17 +91,11 @@ export default function HelloWorldRecipe({ projectId }: { projectId: string }) {
       try {
         const fd = new FormData();
         fd.append('file', file);
-        const r = await fetch(filesBase, { method: 'POST', credentials: 'include', body: fd });
-        if (r.status === 204) {
+        const saved = (await request.postMultiPart(filesBase, fd)) as FileRow | undefined;
+        if (!saved) {
           setUploadError('That file was rejected as an unsupported or invalid workbook.');
           return;
         }
-        if (!r.ok) {
-          const t = await r.text();
-          setUploadError(t || `Upload failed (${r.status}).`);
-          return;
-        }
-        const saved = await r.json().catch(() => null);
         await loadFiles();
         if (saved && saved.id) setSelected(saved);
         else setUploadError('Upload succeeded but the server returned no file record.');
@@ -238,7 +216,7 @@ export default function HelloWorldRecipe({ projectId }: { projectId: string }) {
               ))}
             </div>
             <div className="mt-3">
-              <input ref={inputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={(e) => { const fl = e.target.files?.[0]; if (fl) upload(fl); }} />
+              <input ref={inputRef} type="file" accept=".xlsx" className="hidden" onChange={(e) => { const fl = e.target.files?.[0]; if (fl) upload(fl); }} />
               <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading} className="inline-flex items-center gap-2 rounded-lg border border-border-medium px-3 py-2 text-sm text-text-primary hover:bg-surface-hover disabled:opacity-50">
                 {uploading ? <Spinner className="h-4 w-4" /> : <Upload className="h-4 w-4" />} Upload new file
               </button>

@@ -95,13 +95,10 @@ function wrapLoad(load) {
 
 function wrapExecution(load) {
   return async (p) => {
-    const wanted = p.toolNames.includes(NAME);
     const names = p.toolNames.filter((n) => n !== NAME);
     const r = await load({ ...p, toolNames: names });
-    if (wanted) {
-      if (!r.loadedTools) r.loadedTools = [];
-      r.loadedTools.push(makeTool(p.req));
-    }
+    if (!r.loadedTools) r.loadedTools = [];
+    if (!r.loadedTools.some((t) => t.name === NAME)) r.loadedTools.push(makeTool(p.req));
     return r;
   };
 }

@@ -76,6 +76,7 @@ function registerRoutes(router, projectFilesService) {
       });
       const token = jwt.sign({ id: s.user }, process.env.JWT_SECRET, { expiresIn: '10m' });
       const base = `http://127.0.0.1:${process.env.PORT || 3080}`;
+      console.error('[HELLO_WORLD] dispatching to chat', conversationId);
       fetch(`${base}/api/agents/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -83,71 +84,16 @@ function registerRoutes(router, projectFilesService) {
           conversationId, text: recipe.prompt, parentMessageId: null,
           endpoint: 'agents', files: [{ file_id: fileId, projectFileId: fileId, filename: file.name }],
         }),
+        signal: AbortSignal.timeout(180000),
       }).then(async (r) => {
-        if (!r.ok) { const t = await r.text().catch(() => ''); await svc.failRun(s, `chat ${r.status}: ${t.slice(0, 200)}`); }
-      }).catch(async (e) => { await svc.failRun(s, e.message); });
-    } catch (e) { next(e); }
-  });
-
-  router.post('/:projectId/hello-world/start', async (req, res, next) => {
-    try {
-      const s = await svc.scope(req, req.params.projectId);
-      const { fileId } = req.body || {};
-      if (!fileId) return res.status(400).json({ error: 'fileId required' });
-      const pfScope = { user: s.user, tenant: s.tenant, projectId: s.projectId };
-      const { file, buffer } = await projectFilesService.read(pfScope, fileId);
-      const started = await svc.startRun(s, fileId, file.name, buffer);
-      if (started.status === 'no_new_run') return res.json(started);
-      res.json({ status: 'started', state: await svc.getState(s) });
-
-      setImmediate(async () => {
-        const pf = require('/app/admin-tools/prompt-flow.cjs');
-        const recipe = require('/app/recipes/hello_world.cjs');
-        const req = {
-          user: { id: s.user, tenantId: s.tenant },
-          body: { text: recipe.prompt, conversationId: 'recipe:' + s.projectId },
-          config: {},
-          __helloWorldProjectId: s.projectId,
-        };
-        try {
-          await pf.runRecipe({ req, recipe, files: [{ name: file.name, file_id: fileId }] });
-        } catch (e) {
-          await svc.failRun(s, e.message || String(e));
+        console.error('[HELLO_WORLD] chat response', r.status);
+        if (!r.ok) {
+          const t = await r.text().catch(() => '');
+          await svc.failRun(s, `chat ${r.status}: ${t.slice(0, 200)}`);
         }
-      });
-    } catch (e) { next(e); }
-  });
-
-  router.post('/:projectId/hello-world/start', async (req, res, next) => {
-    try {
-      const s = await svc.scope(req, req.params.projectId);
-      const { fileId } = req.body || {};
-      if (!fileId) return res.status(400).json({ error: 'fileId required' });
-      const pfScope = { user: s.user, tenant: s.tenant, projectId: s.projectId };
-      const { file, buffer } = await projectFilesService.read(pfScope, fileId);
-      const started = await svc.startRun(s, fileId, file.name, buffer);
-      if (started.status === 'no_new_run') return res.json(started);
-      res.json({ status: 'started', state: await svc.getState(s) });
-
-      setImmediate(async () => {
-        const engine = require('/app/recipes/engine.cjs');
-        const recipe = require('/app/recipes/hello_world.cjs');
-        const ctx = engine.makeCtx({ id: s.user, tenantId: s.tenant });
-        ctx.__helloWorldProjectId = s.projectId;
-        try {
-          await engine.runRecipe({
-            req: ctx,
-            prompt: recipe.prompt,
-            files: [{ name: file.name, file_id: fileId }],
-            policy: recipe.policy,
-            operate: async (r) => {
-              const tool = require('/app/hello-world-feature/tool.cjs');
-              return await tool.invoke(r, { file_id: fileId });
-            },
-          });
-        } catch (e) {
-          await svc.failRun(s, e.message || String(e));
-        }
+      }).catch(async (e) => {
+        console.error('[HELLO_WORLD] chat fetch error', e.message);
+        await svc.failRun(s, e.message);
       });
     } catch (e) { next(e); }
   });

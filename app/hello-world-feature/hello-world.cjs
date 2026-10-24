@@ -86,7 +86,7 @@ function registerRoutes(router, projectFilesService) {
                   { role: 'system', content: sys },
                   { role: 'user', content: JSON.stringify({ file_id: fileId, file_name: file.name }) },
                 ],
-                { ctx: r, max_tokens: 1024, tools: [tool.def], tool_choice: { type: 'function', function: { name: tool.NAME } } },
+                { ctx: r, tools: [tool.def], tool_choice: { type: 'function', function: { name: tool.NAME } } },
               );
               const msg = out?.choices?.[0]?.message || {};
               const calls = msg.tool_calls || [];
@@ -105,7 +105,7 @@ function registerRoutes(router, projectFilesService) {
               { role: 'system', content: 'You are Assistant, the final user-facing responder. You have no tools. Close the turn honestly and concisely.' },
               { role: 'user', content: JSON.stringify({ recipe: 'Hello World', route: decision.route, result: 'completed' }) },
             ],
-            { ctx, max_tokens: 512 },
+            { ctx },
           );
           gateway.audit(ctx, 'LLM_OPD', 'boundary_output', { text: opd?.choices?.[0]?.message?.content || '' });
         } catch (e) {

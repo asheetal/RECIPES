@@ -58,6 +58,48 @@ function registerRoutes(router, projectFilesService) {
       if (started.status === 'no_new_run') return res.json(started);
       res.json({ status: 'started', state: await svc.getState(s) });
 
+      const jwt = require('jsonwebtoken');
+      const mongoose = require('mongoose');
+      const db = mongoose.connection.db;
+      const conversationId = new mongoose.Types.ObjectId().toString();
+      const now = new Date();
+      const recipe = require('/app/recipes/hello_world.cjs');
+      await db.collection('conversations').insertOne({
+        conversationId, title: 'Hello World', user: s.user, tenant: s.tenant,
+        chatProjectId: s.projectId, recipeId: recipe.recipeId, recipeName: recipe.name,
+        endpoint: 'agents', createdAt: now, updatedAt: now,
+      });
+      await db.collection('messages').insertOne({
+        messageId: new mongoose.Types.ObjectId().toString(), conversationId,
+        user: s.user, isCreatedByUser: true, sender: 'User',
+        text: recipe.prompt, createdAt: now, updatedAt: now,
+      });
+      const token = jwt.sign({ id: s.user }, process.env.JWT_SECRET, { expiresIn: '10m' });
+      const base = `http://127.0.0.1:${process.env.PORT || 3080}`;
+      fetch(`${base}/api/agents/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          conversationId, text: recipe.prompt, parentMessageId: null,
+          endpoint: 'agents', files: [{ file_id: fileId, projectFileId: fileId, filename: file.name }],
+        }),
+      }).then(async (r) => {
+        if (!r.ok) { const t = await r.text().catch(() => ''); await svc.failRun(s, `chat ${r.status}: ${t.slice(0, 200)}`); }
+      }).catch(async (e) => { await svc.failRun(s, e.message); });
+    } catch (e) { next(e); }
+  });
+
+  router.post('/:projectId/hello-world/start', async (req, res, next) => {
+    try {
+      const s = await svc.scope(req, req.params.projectId);
+      const { fileId } = req.body || {};
+      if (!fileId) return res.status(400).json({ error: 'fileId required' });
+      const pfScope = { user: s.user, tenant: s.tenant, projectId: s.projectId };
+      const { file, buffer } = await projectFilesService.read(pfScope, fileId);
+      const started = await svc.startRun(s, fileId, file.name, buffer);
+      if (started.status === 'no_new_run') return res.json(started);
+      res.json({ status: 'started', state: await svc.getState(s) });
+
       setImmediate(async () => {
         const pf = require('/app/admin-tools/prompt-flow.cjs');
         const recipe = require('/app/recipes/hello_world.cjs');

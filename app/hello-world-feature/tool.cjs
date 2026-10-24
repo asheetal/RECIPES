@@ -43,7 +43,16 @@ async function runWorker(xlsxBuffer, fileName) {
 async function invoke(req, args) {
   const gateway = require('/app/admin-tools/role-gateway.cjs');
   gateway.audit(req, 'LLM_SURGERY', 'tool_call', { tool: NAME, args });
-  const projectId = req?.__helloWorldProjectId;
+  let projectId = req?.__helloWorldProjectId;
+  if (!projectId) {
+    const convId = req?.body?.conversationId;
+    if (convId && convId !== 'new') {
+      const mongoose = require('mongoose');
+      const convo = await mongoose.connection.db.collection('conversations')
+        .findOne({ conversationId: convId }, { projection: { chatProjectId: 1 } });
+      projectId = convo?.chatProjectId;
+    }
+  }
   if (!projectId) throw new Error('Hello World requires a project scope');
   const projectFiles = require('/app/project-files-feature/project-files.cjs').service();
   const s = { user: String(req.user.id || req.user._id), tenant: String(req.user.tenantId || ''), projectId };

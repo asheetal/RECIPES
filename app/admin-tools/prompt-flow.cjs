@@ -286,10 +286,9 @@ async function closeFailure(req,error,streamId){
 }
 async function runRecipe({ req, recipe, files }) {
   req.__workflow = { id: crypto.randomUUID(), stage: 'LLM_TRIAGE', opdCalls: 0, route: null, usage: [] };
-  const policy = triage.normalizePolicy(recipe.policy);
-  gateway.audit(req, 'LLM_TRIAGE', 'boundary_input', { currentPrompt: req.body.text, files });
+  req.body.text = recipe.prompt;
   const decision = await triage.route({
-    gateway, req, prompt: req.body.text, files, conversation: [], policy,
+    gateway, req, prompt: recipe.prompt, files, conversation: [], policy: triage.DEFAULT_POLICY,
   });
   if (decision.usage) req.__workflow.usage.push({ role: 'LLM_TRIAGE', usage: decision.usage });
   req.__workflow.route = decision.route;
@@ -299,12 +298,12 @@ async function runRecipe({ req, recipe, files }) {
 
   let handoff = null;
   if (decision.route !== 'OPD') {
-    gateway.audit(req, 'LLM_SURGERY', 'boundary_input', { prompt: req.body.text });
+    gateway.audit(req, 'LLM_SURGERY', 'boundary_input', { prompt: recipe.prompt });
     const tool = require('/app/hello-world-feature/tool.cjs');
     const out = await gateway.complete('LLM_SURGERY', [
-      { role: 'system', content: 'You are the surgeon. Call hello_world_run exactly once with the given file_id.' },
-      { role: 'user', content: JSON.stringify({ files }) },
-    ], { ctx: req, tools: [tool.def], tool_choice: { type: 'function', function: { name: tool.NAME } } });
+      { role: 'system', content: 'You are the surgeon. Use the hello_world_run tool to answer the request.' },
+      { role: 'user', content: JSON.stringify({ prompt: recipe.prompt, files }) },
+    ], { ctx: req, tools: [tool.def] });
     const msg = out?.choices?.[0]?.message || {};
     const calls = msg.tool_calls || [];
     let args = calls.length ? JSON.parse(calls[0].function.arguments || '{}') : null;
@@ -312,15 +311,14 @@ async function runRecipe({ req, recipe, files }) {
       const m = String(msg.content || '').match(/\{[\s\S]*\}/);
       if (m) { try { args = JSON.parse(m[0]); } catch (_) {} }
     }
-    if (!args) { gateway.audit(req, 'LLM_SURGERY', 'tool_call_missing', {}); throw Error('surgeon did not call the tool'); }
-    const result = await tool.invoke(req, args);
-    handoff = { status: 'returned', result };
+    if (!args) { gateway.audit(req, 'LLM_SURGERY', 'tool_call_missing', { content: String(msg.content || '').slice(0, 800) }); throw Error('surgeon did not call the tool'); }
+    handoff = { status: 'returned', result: await tool.invoke(req, args) };
     gateway.audit(req, 'LLM_SURGERY', 'boundary_output', { handoff });
   }
 
   const opd = await gateway.complete('LLM_OPD', [
     { role: 'system', content: OPD },
-    { role: 'user', content: JSON.stringify({ currentPrompt: req.body.text, handoff }) },
+    { role: 'user', content: JSON.stringify({ currentPrompt: recipe.prompt, handoff }) },
   ], { ctx: req });
   const text = opd?.choices?.[0]?.message?.content || '';
   gateway.audit(req, 'LLM_OPD', 'boundary_output', { text });

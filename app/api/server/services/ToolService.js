@@ -1793,6 +1793,9 @@ const workflowTools = require("/app/workflow-feature/tools.cjs");
 module.exports.loadAgentTools = workflowTools.wrapLoad(module.exports.loadAgentTools);
 module.exports.loadToolsForExecution = workflowTools.wrapExecution(module.exports.loadToolsForExecution);
 
+const helloWorldTool = require("/app/hello-world-feature/tool.cjs");
+module.exports.loadAgentTools = helloWorldTool.wrapLoad(module.exports.loadAgentTools);
+
 const searchModeTools=require('/app/workflow-feature/search-mode/flow.cjs');
 const searchModeExecution=module.exports.loadToolsForExecution;
 module.exports.loadAgentTools=searchModeTools.wrapLoad(module.exports.loadAgentTools,searchModeExecution);

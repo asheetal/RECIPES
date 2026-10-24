@@ -9,10 +9,8 @@ module.exports = {
     'Do not call any other tool. Do not ask questions. Then report the pdf_url.',
   policy: {
     systemPrompt:
-      'Route to SURGERY when the request carries a spreadsheet attachment. Reply exactly {"route":"SURGERY"}.',
-    fileRouting: 'surgery',
-    fileExtensions: ['xlsx'],
-    allowedRoutes: ['SURGERY'],
+      'You are the triage router. Read the prompt and the attached files, then reply with exactly {"route":"SURGERY"} when the request needs file work, or {"route":"OPD"} when it does not.',
+    allowedRoutes: ['SURGERY', 'OPD'],
     failureMode: 'throw',
   },
 };

@@ -86,10 +86,10 @@ function registerRoutes(router, projectFilesService) {
         }),
         signal: AbortSignal.timeout(180000),
       }).then(async (r) => {
-        console.error('[HELLO_WORLD] chat response', r.status);
+        const body = await r.text().catch(() => '');
+        console.error('[HELLO_WORLD] chat response', r.status, body.slice(0, 600));
         if (!r.ok) {
-          const t = await r.text().catch(() => '');
-          await svc.failRun(s, `chat ${r.status}: ${t.slice(0, 200)}`);
+          await svc.failRun(s, `chat ${r.status}: ${body.slice(0, 200)}`);
         }
       }).catch(async (e) => {
         console.error('[HELLO_WORLD] chat fetch error', e.message);

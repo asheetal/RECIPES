@@ -52,14 +52,10 @@ function registerRoutes(router, projectFilesService) {
       const s = await svc.scope(req, req.params.projectId);
       const { fileId } = req.body || {};
       if (!fileId) return res.status(400).json({ error: 'fileId required' });
-
       const pfScope = { user: s.user, tenant: s.tenant, projectId: s.projectId };
       const { file, buffer } = await projectFilesService.read(pfScope, fileId);
-
       const started = await svc.startRun(s, fileId, file.name, buffer);
       if (started.status === 'no_new_run') return res.json(started);
-
-      const recipe = require('/app/recipes/loader.cjs').load('hello_world');
       res.json({ status: 'started', state: await svc.getState(s) });
 
       setImmediate(async () => {
@@ -78,117 +74,6 @@ function registerRoutes(router, projectFilesService) {
               return await tool.invoke(r, { file_id: fileId });
             },
           });
-        } catch (e) {
-          await svc.failRun(s, e.message || String(e));
-        }
-      });
-    } catch (e) { next(e); }
-  });
-
-  router.post('/:projectId/hello-world/start', async (req, res, next) => {
-    try {
-      const s = await svc.scope(req, req.params.projectId);
-      const { fileId } = req.body || {};
-      if (!fileId) return res.status(400).json({ error: 'fileId required' });
-
-      const pfScope = { user: s.user, tenant: s.tenant, projectId: s.projectId };
-      const { file, buffer } = await projectFilesService.read(pfScope, fileId);
-
-      const started = await svc.startRun(s, fileId, file.name, buffer);
-      if (started.status === 'no_new_run') return res.json(started);
-
-      const recipe = require('/app/recipes/loader.cjs').load('hello_world');
-      res.json({ status: 'started', state: await svc.getState(s) });
-
-      setImmediate(async () => {
-        const driver = require('/app/admin-tools/triage-driver.cjs');
-        const gateway = require('/app/admin-tools/role-gateway.cjs');
-        const ctx = driver.makeCtx({ user: { id: s.user, tenantId: s.tenant }, routeTag: 'hello_world' });
-        ctx.__helloWorldProjectId = s.projectId;
-        try {
-          const { decision } = await driver.runTriage({
-            req: ctx,
-            prompt: recipe.promptTemplate,
-            files: [{ name: file.name, file_id: fileId }],
-            policy: recipe.triagePolicy,
-            operate: async (r) => {
-              const tool = require('/app/hello-world-feature/tool.cjs');
-              const sys = [
-                'You are the surgeon. You have exactly one tool: hello_world_run.',
-                'Call it once with the given file_id. Then state the result.',
-                'Do not call any other tool. Do not ask questions.',
-              ].join(' ');
-              const out = await gateway.complete(
-                'LLM_SURGERY',
-                [
-                  { role: 'system', content: sys },
-                  { role: 'user', content: JSON.stringify({ file_id: fileId, file_name: file.name }) },
-                ],
-                { ctx: r, tools: [tool.def], tool_choice: { type: 'function', function: { name: tool.NAME } } },
-              );
-              const msg = out?.choices?.[0]?.message || {};
-              const calls = msg.tool_calls || [];
-              if (!calls.length) {
-                gateway.audit(r, 'LLM_SURGERY', 'tool_call_missing', { message: String(msg.content || '').slice(0, 300) });
-                throw new Error('surgeon did not call the tool');
-              }
-              const result = await tool.invoke(r, JSON.parse(calls[0].function.arguments || '{}'));
-              gateway.audit(r, 'LLM_SURGERY', 'boundary_output', { handoff: { status: 'returned', result } });
-              return result;
-            },
-          });
-          const opd = await gateway.complete(
-            'LLM_OPD',
-            [
-              { role: 'system', content: 'You are Assistant, the final user-facing responder. You have no tools. Close the turn honestly and concisely.' },
-              { role: 'user', content: JSON.stringify({ recipe: 'Hello World', route: decision.route, result: 'completed' }) },
-            ],
-            { ctx },
-          );
-          gateway.audit(ctx, 'LLM_OPD', 'boundary_output', { text: opd?.choices?.[0]?.message?.content || '' });
-        } catch (e) {
-          await svc.failRun(s, e.message || String(e));
-        }
-      });
-    } catch (e) { next(e); }
-  });
-
-  router.post('/:projectId/hello-world/start', async (req, res, next) => {
-    try {
-      const s = await svc.scope(req, req.params.projectId);
-      const { fileId } = req.body || {};
-      if (!fileId) return res.status(400).json({ error: 'fileId required' });
-
-      const pfScope = { user: s.user, tenant: s.tenant, projectId: s.projectId };
-      const { file, buffer } = await projectFilesService.read(pfScope, fileId);
-
-      const started = await svc.startRun(s, fileId, file.name, buffer);
-      if (started.status === 'no_new_run') return res.json(started);
-
-      const recipe = require('/app/recipes/loader.cjs').load('hello_world');
-      res.json({ status: 'started', state: await svc.getState(s) });
-
-      setImmediate(async () => {
-        const gateway = require('/app/admin-tools/role-gateway.cjs');
-        const triage = require('/app/admin-tools/triage.cjs');
-        const ctx = {
-          user: { id: s.user, tenantId: s.tenant },
-          body: { conversationId: 'recipe:' + s.projectId },
-          __workflow: { id: require('node:crypto').randomUUID(), stage: 'LLM_TRIAGE', usage: [] },
-          __helloWorldProjectId: s.projectId,
-        };
-        try {
-          const decision = await triage.route({
-            gateway,
-            req: ctx,
-            prompt: recipe.promptTemplate,
-            files: [{ name: file.name, file_id: fileId }],
-            conversation: [],
-            policy: recipe.triagePolicy,
-          });
-          if (decision.route !== 'SURGERY') throw Error('unexpected route ' + decision.route);
-          const tool = require('/app/hello-world-feature/tool.cjs');
-          await tool.invoke(ctx, { file_id: fileId });
         } catch (e) {
           await svc.failRun(s, e.message || String(e));
         }

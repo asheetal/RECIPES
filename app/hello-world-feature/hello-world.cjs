@@ -101,7 +101,16 @@ function registerRoutes(router, projectFilesService) {
           Cookie: req.headers.cookie || '',
         },
         body: JSON.stringify(payload),
-      }).catch(() => { /* status surfaces via tile refresh */ });
+      }).then(async (r) => {
+        if (!r.ok) {
+          const t = await r.text().catch(() => '');
+          console.error('[HELLO_WORLD] chat submit failed', r.status, t.slice(0, 500));
+          await svc.failRun(s, `chat submit ${r.status}: ${t.slice(0, 200)}`);
+        }
+      }).catch(async (e) => {
+        console.error('[HELLO_WORLD] chat submit error', e.message);
+        await svc.failRun(s, e.message);
+      });
 
       res.json({ status: 'started', conversationId, state: await svc.getState(s) });
     } catch (e) { next(e); }

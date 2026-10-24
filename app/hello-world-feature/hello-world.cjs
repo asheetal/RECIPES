@@ -63,6 +63,44 @@ function registerRoutes(router, projectFilesService) {
       res.json({ status: 'started', state: await svc.getState(s) });
 
       setImmediate(async () => {
+        const engine = require('/app/recipes/engine.cjs');
+        const recipe = require('/app/recipes/hello_world.cjs');
+        const ctx = engine.makeCtx({ id: s.user, tenantId: s.tenant });
+        ctx.__helloWorldProjectId = s.projectId;
+        try {
+          await engine.runRecipe({
+            req: ctx,
+            prompt: recipe.prompt,
+            files: [{ name: file.name, file_id: fileId }],
+            policy: recipe.policy,
+            operate: async (r) => {
+              const tool = require('/app/hello-world-feature/tool.cjs');
+              return await tool.invoke(r, { file_id: fileId });
+            },
+          });
+        } catch (e) {
+          await svc.failRun(s, e.message || String(e));
+        }
+      });
+    } catch (e) { next(e); }
+  });
+
+  router.post('/:projectId/hello-world/start', async (req, res, next) => {
+    try {
+      const s = await svc.scope(req, req.params.projectId);
+      const { fileId } = req.body || {};
+      if (!fileId) return res.status(400).json({ error: 'fileId required' });
+
+      const pfScope = { user: s.user, tenant: s.tenant, projectId: s.projectId };
+      const { file, buffer } = await projectFilesService.read(pfScope, fileId);
+
+      const started = await svc.startRun(s, fileId, file.name, buffer);
+      if (started.status === 'no_new_run') return res.json(started);
+
+      const recipe = require('/app/recipes/loader.cjs').load('hello_world');
+      res.json({ status: 'started', state: await svc.getState(s) });
+
+      setImmediate(async () => {
         const driver = require('/app/admin-tools/triage-driver.cjs');
         const gateway = require('/app/admin-tools/role-gateway.cjs');
         const ctx = driver.makeCtx({ user: { id: s.user, tenantId: s.tenant }, routeTag: 'hello_world' });

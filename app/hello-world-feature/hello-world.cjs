@@ -87,7 +87,7 @@ function registerRoutes(router, projectFilesService) {
         signal: AbortSignal.timeout(180000),
       }).then(async (r) => {
         const body = await r.text().catch(() => '');
-        console.error('[HELLO_WORLD] chat response', r.status, body.slice(0, 600));
+        console.error('[HELLO_WORLD] chat response', r.status, body.slice(0, 3000));
         if (!r.ok) {
           await svc.failRun(s, `chat ${r.status}: ${body.slice(0, 200)}`);
         }

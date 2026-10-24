@@ -1,14 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Check, Download, FileSpreadsheet, Trash2, Upload } from 'lucide-react';
 import { Spinner } from '@librechat/client';
-import { useNavigate } from 'react-router-dom';
-import { useRecoilState } from 'recoil';
 import { useQueryClient } from '@tanstack/react-query';
 import { request, apiBaseUrl } from 'librechat-data-provider';
-import type { TFile } from 'librechat-data-provider';
-import { useLocalize, useNewConvo } from '~/hooks';
 import { cn } from '~/utils';
-import store from '~/store';
 
 type FileRow = { id: string; name: string; bytes: number };
 type RunState = {
@@ -24,8 +19,6 @@ async function postJson(url: string, body: unknown) { return request.post(url, b
 async function delJson(url: string) { return request.delete(url); }
 
 export default function HelloWorldRecipe({ projectId }: { projectId: string }) {
-  const localize = useLocalize();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [state, setState] = useState<RunState>({ status: 'idle' });
   const [open, setOpen] = useState(false);
@@ -36,9 +29,6 @@ export default function HelloWorldRecipe({ projectId }: { projectId: string }) {
   const pollRef = useRef<number | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  const [, setFilesAtom] = useRecoilState(store.filesByIndex(0));
-  const [, setText] = useRecoilState(store.text);
-  const { newConversation } = useNewConvo();
 
   const base = `${apiBaseUrl()}/api/projects/${encodeURIComponent(projectId)}/hello-world`;
   const filesBase = `${apiBaseUrl()}/api/projects/${encodeURIComponent(projectId)}/files`;
@@ -110,24 +100,16 @@ export default function HelloWorldRecipe({ projectId }: { projectId: string }) {
 
   const run = useCallback(async () => {
     if (!selected) return;
-    const seed =
-      `Run the Hello World recipe. Use bash_tool: python3 /app/hello-world-feature/worker.py ` +
-      `"<absolute path to ${selected.name} in project files>" /tmp/hello-world.pdf, then return the PDF.`;
-    const f: TFile = {
-      file_id: selected.id,
-      filename: selected.name,
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      bytes: selected.bytes,
-      projectFileId: selected.id,
-      source: 'project' as any,
-      temp_file_id: selected.id,
-    } as unknown as TFile;
-    setFilesAtom(new Map([[selected.id, f]]));
-    setText(seed);
     setOpen(false);
-    newConversation({ template: { chatProjectId: projectId, recipeId: 'hello_world', recipeName: 'Hello World' } as any });
-    navigate(`/c/new`);
-  }, [selected, setFilesAtom, setText, newConversation, navigate, projectId]);
+    setState({ status: 'running', fileId: selected.id, fileName: selected.name });
+    try {
+      const res = await postJson(`${base}/run`, { fileId: selected.id });
+      if (res && res.state) setState(res.state);
+    } catch (e) {
+      setState({ status: 'failed', error: (e as Error).message });
+    }
+    refresh();
+  }, [selected, base, refresh]);
 
   const download = useCallback(() => {
     window.open(`${base}/pdf`, '_blank');

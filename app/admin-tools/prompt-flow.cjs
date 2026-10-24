@@ -288,7 +288,8 @@ async function runRecipe({ req, recipe, files }) {
   req.__workflow = { id: crypto.randomUUID(), stage: 'LLM_TRIAGE', opdCalls: 0, route: null, usage: [] };
   req.body.text = recipe.prompt;
   const decision = await triage.route({
-    gateway, req, prompt: recipe.prompt, files, conversation: [], policy: triage.DEFAULT_POLICY,
+    gateway, req, prompt: recipe.prompt, files, conversation: [],
+    policy: triage.normalizePolicy({ fileRouting: 'triage' }),
   });
   if (decision.usage) req.__workflow.usage.push({ role: 'LLM_TRIAGE', usage: decision.usage });
   req.__workflow.route = decision.route;
@@ -310,6 +311,10 @@ async function runRecipe({ req, recipe, files }) {
     if (!args) {
       const m = String(msg.content || '').match(/\{[\s\S]*\}/);
       if (m) { try { args = JSON.parse(m[0]); } catch (_) {} }
+    }
+    if (args && args.tool_call) {
+      const inner = args.tool_call.arguments || args.tool_call.args;
+      if (inner && typeof inner === 'object') args = inner;
     }
     if (!args) { gateway.audit(req, 'LLM_SURGERY', 'tool_call_missing', { content: String(msg.content || '').slice(0, 800) }); throw Error('surgeon did not call the tool'); }
     handoff = { status: 'returned', result: await tool.invoke(req, args) };

@@ -41,6 +41,8 @@ async function runWorker(xlsxBuffer, fileName) {
 }
 
 async function invoke(req, args) {
+  const gateway = require('/app/admin-tools/role-gateway.cjs');
+  gateway.audit(req, 'LLM_SURGERY', 'tool_call', { tool: NAME, args });
   const projectId = req?.__helloWorldProjectId;
   if (!projectId) throw new Error('Hello World requires a project scope');
   const projectFiles = require('/app/project-files-feature/project-files.cjs').service();
@@ -49,11 +51,14 @@ async function invoke(req, args) {
   const pdf = await runWorker(buffer, file.name);
   const runState = require('/app/hello-world-feature/hello-world.cjs').service();
   await runState.completeRun({ ...s }, pdf);
-  return JSON.stringify({
+  const out = {
     status: 'done',
     file: file.name,
+    pdf_bytes: pdf.length,
     pdf_url: `/api/projects/${projectId}/hello-world/pdf`,
-  });
+  };
+  gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, result: out });
+  return JSON.stringify(out);
 }
 
 function makeTool(req) {

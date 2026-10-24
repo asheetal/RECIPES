@@ -58,6 +58,12 @@ function registerRoutes(router, projectFilesService) {
       if (started.status === 'no_new_run') return res.json(started);
       res.json({ status: 'started', state: await svc.getState(s) });
 
+      const cfg = req.config || {};
+      const custom = (cfg.endpoints && cfg.endpoints.custom) || [];
+      const spec = (cfg.modelSpecs && cfg.modelSpecs.list && cfg.modelSpecs.list[0]) || null;
+      const endpoint = (spec && spec.endpoint) || (custom[0] && custom[0].name) || null;
+      if (!endpoint) return;
+      const model = (spec && spec.model) || (custom[0] && custom[0].models && custom[0].models.default && custom[0].models.default[0]) || null;
       const jwt = require('jsonwebtoken');
       const mongoose = require('mongoose');
       const db = mongoose.connection.db;
@@ -67,7 +73,7 @@ function registerRoutes(router, projectFilesService) {
       await db.collection('conversations').insertOne({
         conversationId, title: 'Hello World', user: s.user, tenant: s.tenant,
         chatProjectId: s.projectId, recipeId: recipe.recipeId, recipeName: recipe.name,
-        endpoint: 'agents', createdAt: now, updatedAt: now,
+        endpoint, model, createdAt: now, updatedAt: now,
       });
       await db.collection('messages').insertOne({
         messageId: new mongoose.Types.ObjectId().toString(), conversationId,
@@ -82,7 +88,7 @@ function registerRoutes(router, projectFilesService) {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'User-Agent': req.headers['user-agent'] || 'LibreChat/0.8.7' },
         body: JSON.stringify({
           conversationId, text: recipe.prompt, parentMessageId: null,
-          endpoint: 'agents', files: [{ file_id: fileId, projectFileId: fileId, filename: file.name }],
+          endpoint, model, files: [{ file_id: fileId, projectFileId: fileId, filename: file.name }],
         }),
         signal: AbortSignal.timeout(180000),
       }).then(async (r) => {

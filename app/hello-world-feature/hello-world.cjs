@@ -85,6 +85,7 @@ function registerRoutes(router, projectFilesService) {
         updatedAt: now,
       });
 
+      console.error('[HELLO_WORLD] start', { hasAuth: !!req.headers.authorization, hasCookie: !!req.headers.cookie, conversationId });
       const base = `http://127.0.0.1:${process.env.PORT || 3080}`;
       const payload = {
         conversationId,

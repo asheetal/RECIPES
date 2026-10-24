@@ -81,7 +81,9 @@ function registerRoutes(router, projectFilesService) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'User-Agent': req.headers['user-agent'] || 'LibreChat/0.8.7' },
         body: JSON.stringify({
-          conversationId, text: recipe.prompt, parentMessageId: null,
+          conversationId,
+          text: `${recipe.prompt}\n\nWorkbook file_id: ${fileId}`,
+          parentMessageId: null,
           tools: recipe.tools || [],
           files: [{ file_id: fileId, projectFileId: fileId, filename: file.name }],
         }),

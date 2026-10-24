@@ -69,6 +69,7 @@ function registerRoutes(router, projectFilesService) {
           user: { id: s.user, tenantId: s.tenant },
           body: { conversationId: 'recipe:' + s.projectId },
           __workflow: { id: require('node:crypto').randomUUID(), stage: 'LLM_TRIAGE', usage: [] },
+          __helloWorldProjectId: s.projectId,
         };
         try {
           const decision = await triage.route({

@@ -75,6 +75,16 @@ def verify_citations(payload):
             cited = any((rec.get("short_cite") and rec.get("short_cite") in prior_art) or (rec.get("ref_id","").replace("REF_","") in prior_art) for rec in exact)
             if not cited: errors.append(f"NOVELTY_CITATION_MISSING: model {model.get('model_id')} (footnote)")
     return errors
+def normalize_superscripts(text):
+    if not isinstance(text, str) or not text: return text
+    # Rewrite word/R-numeric forms to Unicode superscripts before tex_escape.
+    text = re.sub(r'(?i)\bDelta\s*R\s*\^?\s*2\b', '\u0394R\u00b2', text)
+    text = re.sub(r'(?i)\bdR2\b', '\u0394R\u00b2', text)
+    text = re.sub(r'(?i)\bR\s*\^\s*2\b', 'R\u00b2', text)
+    text = re.sub(r'\bR2\b', 'R\u00b2', text)
+    return text
+
+
 def tex_escape(text):
     if not isinstance(text, str): text = str(text)
     for a,b in [("ΔR²",r"$\Delta R^2$"),("ΔR^2",r"$\Delta R^2$"),("Δ",r"$\Delta$"),("²",r"$^2$"),("≥",r"$\ge$"),("≤",r"$\le$"),("’","'"),("‘","'"),("“","``"),("”","''"),("–","--"),("—","---"),("<",r"\textless{}"),(">",r"\textgreater{}")]:
@@ -115,7 +125,9 @@ def extract_model_meta(payload):
             if m: model_id = m.group(0)
     for mod in payload.get("models", []) or []:
         if mod.get("model_id"): model_id = mod["model_id"]; break
-    return {"model_id": model_id, "topology": "Hayes Model 7 (First-Stage Moderated Mediation)", "title": "First-Stage Moderated Mediation Structural Equation Model", "running_head": f"FIRST-STAGE MODERATED MEDIATION (MODEL {model_id})"}
+    sections = payload.get("sections") or {}
+    report_title = sections.get("title") or "First-Stage Moderated Mediation Structural Equation Model"
+    return {"model_id": model_id, "topology": "Hayes Model 7 (First-Stage Moderated Mediation)", "title": report_title, "running_head": f"FIRST-STAGE MODERATED MEDIATION (MODEL {model_id})"}
 def _support_cell_for_decision(raw_decision_id, claims):
     linked = [c for c in claims.values() if c.get("decision_id") == raw_decision_id]
     if not linked: return "---"
@@ -279,8 +291,8 @@ def build_tex_report(payload, output_tex="Automated_SEM_Recipe_Report.tex"):
         if not ok: log(f"REPLICATION_PARSE_FAILED ({fn}): {err}"); raise SystemExit(10)
         replication_scripts[fn] = text
         log(f"Materialized {fn} ({len(text)} chars); round-trip + parse + semantic checks passed")
-    sec1 = resolve_placeholders(escape_preserving_placeholders(sections.get("garden_of_forking_paths","") or ""), claims)
-    sec2 = resolve_placeholders(escape_preserving_placeholders(sections.get("sem_report","") or ""), claims)
+    sec1 = resolve_placeholders(escape_preserving_placeholders(normalize_superscripts(sections.get("garden_of_forking_paths","") or "")), claims)
+    sec2 = resolve_placeholders(escape_preserving_placeholders(normalize_superscripts(sections.get("sem_report","") or "")), claims)
     mm = extract_model_meta(payload)
     title = tex_escape(mm["title"]); subtitle = tex_escape(f"Empirical Findings and Specification Audit Report; {mm['topology']}, Model {mm['model_id']}")
     running_head = tex_escape(mm["running_head"])

@@ -98,9 +98,22 @@ for (m_idx in seq_along(models_list)) {
       if (!to_id %in% names(node_coords)) fail(sprintf("model [%d] path refs unknown '%s'", m_idx, to_id))
       x_from <- node_coords[[from_id]]$x + bw; y_from <- node_coords[[from_id]]$y
       x_to   <- node_coords[[to_id]]$x   - bw; y_to   <- node_coords[[to_id]]$y
-      p <- p + annotate("segment", x = x_from, y = y_from, xend = x_to, yend = y_to, arrow = arrow(length = unit(0.28, "cm"), type = "closed"), linewidth = 0.85, color = "black")
-      x_lbl <- if (from_id == "X") (x_from + 3.65) / 2 else (x_from + x_to) / 2
-      p <- p + annotate("text", x = x_lbl, y = y_from + 0.18, label = p_label, hjust = 0.5, size = 3.6, fontface = "bold", family = "sans")
+      is_mod_main <- (from_id == "W") && (to_id == "M") && identical(p_type, "solid") && any(grepl("->", paths_df$to) & paths_df$from == from_id)
+      ln_col <- if (is_mod_main) "gray50" else "black"
+      ln_w   <- if (is_mod_main) 0.65 else 0.85
+      p <- p + annotate("segment", x = x_from, y = y_from, xend = x_to, yend = y_to, arrow = arrow(length = unit(0.28, "cm"), type = "closed"), linewidth = ln_w, color = ln_col)
+      if (is_mod_main) {
+        x_lbl <- (x_from + x_to) / 2 + 0.15
+        y_lbl <- (y_from + y_to) / 2 + 0.10
+        lbl_sz <- 3.2
+        lbl_col <- "gray30"
+      } else {
+        x_lbl <- if (from_id == "X") (x_from + 3.65) / 2 else (x_from + x_to) / 2
+        y_lbl <- y_from + 0.18
+        lbl_sz <- 3.6
+        lbl_col <- "black"
+      }
+      p <- p + annotate("text", x = x_lbl, y = y_lbl, label = p_label, hjust = 0.5, size = lbl_sz, fontface = "bold", color = lbl_col, family = "sans")
     }
   }
   for (i in seq_len(nrow(nodes_df))) {

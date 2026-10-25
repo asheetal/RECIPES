@@ -138,7 +138,7 @@ const PASSTHROUGH = {
   2:  { inherit: [], rename: {}, append: ['claims','retrieval_log','decision_log'] },
   3:  { inherit: ['file_path','data_sheet','header_row_index','max_evaluations'], rename: {}, append: ['claims','retrieval_log','decision_log'] },
   5:  { inherit: ['file_path','data_sheet','header_row_index','max_evaluations','controls','taxonomy'], rename: { models: 'candidate_models' }, append: ['claims','retrieval_log','decision_log'] },
-  7:  { inherit: ['file_path','data_sheet','header_row_index','controls','survivors','survivors_count'], rename: {}, append: ['claims','retrieval_log','decision_log'] },
+  7:  { inherit: ['file_path','data_sheet','header_row_index','controls','taxonomy','survivors','survivors_count'], rename: {}, append: ['claims','retrieval_log','decision_log'] },
   10: { inherit: ['file_path','data_sheet','header_row_index','controls','bootstrap_results','survivors','survivors_count','shortlisted_models','shortlisted_count','taxonomy','descriptives','missingness','correlations','alpha_table','n_total','variables'], rename: {}, append: ['claims','retrieval_log','decision_log'] },
   12: { inherit: ['file_path','data_sheet','header_row_index','controls','winning_model_id','topology_type','models','rendered_diagrams','bootstrap_results','models_validated_count','taxonomy','survivors','survivors_count','shortlisted_models','shortlisted_count','evaluations','descriptives','missingness','correlations','alpha_table','n_total','variables'], rename: {}, append: ['claims','retrieval_log','decision_log'], derive: [{ field: 'diagram_path', from: 'rendered_diagrams', pick: (rd) => rd && rd[0] && rd[0].output_image }] }
 };

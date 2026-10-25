@@ -34,6 +34,22 @@ function validateStep10(payload) {
     for (const n of m.nodes) if (n && n.id) nodeIds.add(n.id);
   }
   for (let i = 0; i < models.length; i++) {
+    const fn = models[i].footnote;
+    if (!fn || typeof fn !== 'object') throw new Error(`step 10: models[${i}].footnote is missing or not an object`);
+    if (!Array.isArray(fn.controls) || fn.controls.length === 0) throw new Error(`step 10: models[${i}].footnote.controls must be a non-empty array of human-readable names`);
+    if (!Number.isFinite(Number(fn.N))) throw new Error(`step 10: models[${i}].footnote.N must be a number`);
+    if (typeof fn.sig_key !== 'string' || !fn.sig_key) throw new Error(`step 10: models[${i}].footnote.sig_key must be a non-empty legend string, e.g. "** p < .01"`);
+    if (!fn.imm || typeof fn.imm !== 'object') throw new Error(`step 10: models[${i}].footnote.imm must be an object {point, ci_low, ci_high}`);
+    for (const k of ['point','ci_low','ci_high']) if (!Number.isFinite(Number(fn.imm[k]))) throw new Error(`step 10: models[${i}].footnote.imm.${k} must be a number`);
+    if (typeof fn.prior_art !== 'string') throw new Error(`step 10: models[${i}].footnote.prior_art must be a string`);
+  }
+  for (let i = 0; i < (payload.decision_log || []).length; i++) {
+    const d = payload.decision_log[i] || {};
+    if (Number(d.step) === 10 && d.decision_type !== 'TOPOLOGY_ARBITRATION') {
+      throw new Error(`step 10: decision_log[${i}].decision_type must be TOPOLOGY_ARBITRATION (got "${d.decision_type}")`);
+    }
+  }
+  for (let i = 0; i < models.length; i++) {
     const paths = Array.isArray(models[i].paths) ? models[i].paths : null;
     if (!paths || paths.length === 0) throw new Error(`step 10: models[${i}].paths must be a non-empty array`);
     for (let j = 0; j < paths.length; j++) {

@@ -124,10 +124,11 @@ export default function AutomatedSEMRecipe({ projectId }: { projectId: string })
                 {uploading ? <Spinner className="h-4 w-4" /> : <Upload className="h-4 w-4" />} Upload
               </button>
             </div>
+            {selected && <p className="mt-3 text-sm text-text-primary">Selected: <span className="font-medium">{selected.name}</span></p>}
             {uploadError && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{uploadError}</p>}
             <div className="mt-4 flex items-center justify-end gap-2">
               <button type="button" className="rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-surface-hover" onClick={() => setOpen(false)}>Cancel</button>
-              <button type="button" onClick={run} disabled={!selected} className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">Run</button>
+              <button type="button" onClick={run} disabled={!selected} className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">Run Automated SEM Pipeline</button>
             </div>
           </div>
         </div>

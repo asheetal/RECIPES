@@ -12,6 +12,8 @@ def _token_overlap(a, b):
     return len(ta & tb) / max(1, len(ta))
 def _ref_id_of(ref_string):
     if not isinstance(ref_string, str): return None
+    m = re.search(r"^\[([A-Za-z0-9._/-]+)\]", ref_string)
+    if m: return m.group(1)
     m = re.search(r"(REF_[A-Za-z0-9._/-]+)", ref_string)
     if m: return m.group(1)
     m = re.search(r"(10\.\d{4,9}/[^\s\)]+)", ref_string)

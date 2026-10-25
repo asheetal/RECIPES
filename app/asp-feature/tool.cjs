@@ -130,7 +130,6 @@ function validateEvidence(step, payload) {
   if (step === 12) {
     const sections = payload.sections || {};
     const refs = sections.references || [];
-    if (Array.isArray(refs) && refs.length > 0) throw new Error('step 12: sections.references must be omitted; the tool derives it from claims[] and retrieval_log[]');
     const reCount = (txt) => { const m = String(txt || '').match(/\{\{ref:[A-Za-z0-9_]+\}\}/g); return m ? m.length : 0; };
     if (reCount(sections.garden_of_forking_paths) < 1) throw new Error('STEP 12 requires at least one {{ref:CLAIM_ID}} in sections.garden_of_forking_paths');
     if (reCount(sections.sem_report) < 3) throw new Error('STEP 12 requires at least three {{ref:CLAIM_ID}} in sections.sem_report');
@@ -284,7 +283,7 @@ function deriveStep12References(prior, claims) {
     const year = r.year || '';
     const doi = r.doi ? `https://doi.org/${String(r.doi).trim()}` : '';
     const parts = [title ? title + '.' : '', year ? `(${year}).` : '', doi].filter(Boolean);
-    refs.push(parts.join(' ').trim());
+    refs.push(`[${rid}] ` + parts.join(' ').trim());
     seen.add(rid);
   }
   return refs;
@@ -389,6 +388,7 @@ async function invoke(req, args) {
         }
       }
       if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw new Error('payload must be a JSON object or a JSON-encoded object string for cognitive steps');
+      if (step === 12 && payload && payload.sections && Array.isArray(payload.sections.references) && payload.sections.references.length > 0) throw new Error('step 12: sections.references must be omitted; the tool derives it');
       const prior = await pipeline.readStep({ runId: currentState.runId, step: step - 1 });
       const merged = mergePassthrough(step, prior, payload);
       const schemaErr = validatePayloadSchema(step, merged, require('zod').z);

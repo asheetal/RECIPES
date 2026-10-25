@@ -51,6 +51,20 @@ function validateStep7(payload) {
     const sp = Array.isArray(nv.search_provenance) ? nv.search_provenance : [];
     if (sp.length < 3) throw new Error(`step 7: shortlisted_models[${i}] search_provenance must have >= 3 entries (got ${sp.length})`);
   }
+  const tax = Array.isArray(payload.taxonomy) ? payload.taxonomy : [];
+  const roleOf = new Map();
+  for (const t of tax) if (t && t.code) roleOf.set(t.code, t.role);
+  const expected = { x: 'IV', w: 'MOD', m: 'MED', y: 'DV' };
+  for (let i = 0; i < sm.length; i++) {
+    const m = sm[i] || {};
+    for (const [k, want] of Object.entries(expected)) {
+      const code = m[k];
+      if (!code) throw new Error(`step 7: shortlisted_models[${i}].${k} is missing`);
+      const got = roleOf.get(code);
+      if (!got) throw new Error(`step 7: shortlisted_models[${i}].${k}="${code}" is not in taxonomy`);
+      if (got !== want) throw new Error(`step 7: shortlisted_models[${i}].${k}="${code}" has role ${got}; expected ${want}`);
+    }
+  }
   const dlog = Array.isArray(payload.decision_log) ? payload.decision_log : [];
   const allowed = new Set(['THEORETICAL_FRAMEWORK_SELECTION', 'LITERATURE_GROUNDING', 'PRIOR_ART_ADJUDICATION']);
   for (let i = 0; i < dlog.length; i++) {
@@ -242,6 +256,21 @@ function deriveStep12References(prior, claims) {
   return refs;
 }
 
+
+function reconcileShortlistToSurvivors(out, prior) {
+  if (!out || !Array.isArray(out.shortlisted_models)) return;
+  const byId = new Map();
+  for (const s of (prior.survivors || [])) if (s && s.id) byId.set(s.id, s);
+  for (const m of out.shortlisted_models) {
+    if (!m || !m.id) continue;
+    const s = byId.get(m.id);
+    if (!s) continue;
+    for (const k of ['x', 'w', 'm', 'y']) {
+      if (s[k] !== undefined) m[k] = s[k];
+    }
+  }
+}
+
 function mergePassthrough(step, prior, payload) {
   const spec = PASSTHROUGH[step];
   if (!spec || !prior) return payload;
@@ -275,6 +304,7 @@ function mergePassthrough(step, prior, payload) {
       out.sections.references = refs;
     }
   }
+  if (step === 7 && prior) reconcileShortlistToSurvivors(out, prior);
   for (const d of spec.derive || []) {
     if (out[d.field] === undefined) {
       const v = d.pick(prior[d.from]);

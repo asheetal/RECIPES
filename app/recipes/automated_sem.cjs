@@ -85,6 +85,8 @@ STEP 10 (cognitive): Topology arbiter. Pick the model with excludes_zero=true as
 STEP 11 (tool): asp_step_run({step:11}). Renders ggplot diagram PNG.
 
 STEP 12 (cognitive): Author the report prose. Tool fills references and diagram_path.
+STEP 12 PLACEHOLDER QUOTA: sections.garden_of_forking_paths MUST contain at least one {{ref:CLAIM_ID}} placeholder; sections.sem_report MUST contain at least three. Every claim in claims[] that is SUPPORTED is eligible. Do NOT write author-year prose; write the placeholder. Example: '...grounded in approach-avoidance theory {{ref:CLM_7_001a}}.'
+STEP 12 REFERENCES OMISSION: do NOT emit sections.references at all. The tool derives references[] from SUPPORTED claims and retrieval_log and writes them into sections.references after step 12 closes. If you emit sections.references yourself, it will be overwritten.
 PROSE ESCAPING: every double-quote character inside sections.title, sections.garden_of_forking_paths, sections.sem_report MUST be escaped as \" or replaced with a single quote. Never write an unescaped " inside a JSON string. This is the sole cause of past step-12 failures (char 3590: unescaped " inside title). If unsure, do not use double quotes inside prose at all.
 PREFERRED FORM: emit payload as an inline JSON object (dict). Do NOT wrap payload in outer quotes, do NOT use JSON.stringify. If the payload is a stringified string, keep every inner quote escaped as \" at the outer level.
 REFERENCES: Do NOT author sections.references. The tool derives sections.references from the SUPPORTED claims[] and retrieval_log[] that carry through. Omit references entirely from the payload.
@@ -95,8 +97,8 @@ Payload (inline object, not string):
   "output_filename": "Automated_SEM_Recipe_Report.tex",
   "sections": {
     "title": "<short title, no unescaped \" inside>",
-    "garden_of_forking_paths": "<APA-7 prose, <=200 words, use {{ref:CLAIM_ID}} placeholders, no unescaped \" inside>",
-    "sem_report": "<full APA-7 prose with b, SE, t(df), p, 95% CI, R2, dR2, simple slopes, IMM; every numeric from prior steps; use {{ref:CLAIM_ID}} placeholders; no unescaped \" inside>",
+    "garden_of_forking_paths": "<APA-7 prose, <=200 words, MUST contain >=1 {{ref:CLAIM_ID}}, no unescaped \" inside>",
+    "sem_report": "<full APA-7 prose with b, SE, t(df), p, 95% CI, R2, dR2, simple slopes, IMM; every numeric from prior steps; MUST contain >=3 {{ref:CLAIM_ID}}; no unescaped \" inside>",
     "replication_script": "materialized by step 13"
   },
   "claims": [<only NEW step-12 claims this step adds; may be empty array>],

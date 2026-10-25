@@ -130,7 +130,10 @@ function validateEvidence(step, payload) {
   if (step === 12) {
     const sections = payload.sections || {};
     const refs = sections.references || [];
-    if (!Array.isArray(refs) || refs.length === 0) throw new Error('step 12: sections.references must be a non-empty array');
+    if (Array.isArray(refs) && refs.length > 0) throw new Error('step 12: sections.references must be omitted; the tool derives it from claims[] and retrieval_log[]');
+    const reCount = (txt) => { const m = String(txt || '').match(/\{\{ref:[A-Za-z0-9_]+\}\}/g); return m ? m.length : 0; };
+    if (reCount(sections.garden_of_forking_paths) < 1) throw new Error('STEP 12 requires at least one {{ref:CLAIM_ID}} in sections.garden_of_forking_paths');
+    if (reCount(sections.sem_report) < 3) throw new Error('STEP 12 requires at least three {{ref:CLAIM_ID}} in sections.sem_report');
     const ids = new Set(payload.claims.map(c => c.claim_id));
     for (const secName of ['garden_of_forking_paths','sem_report']) {
       const text = sections[secName] || '';

@@ -161,6 +161,18 @@ function validateEvidence(step, payload) {
     }
   }
   if (step === 12) {
+    const rl = Array.isArray(payload.retrieval_log) ? payload.retrieval_log : [];
+    for (const entry of rl) {
+      for (const r of (entry.results || [])) {
+        if (!r || !r.doi) continue;
+        if (!Array.isArray(r.authors) || r.authors.length === 0) {
+          throw new Error(`step 12: retrieval_log entry for ${r.ref_id || '?'} (DOI ${r.doi}) is missing authors[]; APA-7 requires author names`);
+        }
+        if (!r.journal) throw new Error(`step 12: retrieval_log entry for ${r.ref_id || '?'} (DOI ${r.doi}) is missing journal; APA-7 requires journal`);
+      }
+    }
+  }
+  if (step === 12) {
     const sections = payload.sections || {};
     const refs = sections.references || [];
     const reCount = (txt) => { const m = String(txt || '').match(/\{\{ref:[A-Za-z0-9_]+\}\}/g); return m ? m.length : 0; };
@@ -304,6 +316,36 @@ function deriveStep2Fields(prior) {
 }
 
 
+function formatApa7(r) {
+  if (!r || typeof r !== 'object') return '';
+  let authors = r.authors || [];
+  if (typeof authors === 'string') authors = [authors];
+  authors = authors.map((a) => String(a || '').trim()).filter(Boolean);
+  const year = r.year;
+  const title = String(r.title || '').trim().replace(/\.$/, '');
+  const journal = String(r.journal || '').trim().replace(/\.$/, '');
+  const volume = String(r.volume || '').trim();
+  const issue = String(r.issue || '').trim();
+  const pages = String(r.pages || '').trim().replace(/\.$/, '');
+  const doi = String(r.doi || '').trim();
+  let authStr = '';
+  if (authors.length === 1) authStr = authors[0];
+  else if (authors.length === 2) authStr = authors[0] + ', & ' + authors[1];
+  else if (authors.length > 2 && authors.length <= 20) authStr = authors.slice(0, -1).join(', ') + ', & ' + authors[authors.length - 1];
+  else if (authors.length > 20) authStr = authors.slice(0, 19).join(', ') + ', ... ' + authors[authors.length - 1];
+  const parts = [];
+  if (authStr) parts.push(authStr + '.');
+  if (year) parts.push('(' + year + ').');
+  if (title) parts.push(title + '.');
+  let jblock = '';
+  if (journal) jblock += journal;
+  if (volume) { jblock += (jblock ? ', ' : '') + volume; if (issue) jblock += '(' + issue + ')'; }
+  if (pages) jblock += (jblock ? ', ' : '') + pages;
+  if (jblock) parts.push(jblock.replace(/\.$/, '') + '.');
+  if (doi) parts.push('https://doi.org/' + doi);
+  return parts.join(' ').trim();
+}
+
 function deriveStep12References(prior, claims) {
   const retrieved = new Map();
   for (const entry of (prior.retrieval_log || [])) {
@@ -319,11 +361,9 @@ function deriveStep12References(prior, claims) {
     if (!rid || seen.has(rid)) continue;
     const r = retrieved.get(rid);
     if (!r) continue;
-    const title = String(r.title || '').trim();
-    const year = r.year || '';
-    const doi = r.doi ? `https://doi.org/${String(r.doi).trim()}` : '';
-    const parts = [title ? title + '.' : '', year ? `(${year}).` : '', doi].filter(Boolean);
-    refs.push(`[${rid}] ` + parts.join(' ').trim());
+    const sc = String(c.short_cite || c.ref_id || rid).trim();
+    const apa = formatApa7(r) || (String(r.title || '') + ' (' + (r.year || '') + ').');
+    refs.push(`[${sc}] ` + apa);
     seen.add(rid);
   }
   return refs;

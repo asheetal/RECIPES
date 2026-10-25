@@ -10,10 +10,21 @@ def _token_overlap(a, b):
     ta, tb = _tokenize(a), _tokenize(b)
     if not ta or not tb: return 0.0
     return len(ta & tb) / max(1, len(ta))
-def _ref_id_of(ref_string):
+def _ref_id_of(ref_string, claims=None):
     if not isinstance(ref_string, str): return None
     m = re.search(r"^\[([^\]]+)\]", ref_string)
-    if m: return m.group(1)
+    if m:
+        inner = m.group(1).strip()
+        # If claims are provided, resolve short_cite -> ref_id first.
+        if claims:
+            for c in claims.values():
+                if c.get("short_cite") and c["short_cite"] == inner:
+                    return c.get("ref_id")
+            # In case the bracket already carries the ref_id:
+            for c in claims.values():
+                if c.get("ref_id") == inner:
+                    return inner
+        return inner
     m = re.search(r"(REF_[A-Za-z0-9._/-]+)", ref_string)
     if m: return m.group(1)
     m = re.search(r"(10\.\d{4,9}/[^\s\)]+)", ref_string)
@@ -24,6 +35,46 @@ def _short_cite(claims, ref_id):
     for c in claims.values():
         if c.get("ref_id") == ref_id and c.get("short_cite"): return c["short_cite"]
     return ref_id.replace("REF_", "").split("/")[0]
+def _format_apa7(r):
+    """Format one retrieval record as an APA-7 reference string."""
+    if not isinstance(r, dict): return ""
+    authors = r.get("authors") or []
+    if isinstance(authors, str): authors = [authors]
+    authors = [str(a).strip() for a in authors if str(a).strip()]
+    year = r.get("year")
+    title = str(r.get("title") or "").strip().rstrip(".")
+    journal = str(r.get("journal") or "").strip().rstrip(".")
+    volume = str(r.get("volume") or "").strip()
+    issue = str(r.get("issue") or "").strip()
+    pages = str(r.get("pages") or "").strip().rstrip(".")
+    doi = str(r.get("doi") or "").strip()
+    # Authors: "Last, A., Last, B., & Last, C." (up to 20; APA-7 ellipsis beyond 20 omitted here)
+    if len(authors) == 0:
+        auth_str = ""
+    elif len(authors) == 1:
+        auth_str = authors[0]
+    elif len(authors) == 2:
+        auth_str = authors[0] + ", & " + authors[1]
+    elif len(authors) <= 20:
+        auth_str = ", ".join(authors[:-1]) + ", & " + authors[-1]
+    else:
+        auth_str = ", ".join(authors[:19]) + ", ... " + authors[-1]
+    parts = []
+    if auth_str: parts.append(auth_str + ".")
+    if year: parts.append(f"({year}).")
+    if title: parts.append(title + ".")
+    # Journal block: Journal, Vol(Issue), pages.
+    jblock = ""
+    if journal: jblock += journal
+    if volume:
+        jblock += (", " if jblock else "") + volume
+        if issue: jblock += f"({issue})"
+    if pages: jblock += (", " if jblock else "") + pages
+    if jblock: parts.append(jblock.rstrip(".") + ".")
+    if doi: parts.append(f"https://doi.org/{doi}")
+    return " ".join(parts).strip()
+
+
 def verify_citations(payload):
     errors = []
     claims = {c["claim_id"]: c for c in payload.get("claims", []) if "claim_id" in c}
@@ -63,7 +114,7 @@ def verify_citations(payload):
             elif c.get("support_status") != "SUPPORTED": errors.append(f"UNRESOLVED_PLACEHOLDER: {sec} -> {cid}")
     linked = {c.get("ref_id") for c in claims.values() if c.get("ref_id")}
     for ref in refs:
-        rid = _ref_id_of(ref)
+        rid = _ref_id_of(ref, claims)
         if rid and rid not in linked: errors.append(f"ORPHAN_REFERENCE: {rid}")
     for model in payload.get("models", []) or []:
         nv = model.get("novelty_verdict") or {}

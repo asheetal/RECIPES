@@ -149,6 +149,13 @@ function validateEvidence(step, payload) {
     const reCount = (txt) => { const m = String(txt || '').match(/\{\{ref:[A-Za-z0-9_]+\}\}/g); return m ? m.length : 0; };
     if (reCount(sections.garden_of_forking_paths) < 1) throw new Error('STEP 12 requires at least one {{ref:CLAIM_ID}} in sections.garden_of_forking_paths');
     if (reCount(sections.sem_report) < 3) throw new Error('STEP 12 requires at least three {{ref:CLAIM_ID}} in sections.sem_report');
+    const allowed12 = new Set(['METRIC_STANDARDIZATION', 'HYPOTHESIS_DIRECTIONALITY', 'LITERATURE_GROUNDING']);
+    for (let i = 0; i < (payload.decision_log || []).length; i++) {
+      const d = payload.decision_log[i] || {};
+      if (Number(d.step) === 12 && !allowed12.has(d.decision_type)) {
+        throw new Error(`step 12: decision_log[${i}].decision_type must be METRIC_STANDARDIZATION|HYPOTHESIS_DIRECTIONALITY|LITERATURE_GROUNDING (got "${d.decision_type}")`);
+      }
+    }
     const ids = new Set(payload.claims.map(c => c.claim_id));
     for (const secName of ['garden_of_forking_paths','sem_report']) {
       const text = sections[secName] || '';

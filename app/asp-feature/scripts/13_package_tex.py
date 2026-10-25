@@ -77,7 +77,7 @@ def verify_citations(payload):
     return errors
 def tex_escape(text):
     if not isinstance(text, str): text = str(text)
-    for a,b in [("ΔR²",r"$\Delta R^2$"),("ΔR^2",r"$\Delta R^2$"),("Δ",r"$\Delta$"),("≥",r"$\ge$"),("≤",r"$\le$"),("’","'"),("‘","'"),("“","``"),("”","''"),("–","--"),("—","---"),("<",r"\textless{}"),(">",r"\textgreater{}")]:
+    for a,b in [("ΔR²",r"$\Delta R^2$"),("ΔR^2",r"$\Delta R^2$"),("Δ",r"$\Delta$"),("²",r"$^2$"),("≥",r"$\ge$"),("≤",r"$\le$"),("’","'"),("‘","'"),("“","``"),("”","''"),("–","--"),("—","---"),("<",r"\textless{}"),(">",r"\textgreater{}")]:
         text = text.replace(a,b)
     text = re.sub(r'(?<!\\)&', r'\&', text)
     text = re.sub(r'(?<!\\)%', r'\%', text)

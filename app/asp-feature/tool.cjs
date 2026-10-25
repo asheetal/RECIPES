@@ -244,7 +244,7 @@ function makeTool(req) {
   return new DynamicStructuredTool({
     name: NAME,
     description: def.description,
-    schema: z.object({ step: z.number().int(), file_id: z.string().optional(), payload: z.union([z.record(z.any()), z.string()]).optional() }),
+    schema: z.object({ step: z.number().int(), file_id: z.string().optional(), payload: z.record(z.any()).optional() }),
     func: (a) => invoke(req, a),
   });
 }

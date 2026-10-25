@@ -22,6 +22,20 @@ class H(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == '/health':
             self._json({'ok': True, 'tool_steps': sorted(TOOL_STEPS), 'cognitive_steps': sorted(COGNITIVE_STEPS)}); return
+        if self.path.startswith('/read'):
+            from urllib.parse import urlparse, parse_qs
+            q = parse_qs(urlparse(self.path).query)
+            run_id = (q.get('run_id') or [''])[0]
+            step = (q.get('step') or [''])[0]
+            if not safe_id(run_id) or not step.isdigit():
+                return self._json({'ok': False, 'error': 'bad run_id or step'})
+            p = os.path.join(RUNS_DIR, run_id, f'step{step}_out.json')
+            if not os.path.isfile(p):
+                return self._json({'ok': False, 'error': 'not found', 'step': step})
+            try:
+                return self._json({'ok': True, 'step': step, 'output': json.loads(pathlib.Path(p).read_text())})
+            except Exception as e:
+                return self._json({'ok': False, 'error': f'parse: {e}'})
         self.send_error(404)
     def do_POST(self):
         if self.path != '/run': self.send_error(404); return

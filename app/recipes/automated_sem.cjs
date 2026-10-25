@@ -94,6 +94,15 @@ EVIDENCE RULES (apply to EVERY cognitive step: 2, 3, 5, 7, 10, 12):
 - If 'search()' returns '{code:'LOCAL_ONLY'}' or '{code:'SEARCH_FAILED'}', STOP with "SEARCH_MODE_MUST_BE_ACADEMIC" and message "Recipe must pin search to academic; do not continue." Do not fabricate claims, do not skip.
 - STEP 12 additionally: references[] must be APA-7 strings drawn EXCLUSIVELY from SUPPORTED claims; prose must use {{ref:CLAIM_ID}} placeholders. Do not invoke 'search' at step 12; assemble only.
 
+TOOL-AUTOINHERIT (large passthrough fields): The tool asp_step_run inherits these fields from the prior step on disk; DO NOT include them in payload — they will be rejected if the payload exceeds the model budget and are redundant otherwise:
+- step 3: file_path, data_sheet, header_row_index, max_evaluations
+- step 5: file_path, data_sheet, header_row_index, max_evaluations, controls, taxonomy, candidate_models (auto-named from step4.models)
+- step 7: file_path, data_sheet, header_row_index, controls, survivors, survivors_count
+- step 10: file_path, data_sheet, header_row_index, controls, bootstrap_results, survivors, survivors_count, shortlisted_models, shortlisted_count, taxonomy, descriptives, missingness, correlations, alpha_table, n_total, variables
+- step 12: file_path, data_sheet, header_row_index, controls, winning_model_id, topology_type, models, rendered_diagrams, bootstrap_results, models_validated_count, taxonomy, survivors, survivors_count, shortlisted_models, shortlisted_count, evaluations, descriptives, missingness, correlations, alpha_table, n_total, variables, diagram_path (auto-derived from rendered_diagrams[0].output_image)
+- ALL cognitive steps: claims, retrieval_log, decision_log are inherited verbatim from prior step; include ONLY the NEW entries this step adds; tool will append and dedup by claim_id / query_id / decision_id.
+Send payload containing ONLY: (a) fields this step computes fresh, (b) new claims/retrieval_log/decision_log entries for this step. Trust the tool to fill the rest.
+
 RULES:
 - Call asp_step_run once per iteration, in order 1..13.
 - If ANY asp_step_run call returns an error, STOP immediately. Report the exact error string verbatim. Do NOT retry. Do NOT modify the payload. Do NOT skip the step. A retry is a recipe bug, not a recovery mechanism.

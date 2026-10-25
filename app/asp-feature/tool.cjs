@@ -60,6 +60,46 @@ function validateStep7(payload) {
     }
   }
 }
+
+function validateEvidence(step, payload) {
+  const cognitive = new Set([2, 3, 5, 7, 10, 12]);
+  if (!cognitive.has(step)) return;
+  if (!Array.isArray(payload.claims) || payload.claims.length === 0) {
+    throw new Error(`step ${step}: claims[] must be non-empty; invoke search({query}) for each rationale and copy the verbatim abstract sentence into justifying_excerpt`);
+  }
+  const needsRetrieval = payload.claims.some(c => c && c.citations_required === true);
+  if (needsRetrieval && (!Array.isArray(payload.retrieval_log) || payload.retrieval_log.length === 0)) {
+    throw new Error(`step ${step}: retrieval_log[] must be non-empty because at least one claim has citations_required:true; invoke search({query}) and record results`);
+  }
+  for (let i = 0; i < payload.claims.length; i++) {
+    const c = payload.claims[i] || {};
+    const st = c.support_status;
+    if (!['SUPPORTED', 'UNSUPPORTED', 'INTERNAL_ARTIFACT'].includes(st)) {
+      throw new Error(`step ${step}: claims[${i}].support_status must be SUPPORTED|UNSUPPORTED|INTERNAL_ARTIFACT`);
+    }
+    if (st === 'SUPPORTED') {
+      if (!c.ref_id) throw new Error(`step ${step}: claims[${i}] SUPPORTED but ref_id missing`);
+      if (!c.justifying_excerpt) throw new Error(`step ${step}: claims[${i}] SUPPORTED but justifying_excerpt missing`);
+    }
+  }
+  if (step === 12) {
+    const sections = payload.sections || {};
+    const refs = sections.references || [];
+    if (!Array.isArray(refs) || refs.length === 0) throw new Error('step 12: sections.references must be a non-empty array');
+    const ids = new Set(payload.claims.map(c => c.claim_id));
+    for (const secName of ['garden_of_forking_paths','sem_report']) {
+      const text = sections[secName] || '';
+      const re = /\{\{ref:([A-Za-z0-9_]+)\}\}/g;
+      let m;
+      while ((m = re.exec(text)) !== null) {
+        const cid = m[1];
+        if (!ids.has(cid)) throw new Error(`step 12: ${secName} references unknown claim ${cid}`);
+        const c = payload.claims.find(x => x.claim_id === cid);
+        if (!c || c.support_status !== 'SUPPORTED') throw new Error(`step 12: ${secName} references non-SUPPORTED claim ${cid}`);
+      }
+    }
+  }
+}
 function validateCognitive(step, payload) {
   if (step === 2) {
     if (payload.status !== 'RESOLVED') throw new Error('step 2: status must be "RESOLVED"');
@@ -94,6 +134,47 @@ function validateCognitive(step, payload) {
 }
 
 const COGNITIVE_STEPS = new Set([2, 3, 5, 7, 10, 12]);
+const PASSTHROUGH = {
+  3:  { inherit: ['file_path','data_sheet','header_row_index','max_evaluations'], rename: {}, append: ['claims','retrieval_log','decision_log'] },
+  5:  { inherit: ['file_path','data_sheet','header_row_index','max_evaluations','controls','taxonomy'], rename: { models: 'candidate_models' }, append: ['claims','retrieval_log','decision_log'] },
+  7:  { inherit: ['file_path','data_sheet','header_row_index','controls','survivors','survivors_count'], rename: {}, append: ['claims','retrieval_log','decision_log'] },
+  10: { inherit: ['file_path','data_sheet','header_row_index','controls','bootstrap_results','survivors','survivors_count','shortlisted_models','shortlisted_count','taxonomy','descriptives','missingness','correlations','alpha_table','n_total','variables'], rename: {}, append: ['claims','retrieval_log','decision_log'] },
+  12: { inherit: ['file_path','data_sheet','header_row_index','controls','winning_model_id','topology_type','models','rendered_diagrams','bootstrap_results','models_validated_count','taxonomy','survivors','survivors_count','shortlisted_models','shortlisted_count','evaluations','descriptives','missingness','correlations','alpha_table','n_total','variables'], rename: {}, append: ['claims','retrieval_log','decision_log'], derive: [{ field: 'diagram_path', from: 'rendered_diagrams', pick: (rd) => rd && rd[0] && rd[0].output_image }] }
+};
+
+const DEDUP_KEY = { claims: 'claim_id', retrieval_log: 'query_id', decision_log: 'decision_id' };
+
+function mergePassthrough(step, prior, payload) {
+  const spec = PASSTHROUGH[step];
+  if (!spec || !prior) return payload;
+  const out = { ...payload };
+  for (const f of spec.inherit) {
+    if (prior[f] !== undefined) out[f] = prior[f];
+  }
+  for (const [src, dst] of Object.entries(spec.rename || {})) {
+    if (prior[src] !== undefined) out[dst] = prior[src];
+  }
+  for (const f of spec.append || []) {
+    const key = DEDUP_KEY[f];
+    const inherited = Array.isArray(prior[f]) ? prior[f] : [];
+    const provided = Array.isArray(out[f]) ? out[f] : [];
+    const seen = new Set(inherited.map((x) => x && x[key]).filter(Boolean));
+    const merged = inherited.slice();
+    for (const item of provided) {
+      const k = item && item[key];
+      if (!k || !seen.has(k)) { merged.push(item); if (k) seen.add(k); }
+    }
+    out[f] = merged;
+  }
+  for (const d of spec.derive || []) {
+    if (out[d.field] === undefined) {
+      const v = d.pick(prior[d.from]);
+      if (v !== undefined && v !== null) out[d.field] = v;
+    }
+  }
+  return out;
+}
+
 async function invoke(req, args) {
   const gateway = require('/app/admin-tools/role-gateway.cjs');
   const step = Number(args.step);
@@ -127,10 +208,13 @@ async function invoke(req, args) {
       let payload = args.payload;
       if (typeof payload === 'string') { try { payload = JSON.parse(payload); } catch (_) {} }
       if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw new Error('payload must be a JSON object for cognitive steps');
-      validateCognitive(step, payload);
-      if (step === 7) validateStep7(payload);
-      const result = await pipeline.runStep({ step, runId: currentState.runId, payload });
-      await stateSvc.completeStep(s, step, payload, null);
+      const prior = await pipeline.readStep({ runId: currentState.runId, step: step - 1 });
+      const merged = mergePassthrough(step, prior, payload);
+      validateCognitive(step, merged);
+      if (step === 7) validateStep7(merged);
+      validateEvidence(step, merged);
+      const result = await pipeline.runStep({ step, runId: currentState.runId, payload: merged });
+      await stateSvc.completeStep(s, step, merged, null);
       gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, step, status: 'ok' });
       return JSON.stringify({ status: 'step_complete', step, ok: true });
     }

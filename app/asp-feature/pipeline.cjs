@@ -9,4 +9,16 @@ async function runStep({ step, runId, workbookB64, workbookName, payload }) {
   if (!j.ok) { const err = new Error(j.error || 'step failed'); err.detail = j; throw err; }
   return j;
 }
-module.exports = { runStep, RUNNER_URL };
+
+async function readStep({ runId, step }) {
+  const q = `run_id=${encodeURIComponent(runId)}&step=${encodeURIComponent(step)}`;
+  try {
+    const r = await fetch(`${RUNNER_URL}/read?${q}`, { signal: AbortSignal.timeout(15000) });
+    if (!r.ok) return null;
+    const j = await r.json();
+    if (!j.ok) return null;
+    return j.output || null;
+  } catch (_) { return null; }
+}
+
+module.exports = { runStep, readStep, RUNNER_URL };

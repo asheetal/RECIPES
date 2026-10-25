@@ -139,4 +139,5 @@ module.exports = {
   interactive: false,
   tools: ['asp_step_run'],
   prompt: PROMPT,
+  workflow: { uninterruptedIterations: 50, maxDirectorIterations: 1 },
 };

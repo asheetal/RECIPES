@@ -46,7 +46,7 @@ function registerRoutes(router, projectFilesService) {
       fetch(`${base}/api/agents/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'User-Agent': req.headers['user-agent'] || 'LibreChat/0.8.7' },
-        body: JSON.stringify({ conversationId, text: recipe.prompt + '\n\nWorkbook file_id: ' + fileId, parentMessageId: null, tools: recipe.tools || [], files: [{ file_id: fileId, projectFileId: fileId, filename: file.name }] }),
+        body: JSON.stringify({ conversationId, text: recipe.prompt + '\n\nWorkbook file_id: ' + fileId, parentMessageId: null, tools: recipe.tools || [], files: [{ file_id: fileId, projectFileId: fileId, filename: file.name }], recipeWorkflow: recipe.workflow || null }),
         signal: AbortSignal.timeout(1800000),
       }).then(async (r) => {
         const body = await r.text().catch(() => '');

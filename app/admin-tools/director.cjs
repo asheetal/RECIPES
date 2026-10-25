@@ -47,7 +47,8 @@ function record(req,kind,detail){
 }
 async function begin(req,payload,signal){
  if(!req.__workflow||req.__workflow.direct||req.__directorSets)return;
- const settings=await roles.readWorkflow();
+ const override=(req?.__recipe&&req.__recipe.workflow)||(req?.body&&req.body.recipeWorkflow)||null;
+ const settings=await roles.readWorkflow(override);
  const users=(Array.isArray(payload)?payload:[])
   .filter(m=>m?.role==='user'||m?.getType?.()==='human');
  const brief=users.slice(-4).map(m=>

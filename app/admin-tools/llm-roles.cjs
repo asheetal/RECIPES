@@ -26,9 +26,9 @@ function normalizeWorkflow(value){
   throw Error('Unknown workflow setting');
  return result;
 }
-async function readWorkflow(){
+async function readWorkflow(override){
  const saved=await collection().findOne({_id:'assignments'});
- return normalizeWorkflow(saved?.workflow);
+ return normalizeWorkflow({...saved?.workflow,...(override||{})});
 }
 async function resolve(role){
  if(!ROLES.includes(role))throw Error('Unknown LLM role');

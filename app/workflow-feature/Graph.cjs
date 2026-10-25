@@ -760,7 +760,10 @@ var StandardGraph = class StandardGraph extends Graph {
 			* the breakpoint and don't invalidate the prefix.
 			*/
 			const workflowStep = Number(config.metadata?.langgraph_step ?? 0);
-			const wfCeiling = Number(config.configurable?.recipeWorkflow?.workflowStepCeiling) || 48;
+			const rw = config.configurable?.recipeWorkflow || null;
+			const F = Number(rw?.uninterruptedIterations) || 0;
+			const D = Number(rw?.maxDirectorIterations);
+			const wfCeiling = F > 0 && Number.isFinite(D) ? (F * (1 + D) * 2 + 4) : 48;
 			const wfVerify = wfCeiling - 2;
 			if (workflowStep >= wfCeiling) rawToolsForBinding = [];
 			else if (workflowStep >= wfVerify) rawToolsForBinding = rawToolsForBinding.filter(t => t.name === 'research_files');

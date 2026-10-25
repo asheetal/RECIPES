@@ -198,6 +198,7 @@ function deriveStep2Fields(prior) {
   for (const k of waveKeys) survey_design[`${k}_count`] = buckets[k];
   return {
     status: 'RESOLVED',
+    file_path: prior.file_path || 'Employee Data.xlsx',
     data_sheet: data.sheet_name,
     metadata_sheet: meta.sheet_name,
     header_row_index: 0,

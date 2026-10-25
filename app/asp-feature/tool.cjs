@@ -346,14 +346,19 @@ async function invoke(req, args) {
     }
     throw new Error(`step ${step} not routed`);
   } catch (e) {
-    try {
-      const pid = await resolveProjectId(req);
-      if (pid) {
-        const s = { user: String(req.user.id || req.user._id), tenant: String(req.user.tenantId || ''), projectId: pid };
-        await require('/app/asp-feature/automated-sem.cjs').service().failRun(s, e.message);
-      }
-    } catch (_) {}
-    gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, step, status: 'error', error: e.message });
+    // failRun only for runner errors (pipeline.runStep attaches .detail).
+    // Parse/validation/schema errors are recoverable at the tool boundary:
+    // the surgeon reformulates within the same iteration, no state changed.
+    if (e && e.detail) {
+      try {
+        const pid = await resolveProjectId(req);
+        if (pid) {
+          const s = { user: String(req.user.id || req.user._id), tenant: String(req.user.tenantId || ''), projectId: pid };
+          await require('/app/asp-feature/automated-sem.cjs').service().failRun(s, e.message);
+        }
+      } catch (_) {}
+    }
+    gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, step, status: 'error', error: e.message, recoverable: !(e && e.detail) });
     throw e;
   }
 }

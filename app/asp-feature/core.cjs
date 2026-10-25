@@ -1,6 +1,7 @@
 'use strict';
 const crypto = require('node:crypto');
 const FINAL_STEP = 13;
+const IDLE_TIMEOUT_MS = 15 * 60 * 1000;
 function fail(status, message) { const e = new Error(message); e.status = status; throw e; }
 function owner(req) {
   const user = String(req.user?.id || req.user?._id || '');
@@ -16,8 +17,17 @@ function makeService(repo, deps) {
     return { ...who, projectId };
   }
   async function getState(s) {
-    const r = await repo.getRun(s);
+    let r = await repo.getRun(s);
     if (!r) return { status: 'idle', steps: {} };
+    if (r.status === 'running' && r.lastProgressAt) {
+      const idle = Date.now() - new Date(r.lastProgressAt).getTime();
+      if (idle > IDLE_TIMEOUT_MS) {
+        r.status = 'failed';
+        r.error = `No progress for ${Math.round(idle/60000)} minutes; last closed step: ${Object.keys(r.steps||{}).length}/13`;
+        r.finishedAt = new Date();
+        await repo.putRun(s, r);
+      }
+    }
     const summary = {};
     for (const [k, v] of Object.entries(r.steps || {})) summary[k] = { ok: !!(v && v.ok) };
     return { status: r.status, sha256: r.sha256 || null, fileId: r.fileId || null, fileName: r.fileName || null, runId: r.runId || null, steps: summary, error: r.error || null, startedAt: r.startedAt || null, finishedAt: r.finishedAt || null };
@@ -27,7 +37,7 @@ function makeService(repo, deps) {
     const hash = sha256(buffer);
     if (existing && existing.sha256 === hash && existing.status === 'done') return { status: 'no_new_run', state: await getState(s) };
     const runId = crypto.randomBytes(8).toString('hex');
-    const record = { user: s.user, tenant: s.tenant, projectId: s.projectId, runId, fileId, fileName, sha256: hash, status: 'running', steps: {}, startedAt: new Date(), finishedAt: null, error: null };
+    const record = { user: s.user, tenant: s.tenant, projectId: s.projectId, runId, fileId, fileName, sha256: hash, status: 'running', steps: {}, startedAt: new Date(), lastProgressAt: new Date(), finishedAt: null, error: null };
     await repo.putRun(s, record);
     return { status: 'started', state: await getState(s) };
   }
@@ -37,6 +47,7 @@ function makeService(repo, deps) {
     const entry = { ok: true, output };
     if (extra) entry.extra = extra;
     r.steps = { ...(r.steps || {}), [String(step)]: entry };
+    r.lastProgressAt = new Date();
     if (Number(step) === FINAL_STEP) { r.status = 'done'; r.finishedAt = new Date(); }
     await repo.putRun(s, r);
     return await getState(s);

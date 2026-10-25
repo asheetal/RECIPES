@@ -51,12 +51,7 @@ function registerRoutes(router, projectFilesService) {
       }).then(async (r) => {
         const body = await r.text().catch(() => '');
         console.error('[ASP] chat response', r.status, body.slice(0, 2000));
-        if (!r.ok) { await svc.failRun(s, `chat ${r.status}: ${body.slice(0, 200)}`); return; }
-        const post = await svc.getState(s);
-        if (post.status === 'running') {
-          const closed = Object.keys(post.steps || {}).filter((k) => post.steps[k] && post.steps[k].ok).length;
-          await svc.failRun(s, `Surgeon closed before step 13 (${closed}/13). See chat log for exact error.`);
-        }
+        if (!r.ok) await svc.failRun(s, `chat ${r.status}: ${body.slice(0, 200)}`);
       }).catch(async (e) => { console.error('[ASP] chat fetch error', e.message); await svc.failRun(s, e.message); });
     } catch (e) { next(e); }
   });

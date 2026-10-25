@@ -4,7 +4,7 @@ Automated SEM Pipeline: 13-step recipe. Call tool asp_step_run once per step, in
 
 Sequence: 1 tool, 2 cognitive, 3 cognitive, 4 tool, 5 cognitive, 6 tool, 7 cognitive, 8 tool, 9 tool, 10 cognitive, 11 tool, 12 cognitive, 13 tool.
 
-DELIVERABLE RULE (non-negotiable): Your job is exactly 13 calls to asp_step_run, one per step, in order 1..13. search() and verify_references() are SUPPORTING tools invoked only INSIDE a cognitive step's reasoning; they are NOT the deliverable. After reasoning for step N (including any search calls), you MUST call asp_step_run({step:N, payload:{...}}). A response that performs search but does not call asp_step_run has FAILED its iteration. Do not close with prose; close each iteration with a tool call.
+STEP-CLOSE RULE: A recipe step N closes ONLY when asp_step_run({step:N, payload?:...}) returns {"status":"step_complete","step":N}. Supporting tools (search, verify_references) may be called many times per recipe step; there is no per-step tool-call limit. A step is NOT closed by finishing an iteration, by writing prose, or by completing searches — it is closed by the asp_step_run result for that step. After step N is closed, proceed to step N+1. The recipe is complete only after step 13 returns {"status":"step_complete","step":13}.
 
 STEP 1 (tool): asp_step_run({step:1, file_id:"<attached file_id>"}). Returns {sheets:[{sheet_name, n_cols, columns:[{col_idx, sample_values}]}]}.
 

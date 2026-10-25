@@ -44,7 +44,33 @@ STEP 5 (cognitive): Read step4_out candidates_p05_count. Emit payload keys: stat
 
 STEP 6 (tool): asp_step_run({step:6}). Applies delta_r2, imm, and sibling-DV divergence filters.
 
-STEP 7 (cognitive): Shortlist top survivors from step6. Payload keys: status:"THEORETICAL_REVIEW_COMPLETE"; file_path; data_sheet; header_row_index:0; controls; survivors_count; survivors (verbatim from step6.survivors); shortlisted_count; shortlisted_models:[{id, rank, x, w, m, y, theoretical_framework, recommended_role, novelty_verdict:{status:"EXACT_PRIOR_TEST_FOUND"|"COMPONENT_PRIOR_TESTS_FOUND"|"NO_PRIOR_TEST_IDENTIFIED", exact_prior_records:[], component_records:[], search_provenance:[{query, database, date, n_results_reviewed}]}}]; evaluations:[{id, theoretical_framework, tension_resolution_score, anti_tautology_score, divergence_rationale, overall_novelty_rank}]; taxonomy; claims (verbatim + new); retrieval_log (verbatim + new); decision_log (verbatim + new).
+STEP 7 (cognitive): Shortlist top survivors from step6.
+RULES (verbatim from design doc step_07_abductive.tex):
+  1. Tension Resolution: does the interaction resolve an authentic conceptual paradox or non-obvious boundary condition?
+  2. Anti-Tautology: penalize semantic tautologies.
+  3. Construct Specificity: reward paths demonstrating clear divergence.
+  4. Shortlist up to 5 viable candidates (scores >= 7/10) into shortlisted_models.
+  5. Pass-through: forward ALL fields of step6_out.json verbatim.
+  6. RDF: append entries under THEORETICAL_FRAMEWORK_SELECTION, LITERATURE_GROUNDING, PRIOR_ART_ADJUDICATION only.
+  7. PRIOR-ART NOVELTY ADJUDICATION (MANDATORY):
+     (a) Decompose each candidate into directed links: X->M, M->Y, W moderates X->M, plus the full conditional-process phrase. Use SYNONYM-EXPANDED human-readable labels, NEVER dataset codes.
+     (b) Run >=3 distinct queries per candidate via search({query}) — one per component plus one for the full chain.
+     (c) Classify each candidate's novelty_verdict as exactly one of: EXACT_PRIOR_TEST_FOUND | COMPONENT_PRIOR_TESTS_FOUND | NO_PRIOR_TEST_IDENTIFIED.
+     (d) If EXACT_PRIOR_TEST_FOUND: attach exact_prior_records with verbatim sentences. The model MUST NOT be presented as novel.
+     (e) For every theoretical_framework claim, run LITERATURE_GROUNDING via search({query}) and copy a verbatim abstract sentence into justifying_excerpt.
+     (f) Emit novelty_verdict, claims[], retrieval_log[] alongside the shortlist.
+
+STEP 7 NOVELTY PIN (deterministic, enforced by the tool — payload WILL be rejected otherwise):
+- If component_records[] is non-empty OR exact_prior_records[] is non-empty, status MUST be COMPONENT_PRIOR_TESTS_FOUND or EXACT_PRIOR_TEST_FOUND (whichever is correct), NEVER NO_PRIOR_TEST_IDENTIFIED.
+- status = NO_PRIOR_TEST_IDENTIFIED is legal ONLY when both component_records[] and exact_prior_records[] are empty arrays.
+- status = EXACT_PRIOR_TEST_FOUND is legal ONLY when exact_prior_records[] is non-empty.
+- Field name is component_records (NOT component_prior_records). Each record: {ref_id, supports_link: "X->M"|"M->Y"|"W mod X->M"|"full_chain", justifying_excerpt}.
+- Field name is exact_prior_records. Each record: {ref_id, supports_link: "full_chain", justifying_excerpt}.
+- decision_log entries for step 7 MUST use decision_type from {THEORETICAL_FRAMEWORK_SELECTION, LITERATURE_GROUNDING, PRIOR_ART_ADJUDICATION}. THRESHOLD_CALIBRATION is forbidden at step 7.
+- search_provenance must contain at least 3 entries per shortlisted model.
+- Never invent author, year, title, journal, or DOI. Only identifiers returned by search().
+
+Payload keys: status:"THEORETICAL_REVIEW_COMPLETE"; file_path; data_sheet; header_row_index:0; controls; survivors_count; survivors (verbatim from step6.survivors); shortlisted_count; shortlisted_models:[{id, rank, x, w, m, y, theoretical_framework, recommended_role, novelty_verdict:{status, exact_prior_records:[{ref_id,supports_link,justifying_excerpt}], component_records:[{ref_id,supports_link,justifying_excerpt}], search_provenance:[{query, database, date, n_results_reviewed}]}}]; evaluations:[{id, theoretical_framework, tension_resolution_score, anti_tautology_score, divergence_rationale, overall_novelty_rank}]; taxonomy (verbatim); claims (verbatim + new); retrieval_log (verbatim + new); decision_log (verbatim + new).
 
 STEP 8 (tool): asp_step_run({step:8}). 5000-resample bootstrap of a3*b1 per shortlisted model.
 

@@ -23,6 +23,43 @@ async function resolveProjectId(req) {
   return convo?.chatProjectId || null;
 }
 const TOOL_STEPS = new Set([1, 4, 6, 8, 9, 11, 13]);
+
+function validateStep7(payload) {
+  const sm = payload.shortlisted_models;
+  if (!Array.isArray(sm) || sm.length === 0) throw new Error('step 7: shortlisted_models must be a non-empty array');
+  const okStatus = new Set(['EXACT_PRIOR_TEST_FOUND', 'COMPONENT_PRIOR_TESTS_FOUND', 'NO_PRIOR_TEST_IDENTIFIED']);
+  for (let i = 0; i < sm.length; i++) {
+    const m = sm[i] || {};
+    const nv = m.novelty_verdict;
+    if (!nv || typeof nv !== 'object') throw new Error(`step 7: shortlisted_models[${i}].novelty_verdict must be an object`);
+    if (!okStatus.has(nv.status)) throw new Error(`step 7: shortlisted_models[${i}].novelty_verdict.status invalid (got "${nv.status}")`);
+    if (nv.component_prior_records !== undefined && nv.component_records === undefined) {
+      throw new Error(`step 7: shortlisted_models[${i}] uses component_prior_records; must be component_records`);
+    }
+    const comp = Array.isArray(nv.component_records) ? nv.component_records : [];
+    const exact = Array.isArray(nv.exact_prior_records) ? nv.exact_prior_records : [];
+    if (nv.status === 'NO_PRIOR_TEST_IDENTIFIED' && (comp.length > 0 || exact.length > 0)) {
+      throw new Error(`step 7: shortlisted_models[${i}] status=NO_PRIOR_TEST_IDENTIFIED but component_records=${comp.length} / exact_prior_records=${exact.length}; must be COMPONENT_PRIOR_TESTS_FOUND or EXACT_PRIOR_TEST_FOUND`);
+    }
+    if (nv.status === 'EXACT_PRIOR_TEST_FOUND' && exact.length === 0) {
+      throw new Error(`step 7: shortlisted_models[${i}] status=EXACT_PRIOR_TEST_FOUND but exact_prior_records is empty`);
+    }
+    for (const [j, r] of [...comp, ...exact].entries()) {
+      if (!r || !r.ref_id) throw new Error(`step 7: shortlisted_models[${i}] prior record #${j} missing ref_id`);
+      if (!r.justifying_excerpt) throw new Error(`step 7: shortlisted_models[${i}] prior record #${j} missing justifying_excerpt`);
+    }
+    const sp = Array.isArray(nv.search_provenance) ? nv.search_provenance : [];
+    if (sp.length < 3) throw new Error(`step 7: shortlisted_models[${i}] search_provenance must have >= 3 entries (got ${sp.length})`);
+  }
+  const dlog = Array.isArray(payload.decision_log) ? payload.decision_log : [];
+  const allowed = new Set(['THEORETICAL_FRAMEWORK_SELECTION', 'LITERATURE_GROUNDING', 'PRIOR_ART_ADJUDICATION']);
+  for (let i = 0; i < dlog.length; i++) {
+    const d = dlog[i] || {};
+    if (Number(d.step) === 7 && !allowed.has(d.decision_type)) {
+      throw new Error(`step 7: decision_log[${i}].decision_type "${d.decision_type}" invalid; must be one of ${[...allowed].join('|')}`);
+    }
+  }
+}
 function validateCognitive(step, payload) {
   if (step === 2) {
     if (payload.status !== 'RESOLVED') throw new Error('step 2: status must be "RESOLVED"');
@@ -91,6 +128,7 @@ async function invoke(req, args) {
       if (typeof payload === 'string') { try { payload = JSON.parse(payload); } catch (_) {} }
       if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw new Error('payload must be a JSON object for cognitive steps');
       validateCognitive(step, payload);
+      if (step === 7) validateStep7(payload);
       const result = await pipeline.runStep({ step, runId: currentState.runId, payload });
       await stateSvc.completeStep(s, step, payload, null);
       gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, step, status: 'ok' });

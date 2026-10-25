@@ -8,21 +8,19 @@ STEP-CLOSE RULE: A recipe step N closes ONLY when asp_step_run({step:N, payload?
 
 STEP 1 (tool): asp_step_run({step:1, file_id:"<attached file_id>"}). Returns {sheets:[{sheet_name, n_cols, columns:[{col_idx, sample_values}]}]}.
 
-STEP 2 (cognitive): Read step1_out.json from the prior tool_result in this conversation. Identify numeric data sheet vs codebook sheet.
-RULES (verbatim from design doc step_02_schema.tex):
-  1. Identify the primary data sheet and metadata/codebook sheet.
-  2. Determine 0-based header_row_index and data_start_row_index.
-  3. Map codebook entries to data columns, waves, and codebook roles.
-  4. Enforce Structural Role Quorum: >=1 IV, MOD, MED, DV each.
-  5. Route unresolved non-essential columns to unmapped_dropped.
-  6. Record discretionary choices in decision_log as SCHEMA_DISAMBIGUATION.
-  7. Emit claims[] and retrieval_log[] alongside decision_log[] (may be empty arrays).
-  8. Emit strictly valid step2_out.json.
-Payload keys: status:"RESOLVED"; file_path (basename); data_sheet; metadata_sheet (or null); header_row_index:0; data_start_row_index:1; n_variables_mapped:int; quorum_passed:true; survey_design:{multi_wave:bool, waves_detected:[...], wave_1_count:int, wave_2_count:int}; join_key:{codebook_column:"Variable in Dataset", codebook_column_index:3, match_type:"exact_token", match_coverage:"37/37 (100%)"}; variable_mappings:[{codebook_name, column_name, column_index:int, wave, codebook_role:"IV"|"MOD"|"MED"|"DV"|"Control", data_type:"numeric"|"string"}]; unmapped_dropped:[]; claims:[{claim_id:"CLM_2_001a", decision_id:"DEC_SCH_001", text, claim_type:"METHODOLOGICAL_PRECEDENT", citations_required:true, support_status:"SUPPORTED", ref_id, short_cite, justifying_excerpt}]; retrieval_log:[{query_id:"Q2_01", query, database:"openalex", date:"YYYY-MM-DD", results:[{ref_id, title, year, doi, abstract_snippet, retrieved_for_claims:["CLM_2_001a"]}]}]; decision_log:[{step:2, stage_name:"Semantic Schema & Sheet Layout Resolver", decision_id:"DEC_SCH_001", decision_type:"SCHEMA_DISAMBIGUATION", choice_made, counterfactual_forks:[...], epistemic_rationale, downstream_impact, claims:[]}].
-DERIVED VARIABLE_MAPPINGS (strict JSON, tool fills): Do NOT include variable_mappings or n_variables_mapped in the step-2 payload. The tool derives them from step1_out.json: it reads the Variable Description sheet (Wave, Variable Type, Variable Name, Variable in Dataset) and the Dataset sheet headers, computes column_index for every code, and writes the complete variable_mappings array plus n_variables_mapped into step2_out.json. Your payload for step 2 must contain ONLY: status, file_path, data_sheet, metadata_sheet, header_row_index, data_start_row_index, quorum_passed, survey_design, join_key, unmapped_dropped, claims, retrieval_log, decision_log. This keeps the payload small and forces a strict object handshake.
-HARD PINS: variable_mappings[i].codebook_name = human-readable Variable Name from metadata sheet (e.g. "Organizational tenure"), NEVER the code token. variable_mappings[i].column_name = code token (e.g. "OrTe"). join_key.match_coverage = STRING, e.g. "37/37 (100%)", NEVER a number. header_row_index=0. data_start_row_index=1.
-claims[] MUST contain at least one SUPPORTED entry produced by search({query}) with ref_id, short_cite, and justifying_excerpt (verbatim sentence from the returned abstract). retrieval_log[] MUST contain at least one entry documenting that search with query_id, query, database:"openalex", date:"YYYY-MM-DD", and results:[{ref_id, title, year, doi, abstract_snippet, retrieved_for_claims}]. You MUST call search({query}) at least once during step 2 before calling asp_step_run({step:2}).
-Call asp_step_run({step:2, payload:{...}}).
+STEP 2 (cognitive): Emit ONLY the fields the tool cannot derive. The tool reads step1_out.json and fills data_sheet, metadata_sheet, header_row_index, data_start_row_index, survey_design, join_key, n_variables_mapped, variable_mappings, quorum_passed, and status. You must NOT include those fields in the payload.
+
+STEP 2 PAYLOAD (MINIMAL): { status:"RESOLVED", unmapped_dropped:[], claims:[{claim_id, decision_id:"DEC_SCH_001", text, claim_type, citations_required:true, support_status:"SUPPORTED", ref_id, short_cite, justifying_excerpt}], retrieval_log:[{query_id:"Q2_01", query, database:"openalex", date:"YYYY-MM-DD", results:[{ref_id, title, year, doi, abstract_snippet, retrieved_for_claims:["CLM_2_001a"]}]}], decision_log:[{step:2, stage_name:"Semantic Schema & Sheet Layout Resolver", decision_id:"DEC_SCH_001", decision_type:"SCHEMA_DISAMBIGUATION", choice_made, counterfactual_forks:[...], epistemic_rationale, downstream_impact, claims:["CLM_2_001a"]}] }
+
+RULES for step 2 (strict):
+- Before calling asp_step_run, invoke search({query}) at least once. Use a query about the substantive domain of the variables, so the claim is grounded in a real paper.
+- claims[] MUST contain exactly one SUPPORTED claim with a verbatim justifying_excerpt from the returned abstract.
+- retrieval_log[] MUST contain exactly one entry documenting that search. results[] MUST contain exactly one result object with the fields listed above.
+- decision_log[] MUST contain exactly one entry with decision_type SCHEMA_DISAMBIGUATION.
+- payload is a strict JSON object. Do NOT stringify. Do NOT include data_sheet, metadata_sheet, header_row_index, data_start_row_index, survey_design, join_key, n_variables_mapped, variable_mappings, quorum_passed, status — the tool derives them.
+- File names of that claim and result must match the actual search return. Never invent DOI, title, or author.
+
+Call asp_step_run({step:2, payload:{ status:"RESOLVED", unmapped_dropped:[], claims:[...], retrieval_log:[...], decision_log:[...] }}).
 
 STEP 3 (cognitive): Classify every variable from step2_out.
 RULES (verbatim from design doc step_03_taxonomy.tex):

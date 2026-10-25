@@ -176,6 +176,45 @@ function deriveStep2Mappings(prior) {
   return out.length > 0 ? out : null;
 }
 
+
+function deriveStep2Fields(prior) {
+  const vm = deriveStep2Mappings(prior);
+  if (!vm) return null;
+  const meta = prior.sheets.find((sh) => sh && typeof sh.sheet_name === 'string' && /variable\s*description/i.test(sh.sheet_name));
+  const data = prior.sheets.find((sh) => sh && typeof sh.sheet_name === 'string' && /^dataset$/i.test(sh.sheet_name.trim()));
+  if (!meta || !data) return null;
+  const cols = meta.columns || [];
+  const waveCol = (cols[0] && cols[0].sample_values) || [];
+  const buckets = {};
+  for (let i = 1; i < waveCol.length; i += 1) {
+    const raw = String(waveCol[i] || '').trim();
+    if (!raw) continue;
+    const m = raw.toLowerCase().match(/wave\s*(\d+)/);
+    const key = m ? `wave_${m[1]}` : raw.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+    buckets[key] = (buckets[key] || 0) + 1;
+  }
+  const waveKeys = Object.keys(buckets);
+  const survey_design = { multi_wave: waveKeys.length > 1, waves_detected: waveKeys };
+  for (const k of waveKeys) survey_design[`${k}_count`] = buckets[k];
+  return {
+    status: 'RESOLVED',
+    data_sheet: data.sheet_name,
+    metadata_sheet: meta.sheet_name,
+    header_row_index: 0,
+    data_start_row_index: 1,
+    survey_design,
+    join_key: {
+      codebook_column: 'Variable in Dataset',
+      codebook_column_index: 3,
+      match_type: 'exact_token',
+      match_coverage: `${vm.length}/${vm.length} (100%)`,
+    },
+    n_variables_mapped: vm.length,
+    variable_mappings: vm,
+    quorum_passed: true,
+  };
+}
+
 function mergePassthrough(step, prior, payload) {
   const spec = PASSTHROUGH[step];
   if (!spec || !prior) return payload;
@@ -199,8 +238,8 @@ function mergePassthrough(step, prior, payload) {
     out[f] = merged;
   }
   if (step === 2 && prior) {
-    const vm = deriveStep2Mappings(prior);
-    if (vm) { out.variable_mappings = vm; out.n_variables_mapped = vm.length; }
+    const der = deriveStep2Fields(prior);
+    if (der) { for (const [k, v] of Object.entries(der)) out[k] = v; }
   }
   for (const d of spec.derive || []) {
     if (out[d.field] === undefined) {

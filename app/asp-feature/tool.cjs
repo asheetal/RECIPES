@@ -334,7 +334,39 @@ function formatApa7(r) {
   return parts.join(' ').trim();
 }
 
+function backfillRetrievalClaims(prior, claims) {
+  if (!prior || !Array.isArray(prior.retrieval_log)) return;
+  const byRef = new Map();
+  for (const entry of prior.retrieval_log) {
+    for (const r of (entry.results || [])) {
+      if (r && r.ref_id) {
+        if (!byRef.has(r.ref_id)) byRef.set(r.ref_id, []);
+        byRef.get(r.ref_id).push(r);
+      }
+    }
+  }
+  for (const c of (claims || [])) {
+    if (!c || c.support_status !== 'SUPPORTED') continue;
+    const rid = c.ref_id;
+    if (!rid) continue;
+    const recs = byRef.get(rid);
+    if (!recs || recs.length === 0) continue;
+    const excerpt = String(c.justifying_excerpt || '').trim();
+    if (!excerpt) continue;
+    for (const r of recs) {
+      const abs = String(r.abstract_snippet || '');
+      if (abs && abs.indexOf(excerpt) !== -1) {
+        const cur = Array.isArray(r.retrieved_for_claims) ? r.retrieved_for_claims.slice() : [];
+        if (!cur.includes(c.claim_id)) cur.push(c.claim_id);
+        r.retrieved_for_claims = cur;
+        break;
+      }
+    }
+  }
+}
+
 function deriveStep12References(prior, claims) {
+  backfillRetrievalClaims(prior, claims);
   const retrieved = new Map();
   for (const entry of (prior.retrieval_log || [])) {
     for (const r of (entry.results || [])) {
@@ -458,6 +490,7 @@ async function invoke(req, args) {
       if (step === 12 && payload && payload.sections && Array.isArray(payload.sections.references) && payload.sections.references.length > 0) throw new Error('step 12: sections.references must be omitted; the tool derives it');
       const prior = await pipeline.readStep({ runId: currentState.runId, step: step - 1 });
       const merged = mergePassthrough(step, prior, payload);
+      if (step === 12) backfillRetrievalClaims(prior, merged.claims);
       const schemaErr = validatePayloadSchema(step, merged, require('zod').z);
       if (schemaErr) throw new Error(schemaErr);
       validateCognitive(step, merged);

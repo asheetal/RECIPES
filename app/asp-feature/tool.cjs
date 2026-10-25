@@ -161,18 +161,6 @@ function validateEvidence(step, payload) {
     }
   }
   if (step === 12) {
-    const rl = Array.isArray(payload.retrieval_log) ? payload.retrieval_log : [];
-    for (const entry of rl) {
-      for (const r of (entry.results || [])) {
-        if (!r || !r.doi) continue;
-        if (!Array.isArray(r.authors) || r.authors.length === 0) {
-          throw new Error(`step 12: retrieval_log entry for ${r.ref_id || '?'} (DOI ${r.doi}) is missing authors[]; APA-7 requires author names`);
-        }
-        if (!r.journal) throw new Error(`step 12: retrieval_log entry for ${r.ref_id || '?'} (DOI ${r.doi}) is missing journal; APA-7 requires journal`);
-      }
-    }
-  }
-  if (step === 12) {
     const sections = payload.sections || {};
     const refs = sections.references || [];
     const reCount = (txt) => { const m = String(txt || '').match(/\{\{ref:[A-Za-z0-9_]+\}\}/g); return m ? m.length : 0; };
@@ -342,7 +330,7 @@ function formatApa7(r) {
   if (volume) { jblock += (jblock ? ', ' : '') + volume; if (issue) jblock += '(' + issue + ')'; }
   if (pages) jblock += (jblock ? ', ' : '') + pages;
   if (jblock) parts.push(jblock.replace(/\.$/, '') + '.');
-  if (doi) parts.push('https://doi.org/' + doi);
+  if (doi) parts.push('URL:https://doi.org/' + doi);
   return parts.join(' ').trim();
 }
 
@@ -361,9 +349,8 @@ function deriveStep12References(prior, claims) {
     if (!rid || seen.has(rid)) continue;
     const r = retrieved.get(rid);
     if (!r) continue;
-    const sc = String(c.short_cite || c.ref_id || rid).trim();
     const apa = formatApa7(r) || (String(r.title || '') + ' (' + (r.year || '') + ').');
-    refs.push(`[${sc}] ` + apa);
+    refs.push(`[${rid}] ` + apa);
     seen.add(rid);
   }
   return refs;

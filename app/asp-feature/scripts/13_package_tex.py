@@ -12,7 +12,7 @@ def _token_overlap(a, b):
     return len(ta & tb) / max(1, len(ta))
 def _ref_id_of(ref_string, claims=None):
     if not isinstance(ref_string, str): return None
-    m = re.search(r"^\[([^\]]+)\]", ref_string)
+    m = re.search(r"^\[([^\]]+)\]", ref_string) if not ref_string.startswith("%") else re.search(r"^%\s*\[([^\]]+)\]", ref_string)
     if m:
         inner = m.group(1).strip()
         # If claims are provided, resolve short_cite -> ref_id first.
@@ -160,6 +160,19 @@ def escape_preserving_placeholders(text):
         if re.match(r'\{\{ref:[A-Za-z0-9_]+\}\}', p): out.append(p)
         else: out.append(tex_escape(p))
     return "".join(out)
+def _render_reference(text):
+    if not isinstance(text, str): return str(text)
+    # tool.cjs emits "URL:https://..." to preserve the explicit-URL marker
+    parts = re.split(r"(URL:(https?://\S+))", text)
+    out = []
+    for p in parts:
+        if p.startswith("URL:"):
+            out.append("\\url{" + p[4:] + "}")
+        else:
+            out.append(tex_escape(p))
+    return "".join(out)
+
+
 def _escape_with_urls(text):
     if not isinstance(text, str): text = str(text)
     parts = re.split(r'(https?://\S+)', text)
@@ -442,7 +455,7 @@ mean-centered. $**p < .01$. See model footnote for IMM, controls, and prior-art 
     tex.append(render_model_comparison_table(payload))
     tex.append("\\begin{center}\\textbf{References}\\end{center}\n\\vspace{0.5em}\n")
     for r in sections.get("references",[]) or []:
-        rt = _escape_with_urls(str(r))
+        rt = _render_reference(str(r))
         tex.append("\\noindent\\hangindent=0.5in\\hangafter=1 " + rt + "\\par\\vspace{0.8em}\n")
     if replication_scripts:
         keys = sorted(replication_scripts.keys())

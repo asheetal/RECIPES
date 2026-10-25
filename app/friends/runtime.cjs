@@ -20,17 +20,20 @@ async function admin(req,res,next){
  if(u?.role!=='ADMIN')return fail(res,403,'Administrator access required.');next();}
  catch{return fail(res,503,'Cannot verify administrator access.');}
 }
+function clampInt(v,min,max,fallback){const n=Number.parseInt(v,10);return Number.isFinite(n)?Math.min(max,Math.max(min,n)):fallback;}
 async function generate(req,res){
- const code=newCode(),now=new Date(),expiresAt=new Date(now.getTime()+7*DAY);
- await codes().insertOne({_id:codeHash(code),label:code.slice(-4),createdAt:now,expiresAt,state:'unused',createdBy:idOf(req.user)});
+ const daysValid=clampInt(req.body?.daysValid,1,3650,7);
+ const maxRedemptions=clampInt(req.body?.maxRedemptions,1,10000,1);
+ const code=newCode(),now=new Date(),expiresAt=new Date(now.getTime()+daysValid*DAY);
+ await codes().insertOne({_id:codeHash(code),label:code.slice(-4),createdAt:now,expiresAt,state:'unused',maxRedemptions,redemptionsUsed:0,createdBy:idOf(req.user)});
  const url=new URL(process.env.DOMAIN_CLIENT);url.pathname=url.pathname.replace(/\/+$/,'')+'/register';url.search='?friend=1';url.hash='';
- res.json({code,expiresAt,registrationURL:url.toString()});
+ res.json({code,expiresAt,daysValid,maxRedemptions,registrationURL:url.toString()});
 }
 async function list(req,res){
  const rows=await members().find({}).sort({expiresAt:1}).toArray();
  const data=[];for(const r of rows){const u=await users().findOne({_id:new mongoose.Types.ObjectId(r._id)},{projection:{name:1,email:1,role:1}});if(u)data.push({id:r._id,name:u.name,email:u.email,state:r.state,expiresAt:r.expiresAt,registeredAt:r.registeredAt,remindedAt:r.remindedAt});}
- const pending=await codes().find({state:'unused',expiresAt:{$gt:new Date()}},{projection:{label:1,expiresAt:1}}).sort({expiresAt:1}).limit(100).toArray();
- res.json({friends:data,codes:pending.map(c=>({id:c._id,label:c.label,expiresAt:c.expiresAt}))});
+ const pending=await codes().find({state:'unused',expiresAt:{$gt:new Date()},$expr:{$lt:[{$ifNull:['$redemptionsUsed',0]},{$ifNull:['$maxRedemptions',1]}]}},{projection:{label:1,expiresAt:1,maxRedemptions:1,redemptionsUsed:1}}).sort({expiresAt:1}).limit(100).toArray();
+ res.json({friends:data,codes:pending.map(c=>({id:c._id,label:c.label,expiresAt:c.expiresAt,maxRedemptions:c.maxRedemptions??1,redemptionsUsed:c.redemptionsUsed??0}))});
 }
 async function revoke(req,res){await codes().deleteOne({_id:req.params.codeId,state:'unused'});res.json({message:'Code revoked.'});}
 async function convert(req,res){
@@ -63,8 +66,9 @@ async function register(req,res,next){
  const data={...parsed.data,email:parsed.data.email.trim().toLowerCase()};
  if(await users().findOne({email:data.email},{projection:{_id:1}}))return fail(res,409,'This email already has an account.');
  const oid=new mongoose.Types.ObjectId(),userId=String(oid),now=new Date();
- const code=result(await codes().findOneAndUpdate({_id:hash,state:'unused',expiresAt:{$gt:now}},{$set:{state:'used',userId,usedAt:now}},{returnDocument:'after'}));
+ const code=result(await codes().findOneAndUpdate({_id:hash,state:'unused',expiresAt:{$gt:now},$expr:{$lt:[{$ifNull:['$redemptionsUsed',0]},{$ifNull:['$maxRedemptions',1]}]}},{$inc:{redemptionsUsed:1},$set:{userId,usedAt:now}},{returnDocument:'after'}));
  if(!code)return fail(res,400,'Invalid, used or expired registration code.');
+ if((code.redemptionsUsed??0)>=(code.maxRedemptions??1))await codes().updateOne({_id:hash,state:'unused',redemptionsUsed:code.redemptionsUsed},{$set:{state:'used'}});
  // Persist restriction BEFORE creating the account; no unrestricted login window.
  await members().insertOne({_id:userId,state:'pending',registeredAt:now,expiresAt:sixMonths(now)});
  const answer=await require('~/server/services/AuthService').registerUser(data,{_id:oid,role:'USER'});

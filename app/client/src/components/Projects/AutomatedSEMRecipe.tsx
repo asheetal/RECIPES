@@ -73,8 +73,8 @@ export default function AutomatedSEMRecipe({ projectId }: { projectId: string })
   };
 
   const download = useCallback(async () => {
-    const n = 4;
-    if (latestStep() < 4) return;
+    const n = 5;
+    if (latestStep() < 5) return;
     try {
       const blob = (await request.get(`${base}/output/${n}`, { responseType: 'blob' })) as unknown as Blob;
       const url = URL.createObjectURL(blob);

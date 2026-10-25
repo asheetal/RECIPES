@@ -34,6 +34,23 @@ function validateStep10(payload) {
     for (const n of m.nodes) if (n && n.id) nodeIds.add(n.id);
   }
   for (let i = 0; i < models.length; i++) {
+    const m = models[i] || {};
+    if (!Number.isFinite(Number(m.node_w)) || Number(m.node_w) <= 0) throw new Error(`step 10: models[${i}].node_w must be a positive number`);
+    if (!Number.isFinite(Number(m.node_h)) || Number(m.node_h) <= 0) throw new Error(`step 10: models[${i}].node_h must be a positive number`);
+    if (!Array.isArray(m.canvas_xlim) || m.canvas_xlim.length !== 2 || !Number.isFinite(Number(m.canvas_xlim[0])) || !Number.isFinite(Number(m.canvas_xlim[1]))) throw new Error(`step 10: models[${i}].canvas_xlim must be [min, max]`);
+    if (!Array.isArray(m.canvas_ylim) || m.canvas_ylim.length !== 2 || !Number.isFinite(Number(m.canvas_ylim[0])) || !Number.isFinite(Number(m.canvas_ylim[1]))) throw new Error(`step 10: models[${i}].canvas_ylim must be [min, max]`);
+    if (Number(m.canvas_xlim[0]) >= Number(m.canvas_xlim[1])) throw new Error(`step 10: models[${i}].canvas_xlim min must be < max`);
+    if (Number(m.canvas_ylim[0]) >= Number(m.canvas_ylim[1])) throw new Error(`step 10: models[${i}].canvas_ylim min must be < max`);
+    const pathsL = Array.isArray(m.paths) ? m.paths : [];
+    for (let j = 0; j < pathsL.length; j++) {
+      const pp = pathsL[j] || {};
+      if (!Number.isFinite(Number(pp.label_x))) throw new Error(`step 10: models[${i}].paths[${j}].label_x required (surgeon owns label placement)`);
+      if (!Number.isFinite(Number(pp.label_y))) throw new Error(`step 10: models[${i}].paths[${j}].label_y required (surgeon owns label placement)`);
+      if (pp.color !== undefined && typeof pp.color !== 'string') throw new Error(`step 10: models[${i}].paths[${j}].color must be a string`);
+      if (pp.line_width !== undefined && !Number.isFinite(Number(pp.line_width))) throw new Error(`step 10: models[${i}].paths[${j}].line_width must be numeric`);
+    }
+  }
+  for (let i = 0; i < models.length; i++) {
     const fn = models[i].footnote;
     if (!fn || typeof fn !== 'object') throw new Error(`step 10: models[${i}].footnote is missing or not an object`);
     if (!Array.isArray(fn.controls) || fn.controls.length === 0) throw new Error(`step 10: models[${i}].footnote.controls must be a non-empty array of human-readable names`);

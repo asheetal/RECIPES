@@ -64,12 +64,19 @@ for (m_idx in seq_along(models_list)) {
     if (length(pos) < 2L) fail(sprintf("model [%d] node '%s' malformed grid_pos", m_idx, n_id))
     node_coords[[n_id]] <- list(x = pos[1], y = pos[2], label = nodes_df$label[i])
   }
-  bw <- 1.05; bh <- 0.48
-  p <- ggplot() + coord_fixed(ratio = 1, xlim = c(0, 11), ylim = c(0.0, 6.0)) + theme_void() +
+  bw <- if (!is.null(m_spec$node_w)) as.numeric(unlist(m_spec$node_w))[1] else 1.05
+  bh <- if (!is.null(m_spec$node_h)) as.numeric(unlist(m_spec$node_h))[1] else 0.48
+  xlim_val <- if (!is.null(m_spec$canvas_xlim)) as.numeric(unlist(m_spec$canvas_xlim))[1:2] else c(0, 11)
+  ylim_val <- if (!is.null(m_spec$canvas_ylim)) as.numeric(unlist(m_spec$canvas_ylim))[1:2] else c(0, 6)
+  p <- ggplot() + coord_fixed(ratio = 1, xlim = xlim_val, ylim = ylim_val) + theme_void() +
     theme(plot.background = element_rect(fill = "white", color = NA))
   for (i in seq_len(nrow(paths_df))) {
     from_id <- paths_df$from[i]; to_id <- paths_df$to[i]
     p_type  <- paths_df$type[i]; p_label <- paths_df$label[i]
+    p_col   <- if (!is.null(paths_df$color) && !is.na(paths_df$color[i])) as.character(paths_df$color[i]) else "black"
+    p_lw    <- if (!is.null(paths_df$line_width) && !is.na(paths_df$line_width[i])) as.numeric(paths_df$line_width[i]) else 0.85
+    p_lx    <- if (!is.null(paths_df$label_x) && !is.na(paths_df$label_x[i])) as.numeric(paths_df$label_x[i]) else NA_real_
+    p_ly    <- if (!is.null(paths_df$label_y) && !is.na(paths_df$label_y[i])) as.numeric(paths_df$label_y[i]) else NA_real_
     if (!from_id %in% names(node_coords)) fail(sprintf("model [%d] path refs unknown '%s'", m_idx, from_id))
     if (grepl("->", to_id)) {
       parts  <- strsplit(to_id, "->", fixed = TRUE)[[1]]
@@ -80,8 +87,10 @@ for (m_idx in seq_along(models_list)) {
       x_2 <- node_coords[[t_to]]$x;   y_2 <- node_coords[[t_to]]$y
       x_target <- (x_1 + x_2) / 2; y_target <- (y_1 + y_2) / 2
       x_w <- node_coords[[from_id]]$x; y_w <- node_coords[[from_id]]$y
-      p <- p + annotate("segment", x = x_w, y = y_w - bh, xend = x_target, yend = y_target + 0.08, arrow = arrow(length = unit(0.28, "cm"), type = "closed"), linewidth = 0.85, color = "black")
-      p <- p + annotate("text", x = x_target + 0.15, y = (y_w + y_target) / 2 + 0.15, label = p_label, hjust = 0, size = 3.6, fontface = "bold", family = "sans")
+      p <- p + annotate("segment", x = x_w, y = y_w - bh, xend = x_target, yend = y_target + 0.08, arrow = arrow(length = unit(0.28, "cm"), type = "closed"), linewidth = p_lw, color = p_col)
+      st_lx <- if (!is.na(p_lx)) p_lx else x_target + 0.55
+      st_ly <- if (!is.na(p_ly)) p_ly else (y_w + y_target) / 2 + 0.15
+      p <- p + annotate("text", x = st_lx, y = st_ly, label = p_label, hjust = 0.5, size = 3.6, fontface = "bold", color = p_col, family = "sans")
     } else if (identical(p_type, "dashed_arc")) {
       if (!to_id %in% names(node_coords)) fail(sprintf("model [%d] arc refs unknown '%s'", m_idx, to_id))
       x_start <- node_coords[[from_id]]$x + 0.15; y_start <- node_coords[[from_id]]$y - bh
@@ -91,29 +100,20 @@ for (m_idx in seq_along(models_list)) {
       arc_x  <- (1 - t_seq)^2 * x_start + 2 * (1 - t_seq) * t_seq * ctrl_x + t_seq^2 * x_end
       arc_y  <- (1 - t_seq)^2 * y_start + 2 * (1 - t_seq) * t_seq * ctrl_y + t_seq^2 * y_end
       arc_df <- data.frame(x = arc_x, y = arc_y)
-      p <- p + geom_path(data = arc_df, aes(x = x, y = y), linetype = "dashed", linewidth = 0.75, color = "gray25")
-      p <- p + annotate("segment", x = arc_x[95], y = arc_y[95], xend = x_end, yend = y_end - 0.02, arrow = arrow(length = unit(0.25, "cm"), type = "closed"), linewidth = 0.75, color = "gray25")
-      p <- p + annotate("text", x = ctrl_x, y = min(arc_df$y) - 0.16, label = p_label, hjust = 0.5, size = 3.4, fontface = "italic", color = "gray20", family = "sans")
+      arc_col <- if (p_col == "black") "gray25" else p_col
+      p <- p + geom_path(data = arc_df, aes(x = x, y = y), linetype = "dashed", linewidth = p_lw, color = arc_col)
+      p <- p + annotate("segment", x = arc_x[95], y = arc_y[95], xend = x_end, yend = y_end - 0.02, arrow = arrow(length = unit(0.25, "cm"), type = "closed"), linewidth = p_lw, color = arc_col)
+      arc_lx <- if (!is.na(p_lx)) p_lx else ctrl_x
+      arc_ly <- if (!is.na(p_ly)) p_ly else min(arc_df$y) - 0.16
+      p <- p + annotate("text", x = arc_lx, y = arc_ly, label = p_label, hjust = 0.5, size = 3.4, fontface = "italic", color = arc_col, family = "sans")
     } else {
       if (!to_id %in% names(node_coords)) fail(sprintf("model [%d] path refs unknown '%s'", m_idx, to_id))
       x_from <- node_coords[[from_id]]$x + bw; y_from <- node_coords[[from_id]]$y
       x_to   <- node_coords[[to_id]]$x   - bw; y_to   <- node_coords[[to_id]]$y
-      is_mod_main <- (from_id == "W") && (to_id == "M") && identical(p_type, "solid") && any(grepl("->", paths_df$to) & paths_df$from == from_id)
-      ln_col <- if (is_mod_main) "gray50" else "black"
-      ln_w   <- if (is_mod_main) 0.65 else 0.85
-      p <- p + annotate("segment", x = x_from, y = y_from, xend = x_to, yend = y_to, arrow = arrow(length = unit(0.28, "cm"), type = "closed"), linewidth = ln_w, color = ln_col)
-      if (is_mod_main) {
-        x_lbl <- (x_from + x_to) / 2 + 0.15
-        y_lbl <- (y_from + y_to) / 2 + 0.10
-        lbl_sz <- 3.2
-        lbl_col <- "gray30"
-      } else {
-        x_lbl <- if (from_id == "X") (x_from + 3.65) / 2 else (x_from + x_to) / 2
-        y_lbl <- y_from + 0.18
-        lbl_sz <- 3.6
-        lbl_col <- "black"
-      }
-      p <- p + annotate("text", x = x_lbl, y = y_lbl, label = p_label, hjust = 0.5, size = lbl_sz, fontface = "bold", color = lbl_col, family = "sans")
+      p <- p + annotate("segment", x = x_from, y = y_from, xend = x_to, yend = y_to, arrow = arrow(length = unit(0.28, "cm"), type = "closed"), linewidth = p_lw, color = p_col)
+      x_lbl <- if (!is.na(p_lx)) p_lx else (x_from + x_to) / 2
+      y_lbl <- if (!is.na(p_ly)) p_ly else y_from + 0.18
+      p <- p + annotate("text", x = x_lbl, y = y_lbl, label = p_label, hjust = 0.5, size = 3.6, fontface = "bold", color = p_col, family = "sans")
     }
   }
   for (i in seq_len(nrow(nodes_df))) {

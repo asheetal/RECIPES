@@ -313,7 +313,7 @@ def build_tex_report(payload, output_tex="Automated_SEM_Recipe_Report.tex"):
     numbers=none, keepspaces=true, showspaces=false,
     showstringspaces=false, xleftmargin=4pt, xrightmargin=4pt,
     framexleftmargin=4pt, framexrightmargin=4pt,
-    frametopmargin=4pt, framebottommargin=4pt,
+    framextopmargin=4pt, framexbottommargin=4pt,
     lineskip=-0.5pt, extendedchars=true, inputencoding=utf8
 }
 \begin{document}
@@ -411,6 +411,24 @@ if __name__ == "__main__":
     try: build_tex_report(data, out_tex)
     except SystemExit: raise
     except Exception as e: log(f"FATAL: packaging failed: {type(e).__name__}: {e}"); raise SystemExit(8)
+    pdf_path = out_tex.replace(".tex", ".pdf")
+    try:
+        for i in range(2):
+            r = subprocess.run(["pdflatex", "-interaction=nonstopmode", "-halt-on-error", out_tex], capture_output=True, text=True, timeout=180)
+            if r.returncode != 0:
+                log(f"PDF_COMPILE_FAILED on pass {i+1}: {r.stdout[-1500:]}")
+                raise SystemExit(11)
+        if not os.path.exists(pdf_path):
+            log(f"PDF_MISSING_AFTER_COMPILE: {pdf_path}")
+            raise SystemExit(11)
+        log(f"Compiled {pdf_path} ({os.path.getsize(pdf_path)} bytes)")
+    except FileNotFoundError:
+        log("PDF_COMPILE_FAILED: pdflatex not found in PATH")
+        raise SystemExit(11)
+    except subprocess.TimeoutExpired:
+        log("PDF_COMPILE_FAILED: timeout after 180s")
+        raise SystemExit(11)
+
     claims = data.get("claims") or []
     supported = sum(1 for c in claims if c.get("support_status") == "SUPPORTED")
     unsupported = sum(1 for c in claims if c.get("support_status") == "UNSUPPORTED")
@@ -421,6 +439,7 @@ if __name__ == "__main__":
         "status": "STEP_13_PACKAGING_COMPLETE",
         "input_source": args.input, "correlations_from": args.correlations_from,
         "output_tex": out_tex, "file_size_bytes": os.path.getsize(out_tex),
+        "pdf_path": pdf_path, "pdf_size_bytes": os.path.getsize(pdf_path),
         "sections_packaged": ["1. Garden of Forking Paths","2. SEM Report","3. Structural Equation Model","4. Researcher Degrees of Freedom Ledger (Audit Trail)","5. References","6. Minimal Replication Script"],
         "tables_rendered": ["Table 1 (RDF Audit, incl. Support column)","Table 2 (Descriptives" + (" + Reliability" if (data.get("alpha_table") or []) else "") + ")","Table 3 (Correlations, focal subset)","Table 4 (Model Comparison)"],
         "replication_scripts_materialized": rep_scripts,

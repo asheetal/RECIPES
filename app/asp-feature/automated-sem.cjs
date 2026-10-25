@@ -66,6 +66,17 @@ function registerRoutes(router, projectFilesService) {
       res.send(content);
     } catch (e) { next(e); }
   });
+  router.get('/:projectId/automated-sem/pdf', async (req, res, next) => {
+    try {
+      const s = await svc.scope(req, req.params.projectId);
+      const extra = await svc.getExtra(s, '13');
+      if (!extra || !extra.pdf_b64) return res.status(404).json({ error: 'PDF not available' });
+      const buf = Buffer.from(extra.pdf_b64, 'base64');
+      res.set('Content-Type', 'application/pdf');
+      res.set('Content-Disposition', `inline; filename="${extra.pdf_name || 'Automated_SEM_Recipe_Report.pdf'}"`);
+      res.send(buf);
+    } catch (e) { next(e); }
+  });
   router.get('/:projectId/automated-sem/artifacts', async (req, res, next) => {
     try {
       const s = await svc.scope(req, req.params.projectId);

@@ -100,6 +100,11 @@ class H(BaseHTTPRequestHandler):
                         if f.is_file(): zf.write(f, arcname=f.name)
             resp['artifacts_b64'] = base64.b64encode(buf.getvalue()).decode()
             resp['artifacts_bytes'] = buf.tell()
+            pdf_p = pathlib.Path(workdir) / 'Automated_SEM_Recipe_Report.pdf'
+            if pdf_p.is_file():
+                resp['pdf_b64'] = base64.b64encode(pdf_p.read_bytes()).decode()
+                resp['pdf_name'] = pdf_p.name
+                resp['pdf_bytes'] = pdf_p.stat().st_size
         return self._json(resp)
     def _json(self, obj):
         data = json.dumps(obj).encode()

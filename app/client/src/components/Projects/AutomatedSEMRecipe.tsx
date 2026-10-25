@@ -73,13 +73,20 @@ export default function AutomatedSEMRecipe({ projectId }: { projectId: string })
   };
 
   const download = useCallback(async () => {
-    const n = 12;
-    if (latestStep() < 12) return;
+    if (latestStep() < 1) return;
     try {
-      const blob = (await request.get(`${base}/output/${n}`, { responseType: 'blob' })) as unknown as Blob;
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = `step${n}_out.json`;
-      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      if (latestStep() >= 13) {
+        const blob = (await request.get(`${base}/pdf`, { responseType: 'blob' })) as unknown as Blob;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = 'Automated_SEM_Recipe_Report.pdf';
+        document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      } else {
+        const n = 12;
+        const blob = (await request.get(`${base}/output/${n}`, { responseType: 'blob' })) as unknown as Blob;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = `step${n}_out.json`;
+        document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      }
     } catch { /* state surfaces it */ }
   }, [base, state.steps]);
 

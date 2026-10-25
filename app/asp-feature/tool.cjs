@@ -427,7 +427,7 @@ async function invoke(req, args) {
     }
     if (TOOL_STEPS.has(step)) {
       const result = await pipeline.runStep({ step, runId: currentState.runId });
-      const extra = step === 13 ? { artifacts_b64: result.artifacts_b64 || null, artifacts_bytes: result.artifacts_bytes || 0 } : null;
+      const extra = step === 13 ? { artifacts_b64: result.artifacts_b64 || null, artifacts_bytes: result.artifacts_bytes || 0, pdf_b64: result.pdf_b64 || null, pdf_name: result.pdf_name || 'Automated_SEM_Recipe_Report.pdf', pdf_bytes: result.pdf_bytes || 0 } : null;
       await stateSvc.completeStep(s, step, result.output, extra);
       gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, step, status: 'ok' });
       return JSON.stringify({ status: 'step_complete', step, output: result.output });

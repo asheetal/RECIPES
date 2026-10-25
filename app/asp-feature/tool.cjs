@@ -216,6 +216,32 @@ function deriveStep2Fields(prior) {
   };
 }
 
+
+function deriveStep12References(prior, claims) {
+  const retrieved = new Map();
+  for (const entry of (prior.retrieval_log || [])) {
+    for (const r of (entry.results || [])) {
+      if (r && r.ref_id) retrieved.set(r.ref_id, r);
+    }
+  }
+  const seen = new Set();
+  const refs = [];
+  for (const c of (claims || [])) {
+    if (!c || c.support_status !== 'SUPPORTED') continue;
+    const rid = c.ref_id;
+    if (!rid || seen.has(rid)) continue;
+    const r = retrieved.get(rid);
+    if (!r) continue;
+    const title = String(r.title || '').trim();
+    const year = r.year || '';
+    const doi = r.doi ? `https://doi.org/${String(r.doi).trim()}` : '';
+    const parts = [title ? title + '.' : '', year ? `(${year}).` : '', doi].filter(Boolean);
+    refs.push(parts.join(' ').trim());
+    seen.add(rid);
+  }
+  return refs;
+}
+
 function mergePassthrough(step, prior, payload) {
   const spec = PASSTHROUGH[step];
   if (!spec || !prior) return payload;
@@ -241,6 +267,13 @@ function mergePassthrough(step, prior, payload) {
   if (step === 2 && prior) {
     const der = deriveStep2Fields(prior);
     if (der) { for (const [k, v] of Object.entries(der)) out[k] = v; }
+  }
+  if (step === 12 && prior) {
+    const refs = deriveStep12References(prior, out.claims || []);
+    if (refs.length > 0) {
+      if (!out.sections || typeof out.sections !== 'object') out.sections = {};
+      out.sections.references = refs;
+    }
   }
   for (const d of spec.derive || []) {
     if (out[d.field] === undefined) {

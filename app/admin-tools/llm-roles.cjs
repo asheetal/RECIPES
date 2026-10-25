@@ -12,7 +12,7 @@ async function read(){
 }
 
 const WORKFLOW_DEFAULTS=Object.freeze({
- uninterruptedIterations:20,maxDirectorIterations:5
+ uninterruptedIterations:20,maxDirectorIterations:5,workflowStepCeiling:48
 });
 function normalizeWorkflow(value){
  const result={...WORKFLOW_DEFAULTS,...value};
@@ -22,6 +22,9 @@ function normalizeWorkflow(value){
  if(!Number.isInteger(result.maxDirectorIterations)||
     result.maxDirectorIterations<0||result.maxDirectorIterations>20)
   throw Error("Max Director's iterations must be an integer from 0 to 20");
+ if(!Number.isInteger(result.workflowStepCeiling)||
+    result.workflowStepCeiling<20||result.workflowStepCeiling>500)
+  throw Error('Workflow step ceiling must be an integer from 20 to 500');
  if(Object.keys(result).some(k=>!Object.hasOwn(WORKFLOW_DEFAULTS,k)))
   throw Error('Unknown workflow setting');
  return result;

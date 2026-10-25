@@ -760,8 +760,10 @@ var StandardGraph = class StandardGraph extends Graph {
 			* the breakpoint and don't invalidate the prefix.
 			*/
 			const workflowStep = Number(config.metadata?.langgraph_step ?? 0);
-			if (workflowStep >= 48) rawToolsForBinding = [];
-			else if (workflowStep >= 46) rawToolsForBinding = rawToolsForBinding.filter(t => t.name === 'research_files');
+			const wfCeiling = Number(config.configurable?.recipeWorkflow?.workflowStepCeiling) || 48;
+			const wfVerify = wfCeiling - 2;
+			if (workflowStep >= wfCeiling) rawToolsForBinding = [];
+			else if (workflowStep >= wfVerify) rawToolsForBinding = rawToolsForBinding.filter(t => t.name === 'research_files');
 			let toolsForBinding = rawToolsForBinding;
 			if (agentContext.provider === "anthropic" && agentContext.clientOptions?.promptCache === true) toolsForBinding = require_anthropicToolCache.partitionAndMarkAnthropicToolCache(rawToolsForBinding, require_anthropicToolCache.makeIsDeferred(agentContext.toolDefinitions), require_cache.resolvePromptCacheTtl(agentContext.clientOptions?.promptCacheTtl)) ?? rawToolsForBinding;
 			else if (agentContext.provider === "openrouter" && agentContext.clientOptions?.promptCache === true) toolsForBinding = require_toolCache.partitionAndMarkOpenRouterToolCache(rawToolsForBinding, require_anthropicToolCache.makeIsDeferred(agentContext.toolDefinitions), require_cache.resolvePromptCacheTtl(agentContext.clientOptions?.promptCacheTtl)) ?? rawToolsForBinding;
@@ -910,7 +912,7 @@ var StandardGraph = class StandardGraph extends Graph {
 					});
 				}
 			}
-			            if(workflowStep>=44) messagesToUse=[...messagesToUse,new _langchain_core_messages.HumanMessage(workflowStep>=48 ? 'Execution budget reached: no further tools. Deliver verified saved files and clearly disclose incomplete work. Do not claim completion without evidence.' : workflowStep>=46 ? 'Final verification phase. Use research_files verify on deliverables; no further editing or research. Then deliver with an honest completion status.' : 'Approaching execution budget. Complete the current edit now; next phase is verification and delivery.')];
+			            if(workflowStep>=wfCeiling-4) messagesToUse=[...messagesToUse,new _langchain_core_messages.HumanMessage(workflowStep>=wfCeiling ? 'Execution budget reached: no further tools. Deliver verified saved files and clearly disclose incomplete work. Do not claim completion without evidence.' : workflowStep>=wfVerify ? 'Final verification phase. Use research_files verify on deliverables; no further editing or research. Then deliver with an honest completion status.' : 'Approaching execution budget. Complete the current edit now; next phase is verification and delivery.')];
 			let finalMessages = messagesToUse;
 			/** Tail snapshot for the dispatch-time usage delta: in-place
 			*  formatters (artifact appends, Bedrock content rewrites, legacy

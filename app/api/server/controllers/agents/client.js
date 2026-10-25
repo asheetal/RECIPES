@@ -1028,6 +1028,7 @@ class AgentClient extends BaseClient {
             parentMessageId: this.parentMessageId,
           },
           user: createSafeUser(this.options.req.user),
+          recipeWorkflow: this.options.req.body?.recipeWorkflow || null,
         },
         recursionLimit: require('/app/admin-tools/director.cjs').recursionLimit(this.options.req),
         signal: abortController.signal,

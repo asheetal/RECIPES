@@ -17,7 +17,7 @@ if (is.data.frame(input_json$models)) {
       output_image = if (!is.null(input_json$models$output_image[k])) input_json$models$output_image[k] else sprintf("sem_model_diagram_%d.png", k),
       nodes        = input_json$models$nodes[[k]],
       paths        = input_json$models$paths[[k]],
-      footnote     = input_json$models$footnote[[k]]
+      footnote     = if (is.data.frame(input_json$models$footnote)) as.list(input_json$models$footnote[k, , drop = FALSE]) else input_json$models$footnote[[k]]
     )
   }
 } else if (is.list(input_json$models)) {
@@ -44,7 +44,7 @@ build_footnote_text <- function(fn) {
   if (!is.null(ctrl)) { if (is.list(ctrl)) ctrl <- paste(unlist(ctrl), collapse = ", "); ctrl <- as.character(ctrl)[1]; parts <- c(parts, paste0("Controls: ", ctrl)) }
   if (!is.null(fn[["N"]])) parts <- c(parts, paste0("N = ", as.integer(fn[["N"]])))
   if (!is.null(fn$sig_key)) parts <- c(parts, as.character(fn$sig_key)[1])
-  if (!is.null(fn$imm) && is.list(fn$imm) && !is.null(fn$imm$point)) parts <- c(parts, sprintf("Index of Moderated Mediation = %.3f, 95%% Boot CI [%.3f, %.3f]", as.numeric(fn$imm$point), as.numeric(fn$imm$ci_low), as.numeric(fn$imm$ci_high)))
+  if (!is.null(fn$imm)) { pt <- tryCatch(as.numeric(fn$imm$point[1]), error=function(e) NA); lo <- tryCatch(as.numeric(fn$imm$ci_low[1]), error=function(e) NA); hi <- tryCatch(as.numeric(fn$imm$ci_high[1]), error=function(e) NA); if (!is.na(pt) && !is.na(lo) && !is.na(hi)) parts <- c(parts, sprintf("Index of Moderated Mediation = %.3f, 95%% Boot CI [%.3f, %.3f]", pt, lo, hi)) }
   if (!is.null(fn$prior_art)) parts <- c(parts, as.character(fn$prior_art)[1])
   paste(parts, collapse = " | ")
 }

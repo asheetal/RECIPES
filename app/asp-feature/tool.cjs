@@ -23,6 +23,39 @@ async function resolveProjectId(req) {
   return convo?.chatProjectId || null;
 }
 const TOOL_STEPS = new Set([1, 4, 6, 8, 9, 11, 13]);
+function validateCognitive(step, payload) {
+  if (step === 2) {
+    if (payload.status !== 'RESOLVED') throw new Error('step 2: status must be "RESOLVED"');
+    if (!Array.isArray(payload.variable_mappings) || payload.variable_mappings.length === 0) throw new Error('step 2: variable_mappings must be a non-empty array');
+    for (let i = 0; i < payload.variable_mappings.length; i++) {
+      const m = payload.variable_mappings[i] || {};
+      if (!m.codebook_name || !m.column_name) throw new Error('step 2: variable_mappings[' + i + '] missing codebook_name or column_name');
+      if (m.codebook_name === m.column_name) throw new Error('step 2: variable_mappings[' + i + '].codebook_name must be the human-readable Variable Name, not the code token "' + m.column_name + '"');
+    }
+    if (typeof (payload.join_key || {}).match_coverage !== 'string') throw new Error('step 2: join_key.match_coverage must be a string like "37/37 (100%)", not a number');
+    if (payload.header_row_index !== 0) throw new Error('step 2: header_row_index must be 0');
+    if (payload.data_start_row_index !== 1) throw new Error('step 2: data_start_row_index must be 1');
+    if (!payload.survey_design || !Array.isArray(payload.survey_design.waves_detected)) throw new Error('step 2: survey_design.waves_detected must be an array');
+  } else if (step === 3) {
+    if (!Array.isArray(payload.taxonomy) || payload.taxonomy.length === 0) throw new Error('step 3: taxonomy must be a non-empty array');
+    const validRoles = new Set(['IV', 'MOD', 'MED', 'DV', 'CONTROL']);
+    const validValences = new Set(['Positive', 'Negative', 'Neutral']);
+    for (let i = 0; i < payload.taxonomy.length; i++) {
+      const t = payload.taxonomy[i] || {};
+      if (!validRoles.has(t.role)) throw new Error('step 3: taxonomy[' + i + '].role must be IV|MOD|MED|DV|CONTROL (got "' + t.role + '")');
+      if (!validValences.has(t.valence)) throw new Error('step 3: taxonomy[' + i + '].valence must be Positive|Negative|Neutral (got "' + t.valence + '")');
+    }
+    if (!payload.family_summary || typeof payload.family_summary !== 'object' || Array.isArray(payload.family_summary)) throw new Error('step 3: family_summary must be an object');
+    const fams = Object.entries(payload.family_summary);
+    if (fams.length === 0) throw new Error('step 3: family_summary must be non-empty');
+    for (const [fname, f] of fams) {
+      if (!f || typeof f !== 'object' || Array.isArray(f)) throw new Error('step 3: family_summary["' + fname + '"] must be {role, members}, not a scalar count');
+      if (typeof f.role !== 'string' || !Array.isArray(f.members) || f.members.length === 0) throw new Error('step 3: family_summary["' + fname + '"] must be {role: string, members: string[]}');
+    }
+    if (!Array.isArray(payload.controls)) throw new Error('step 3: controls must be an array');
+  }
+}
+
 const COGNITIVE_STEPS = new Set([2, 3, 5, 7, 10, 12]);
 async function invoke(req, args) {
   const gateway = require('/app/admin-tools/role-gateway.cjs');
@@ -57,6 +90,7 @@ async function invoke(req, args) {
       let payload = args.payload;
       if (typeof payload === 'string') { try { payload = JSON.parse(payload); } catch (_) {} }
       if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw new Error('payload must be a JSON object for cognitive steps');
+      validateCognitive(step, payload);
       const result = await pipeline.runStep({ step, runId: currentState.runId, payload });
       await stateSvc.completeStep(s, step, payload, null);
       gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, step, status: 'ok' });

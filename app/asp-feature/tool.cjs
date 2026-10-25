@@ -243,7 +243,15 @@ async function invoke(req, args) {
     if (COGNITIVE_STEPS.has(step)) {
       let payload = args.payload;
       if (typeof payload === 'string') { try { payload = JSON.parse(payload); } catch (_) {} }
-      if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw new Error('payload must be a JSON object for cognitive steps');
+      if (typeof payload === 'string') {
+        try { payload = JSON.parse(payload); }
+        catch (e) {
+          const m = /position (\d+)/.exec(e.message) || /char (\d+)/.exec(e.message) || /column (\d+)/.exec(e.message);
+          const at = m ? ` at char ${m[1]}` : '';
+          throw new Error(`payload string is not valid JSON${at}. Re-emit as valid JSON (object or JSON-encoded object).`);
+        }
+      }
+      if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw new Error('payload must be a JSON object or a JSON-encoded object string for cognitive steps');
       const prior = await pipeline.readStep({ runId: currentState.runId, step: step - 1 });
       const merged = mergePassthrough(step, prior, payload);
       validateCognitive(step, merged);
@@ -280,7 +288,7 @@ function makeTool(req) {
   return new DynamicStructuredTool({
     name: NAME,
     description: def.description,
-    schema: z.object({ step: z.number().int(), file_id: z.string().optional(), payload: z.record(z.any()).optional() }),
+    schema: z.object({ step: z.number().int(), file_id: z.string().optional(), payload: z.union([z.record(z.any()), z.string()]).optional() }),
     func: (a) => invoke(req, a),
   });
 }

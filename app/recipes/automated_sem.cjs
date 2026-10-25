@@ -1,5 +1,6 @@
 'use strict';
-const PROMPT = `Automated SEM Pipeline: 13-step recipe. Call tool asp_step_run once per step, in order, no skips. Stop after step 13 returns done.
+const PROMPT = `SEARCH_MODE: academic (the search() tool routes to OpenAlex). Use search() for every normative, methodological, or theoretical claim.
+Automated SEM Pipeline: 13-step recipe. Call tool asp_step_run once per step, in order, no skips. Stop after step 13 returns done.
 
 Sequence: 1 tool, 2 cognitive, 3 cognitive, 4 tool, 5 cognitive, 6 tool, 7 cognitive, 8 tool, 9 tool, 10 cognitive, 11 tool, 12 cognitive, 13 tool.
 
@@ -54,6 +55,16 @@ STEP 11 (tool): asp_step_run({step:11}). Renders ggplot diagram PNG.
 STEP 12 (cognitive): Author report. Payload keys: status:"STEP_12_REPORT_AUTHORED"; output_filename:"Automated_SEM_Recipe_Report.tex"; diagram_path:"sem_model_diagram_1.png"; sections:{title, garden_of_forking_paths (<=200 words, uses {{ref:CLAIM_ID}} placeholders), sem_report (APA-7 full prose with b/SE/t/p/95%CI/R2/dR2/simple slopes/IMM, uses {{ref:CLAIM_ID}} placeholders), references:[APA-7 strings], replication_script:"materialized by step 13"}; plus verbatim passthrough of models, bootstrap_results, taxonomy, descriptives, missingness, correlations, claims, retrieval_log, decision_log, etc. Do not write raw author-year strings; use {{ref:CLAIM_ID}} only. Every {{ref:X}} must correspond to a SUPPORTED claim in claims[].
 
 STEP 13 (tool): asp_step_run({step:13}). Packages LaTeX + PDF + replication scripts. Returns done. STOP after step 13.
+
+EVIDENCE RULES (apply to EVERY cognitive step: 2, 3, 5, 7, 10, 12):
+- 'search({query})' routes to OpenAlex (academic). Invoke it at least once per distinct normative/methodological/theoretical claim.
+- After collecting DOIs, invoke 'verify_references({references:[{doi,title}]})' (batch up to 12) to confirm registration.
+- Every claim: {claim_id:"CLM_<STEP>_<NNN><letter>", decision_id, text, claim_type, citations_required:true|false, support_status:"SUPPORTED"|"UNSUPPORTED"|"INTERNAL_ARTIFACT", ref_id (if SUPPORTED), short_cite, justifying_excerpt (verbatim sentence from returned abstract)}.
+- Every retrieval_log entry: {query_id, query, database:"openalex", date:"YYYY-MM-DD", results:[{ref_id, title, year, doi, abstract_snippet, retrieved_for_claims:[claim_id,...]}]}. Empty results[] allowed only if the claim is marked UNSUPPORTED.
+- Never invent author, year, title, journal, or DOI. Only identifiers returned by 'search' or confirmed by 'verify_references'.
+- Carry claims[] and retrieval_log[] verbatim; append, never replace.
+- If 'search()' returns '{code:'LOCAL_ONLY'}' or '{code:'SEARCH_FAILED'}', STOP with "SEARCH_MODE_MUST_BE_ACADEMIC" and message "Recipe must pin search to academic; do not continue." Do not fabricate claims, do not skip.
+- STEP 12 additionally: references[] must be APA-7 strings drawn EXCLUSIVELY from SUPPORTED claims; prose must use {{ref:CLAIM_ID}} placeholders. Do not invoke 'search' at step 12; assemble only.
 
 RULES:
 - Call asp_step_run once per iteration, in order 1..13.

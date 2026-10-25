@@ -26,6 +26,9 @@ function registerRoutes(router, projectFilesService) {
       const s = await svc.scope(req, req.params.projectId);
       const { fileId } = req.body || {};
       if (!fileId) return res.status(400).json({ error: 'fileId required' });
+      const searchMode = await require('mongoose').connection.db.collection('searchmodes').findOne({ user: s.user, tenant: s.tenant || null });
+      const mode = searchMode && searchMode.mode ? searchMode.mode : 'training';
+      if (mode !== 'academic') return res.status(400).json({ error: 'SEARCH_MODE_MUST_BE_ACADEMIC', detail: `Automated SEM Pipeline requires the search slider set to 'Academic paper search'. Current mode: ${mode}. Flip the slider and re-run.` });
       const pfScope = { user: s.user, tenant: s.tenant, projectId: s.projectId };
       const { file, buffer } = await projectFilesService.read(pfScope, fileId);
       const started = await svc.startRun(s, fileId, file.name, buffer);

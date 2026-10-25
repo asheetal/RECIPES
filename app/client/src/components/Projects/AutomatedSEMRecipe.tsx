@@ -98,6 +98,7 @@ export default function AutomatedSEMRecipe({ projectId }: { projectId: string })
           {state.status === 'failed' && <span className="text-red-600 dark:text-red-400" title={state.error ?? 'Failed'}>{state.error ? state.error.slice(0, 80) : 'Failed'}</span>}
           {state.status === 'done' && <Check className="h-4 w-4 text-green-600 dark:text-green-400" />}
           {state.status === 'done' && <span className="text-text-secondary">13/13 · complete</span>}
+          {state.status === 'idle' && <span className="text-text-secondary">Upload an Excel file with codebook and survey data</span>}
           {have && state.status !== 'running' && (
             <button type="button" onClick={(e) => { e.stopPropagation(); download(); }} aria-label="Download step JSON" className="rounded p-1 hover:bg-surface-hover"><Download className="h-4 w-4" /></button>
           )}

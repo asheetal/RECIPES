@@ -339,7 +339,7 @@ const PAYLOAD_SCHEMAS = {
       ref_id: z.string().optional(),
       short_cite: z.string().optional(),
       justifying_excerpt: z.string().optional(),
-    }).strict()).min(1),
+    }).strip()).min(1),
     retrieval_log: z.array(z.object({
       query_id: z.string(),
       query: z.string(),
@@ -352,8 +352,8 @@ const PAYLOAD_SCHEMAS = {
         doi: z.string().optional(),
         abstract_snippet: z.string(),
         retrieved_for_claims: z.array(z.string()),
-      }).strict()),
-    }).strict()).min(1),
+      }).strip()),
+    }).strip()).min(1),
     decision_log: z.array(z.object({
       step: z.number().int(),
       stage_name: z.string(),
@@ -364,8 +364,8 @@ const PAYLOAD_SCHEMAS = {
       epistemic_rationale: z.string(),
       downstream_impact: z.string(),
       claims: z.array(z.string()),
-    }).strict()).min(1),
-  }).strict(),
+    }).strip()).min(1),
+  }).strip(),
 };
 
 function validatePayloadSchema(step, payload, zlib) {
@@ -383,7 +383,7 @@ function makeTool(req) {
   return new DynamicStructuredTool({
     name: NAME,
     description: def.description,
-    schema: z.object({ plan: z.any().optional(), step: z.number().int(), file_id: z.string().optional(), payload: z.union([z.record(z.any()), z.string()]).optional() }).strict(),
+    schema: z.object({ plan: z.any().optional(), step: z.number().int(), file_id: z.string().optional(), payload: z.union([z.record(z.any()), z.string()]).optional() }).strip(),
     func: (a) => invoke(req, a),
   });
 }

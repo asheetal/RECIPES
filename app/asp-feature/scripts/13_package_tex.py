@@ -414,7 +414,7 @@ if __name__ == "__main__":
     pdf_path = out_tex.replace(".tex", ".pdf")
     try:
         for i in range(2):
-            r = subprocess.run(["pdflatex", "-interaction=nonstopmode", "-halt-on-error", out_tex], capture_output=True, text=True, timeout=180)
+            r = subprocess.run(["pdflatex", "-interaction=nonstopmode", "-halt-on-error", out_tex], capture_output=True, text=True, errors="replace", timeout=180)
             if r.returncode != 0:
                 log(f"PDF_COMPILE_FAILED on pass {i+1}: {r.stdout[-1500:]}")
                 raise SystemExit(11)

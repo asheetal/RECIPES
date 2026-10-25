@@ -135,6 +135,7 @@ function validateCognitive(step, payload) {
 
 const COGNITIVE_STEPS = new Set([2, 3, 5, 7, 10, 12]);
 const PASSTHROUGH = {
+  2:  { inherit: [], rename: {}, append: ['claims','retrieval_log','decision_log'] },
   3:  { inherit: ['file_path','data_sheet','header_row_index','max_evaluations'], rename: {}, append: ['claims','retrieval_log','decision_log'] },
   5:  { inherit: ['file_path','data_sheet','header_row_index','max_evaluations','controls','taxonomy'], rename: { models: 'candidate_models' }, append: ['claims','retrieval_log','decision_log'] },
   7:  { inherit: ['file_path','data_sheet','header_row_index','controls','survivors','survivors_count'], rename: {}, append: ['claims','retrieval_log','decision_log'] },
@@ -143,6 +144,37 @@ const PASSTHROUGH = {
 };
 
 const DEDUP_KEY = { claims: 'claim_id', retrieval_log: 'query_id', decision_log: 'decision_id' };
+
+
+function deriveStep2Mappings(prior) {
+  if (!prior || !Array.isArray(prior.sheets)) return null;
+  const meta = prior.sheets.find((sh) => sh && typeof sh.sheet_name === 'string' && /variable\s*description/i.test(sh.sheet_name));
+  const data = prior.sheets.find((sh) => sh && typeof sh.sheet_name === 'string' && /^dataset$/i.test(sh.sheet_name.trim()));
+  if (!meta || !data) return null;
+  const cols = Array.isArray(meta.columns) ? meta.columns : [];
+  if (cols.length < 4) return null;
+  const waveCol = (cols[0] && cols[0].sample_values) || [];
+  const typeCol = (cols[1] && cols[1].sample_values) || [];
+  const nameCol = (cols[2] && cols[2].sample_values) || [];
+  const codeCol = (cols[3] && cols[3].sample_values) || [];
+  const n = Math.min(waveCol.length, typeCol.length, nameCol.length, codeCol.length);
+  const dataCols = Array.isArray(data.columns) ? data.columns : [];
+  const dataHeaders = dataCols.map((c) => (c && c.sample_values && c.sample_values[0]) || '');
+  const roleMap = { 'independent variable': 'IV', 'moderator': 'MOD', 'mediator': 'MED', 'dependent variable': 'DV', 'control': 'Control' };
+  const out = [];
+  for (let i = 1; i < n; i += 1) {
+    const wave = String(waveCol[i] || '').trim();
+    const rawRole = String(typeCol[i] || '').trim().toLowerCase();
+    const codebook_name = String(nameCol[i] || '').trim();
+    const column_name = String(codeCol[i] || '').trim();
+    if (!codebook_name || !column_name) continue;
+    const ci = dataHeaders.indexOf(column_name);
+    if (ci < 0) continue;
+    const role = roleMap[rawRole] || 'Control';
+    out.push({ codebook_name, column_name, column_index: ci, wave, codebook_role: role, data_type: 'numeric' });
+  }
+  return out.length > 0 ? out : null;
+}
 
 function mergePassthrough(step, prior, payload) {
   const spec = PASSTHROUGH[step];
@@ -165,6 +197,10 @@ function mergePassthrough(step, prior, payload) {
       if (!k || !seen.has(k)) { merged.push(item); if (k) seen.add(k); }
     }
     out[f] = merged;
+  }
+  if (step === 2 && prior) {
+    const vm = deriveStep2Mappings(prior);
+    if (vm) { out.variable_mappings = vm; out.n_variables_mapped = vm.length; }
   }
   for (const d of spec.derive || []) {
     if (out[d.field] === undefined) {

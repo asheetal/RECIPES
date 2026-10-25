@@ -294,6 +294,8 @@ async function invoke(req, args) {
       if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw new Error('payload must be a JSON object or a JSON-encoded object string for cognitive steps');
       const prior = await pipeline.readStep({ runId: currentState.runId, step: step - 1 });
       const merged = mergePassthrough(step, prior, payload);
+      const schemaErr = validatePayloadSchema(step, merged, require('zod').z);
+      if (schemaErr) throw new Error(schemaErr);
       validateCognitive(step, merged);
       if (step === 7) validateStep7(merged);
       validateEvidence(step, merged);
@@ -322,13 +324,66 @@ async function invoke(req, args) {
     throw e;
   }
 }
+
+const PAYLOAD_SCHEMAS = {
+  2: (z) => z.object({
+    status: z.literal('RESOLVED'),
+    unmapped_dropped: z.array(z.any()),
+    claims: z.array(z.object({
+      claim_id: z.string(),
+      decision_id: z.string(),
+      text: z.string(),
+      claim_type: z.string(),
+      citations_required: z.boolean(),
+      support_status: z.enum(['SUPPORTED','UNSUPPORTED','INTERNAL_ARTIFACT']),
+      ref_id: z.string().optional(),
+      short_cite: z.string().optional(),
+      justifying_excerpt: z.string().optional(),
+    }).strict()).min(1),
+    retrieval_log: z.array(z.object({
+      query_id: z.string(),
+      query: z.string(),
+      database: z.string(),
+      date: z.string(),
+      results: z.array(z.object({
+        ref_id: z.string(),
+        title: z.string(),
+        year: z.union([z.number(), z.string()]),
+        doi: z.string().optional(),
+        abstract_snippet: z.string(),
+        retrieved_for_claims: z.array(z.string()),
+      }).strict()),
+    }).strict()).min(1),
+    decision_log: z.array(z.object({
+      step: z.number().int(),
+      stage_name: z.string(),
+      decision_id: z.string(),
+      decision_type: z.string(),
+      choice_made: z.string(),
+      counterfactual_forks: z.array(z.string()),
+      epistemic_rationale: z.string(),
+      downstream_impact: z.string(),
+      claims: z.array(z.string()),
+    }).strict()).min(1),
+  }).strict(),
+};
+
+function validatePayloadSchema(step, payload, zlib) {
+  const builder = PAYLOAD_SCHEMAS[step];
+  if (!builder) return null;
+  const parsed = builder(zlib).safeParse(payload);
+  if (parsed.success) return null;
+  const first = parsed.error.issues[0];
+  return `payload schema violation at ${first.path.join('.') || '<root>'}: ${first.message}`;
+}
+
 function makeTool(req) {
   const { DynamicStructuredTool } = require('@librechat/agents/langchain/tools');
   const { z } = require('zod');
   return new DynamicStructuredTool({
     name: NAME,
     description: def.description,
-    schema: z.object({ step: z.number().int(), file_id: z.string().optional(), payload: z.union([z.record(z.any()), z.string()]).optional() }),
+    schema: z.object({ plan: z.any().optional(), step: z.number().int(), file_id: z.string().optional(), payload: z.union([z.record(z.any()), z.string()]).optional() }).strict(),
     func: (a) => invoke(req, a),
   });
 }

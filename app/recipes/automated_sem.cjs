@@ -94,6 +94,7 @@ EVIDENCE RULES (apply to EVERY cognitive step: 2, 3, 5, 7, 10, 12):
 - If 'search()' returns '{code:'LOCAL_ONLY'}' or '{code:'SEARCH_FAILED'}', STOP with "SEARCH_MODE_MUST_BE_ACADEMIC" and message "Recipe must pin search to academic; do not continue." Do not fabricate claims, do not skip.
 - STEP 12 additionally: references[] must be APA-7 strings drawn EXCLUSIVELY from SUPPORTED claims; prose must use {{ref:CLAIM_ID}} placeholders. Do not invoke 'search' at step 12; assemble only.
 
+NO PROSE INSIDE PAYLOAD: nothing between the outermost { and } except JSON values required by the step schema. No notes, no annotations, no labels, no bracketed text, no trailing commentary. Any free text inside the payload will invalidate the strict JSON parse and the call will be rejected with the character position.
 PAYLOAD SHAPE: payload may be either (a) an inline JSON object (preferred), or (b) a JSON-encoded string that strict-parses to that object. Both forms are strict JSON at the tool boundary. Do NOT emit malformed JSON strings; if you use form (b), every quote and brace must be balanced. The tool applies strict JSON.parse and rejects the call with the character position on any parse failure.
 TOOL-AUTOINHERIT (large passthrough fields): The tool asp_step_run inherits these fields from the prior step on disk; DO NOT include them in payload — they will be rejected if the payload exceeds the model budget and are redundant otherwise:
 - step 3: file_path, data_sheet, header_row_index, max_evaluations

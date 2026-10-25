@@ -395,7 +395,19 @@ services:
     - type: bind
       source: /var/lib/librechat/vectordb
       target: /var/lib/postgresql/data
+  asp-runner:
+    image: asp-runner:1
+    container_name: asp-runner
+    restart: unless-stopped
+    command: python3 /app/asp-feature/runner-server.py
+    networks:
+      - librechat_default
+
 volumes:
   librechat_vectordb_data:
     external: true
     name: librechat_vectordb_data
+networks:
+  librechat_default:
+    external: true
+    name: librechat_default

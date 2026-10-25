@@ -1,5 +1,6 @@
 'use strict';
 const crypto = require('node:crypto');
+const FINAL_STEP = 13;
 function fail(status, message) { const e = new Error(message); e.status = status; throw e; }
 function owner(req) {
   const user = String(req.user?.id || req.user?._id || '');
@@ -30,19 +31,20 @@ function makeService(repo, deps) {
     await repo.putRun(s, record);
     return { status: 'started', state: await getState(s) };
   }
-  async function completeStep(s, step, output) {
+  async function completeStep(s, step, output, extra) {
     const r = await repo.getRun(s);
     if (!r) fail(404, 'No active run');
-    r.steps = { ...(r.steps || {}), [String(step)]: { ok: true, output } };
-    r.status = step === 1 ? 'done' : r.status;
-    if (step === 1) r.finishedAt = new Date();
+    const entry = { ok: true, output };
+    if (extra) entry.extra = extra;
+    r.steps = { ...(r.steps || {}), [String(step)]: entry };
+    if (Number(step) === FINAL_STEP) { r.status = 'done'; r.finishedAt = new Date(); }
     await repo.putRun(s, r);
     return await getState(s);
   }
   async function failRun(s, message) {
     const r = await repo.getRun(s);
     if (!r) return;
-    r.status = 'failed'; r.error = String(message).slice(0, 500); r.finishedAt = new Date();
+    r.status = 'failed'; r.error = String(message).slice(0, 800); r.finishedAt = new Date();
     await repo.putRun(s, r);
   }
   async function deleteRun(s) { await repo.delRun(s); return { status: 'idle' }; }
@@ -51,6 +53,11 @@ function makeService(repo, deps) {
     if (!r || !r.steps || !r.steps[String(step)]) return null;
     return r.steps[String(step)].output;
   }
-  return { scope, getState, startRun, completeStep, failRun, deleteRun, getOutput };
+  async function getExtra(s, step) {
+    const r = await repo.getRun(s);
+    if (!r || !r.steps || !r.steps[String(step)]) return null;
+    return r.steps[String(step)].extra || null;
+  }
+  return { scope, getState, startRun, completeStep, failRun, deleteRun, getOutput, getExtra };
 }
-module.exports = { makeService, sha256 };
+module.exports = { makeService, sha256, FINAL_STEP };

@@ -45,8 +45,8 @@ function registerRoutes(router, projectFilesService) {
       fetch(`${base}/api/agents/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'User-Agent': req.headers['user-agent'] || 'LibreChat/0.8.7' },
-        body: JSON.stringify({ conversationId, text: `${recipe.prompt}\n\nWorkbook file_id: ${fileId}`, parentMessageId: null, tools: recipe.tools || [], files: [{ file_id: fileId, projectFileId: fileId, filename: file.name }] }),
-        signal: AbortSignal.timeout(180000),
+        body: JSON.stringify({ conversationId, text: recipe.prompt + '\n\nWorkbook file_id: ' + fileId, parentMessageId: null, tools: recipe.tools || [], files: [{ file_id: fileId, projectFileId: fileId, filename: file.name }] }),
+        signal: AbortSignal.timeout(1800000),
       }).then(async (r) => {
         const body = await r.text().catch(() => '');
         console.error('[ASP] chat response', r.status, body.slice(0, 2000));
@@ -63,6 +63,17 @@ function registerRoutes(router, projectFilesService) {
       res.set('Content-Type', 'application/json');
       res.set('Content-Disposition', `attachment; filename="step${req.params.step}_out.json"`);
       res.send(content);
+    } catch (e) { next(e); }
+  });
+  router.get('/:projectId/automated-sem/artifacts', async (req, res, next) => {
+    try {
+      const s = await svc.scope(req, req.params.projectId);
+      const extra = await svc.getExtra(s, '13');
+      if (!extra || !extra.artifacts_b64) return res.status(404).json({ error: 'artifacts not available' });
+      const buf = Buffer.from(extra.artifacts_b64, 'base64');
+      res.set('Content-Type', 'application/zip');
+      res.set('Content-Disposition', 'attachment; filename="asp_artifacts.zip"');
+      res.send(buf);
     } catch (e) { next(e); }
   });
   router.delete('/:projectId/automated-sem', async (req, res, next) => {

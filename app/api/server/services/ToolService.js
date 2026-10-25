@@ -1794,8 +1794,13 @@ module.exports.loadAgentTools = workflowTools.wrapLoad(module.exports.loadAgentT
 module.exports.loadToolsForExecution = workflowTools.wrapExecution(module.exports.loadToolsForExecution);
 
 const helloWorldTool = require("/app/hello-world-feature/tool.cjs");
+
+const aspTool = require("/app/asp-feature/tool.cjs");
 module.exports.loadAgentTools = helloWorldTool.wrapLoad(module.exports.loadAgentTools);
 module.exports.loadToolsForExecution = helloWorldTool.wrapExecution(module.exports.loadToolsForExecution);
+
+module.exports.loadAgentTools = aspTool.wrapLoad(module.exports.loadAgentTools);
+module.exports.loadToolsForExecution = aspTool.wrapExecution(module.exports.loadToolsForExecution);
 
 const searchModeTools=require('/app/workflow-feature/search-mode/flow.cjs');
 const searchModeExecution=module.exports.loadToolsForExecution;

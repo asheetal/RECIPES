@@ -1,0 +1,14 @@
+services:
+  asp-runner:
+    image: rocker/verse:4.3.3
+    container_name: asp-runner
+    restart: unless-stopped
+    command: python3 /app/asp-feature/runner-server.py
+    networks:
+      - librechat_default
+    volumes:
+      - /home/sheetal/librechat-src/app/asp-feature:/app/asp-feature:ro
+      - /var/lib/librechat/asp-runs:/var/lib/librechat/asp-runs
+networks:
+  librechat_default:
+    external: true

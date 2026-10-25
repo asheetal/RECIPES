@@ -14,6 +14,7 @@ import { cn, clearMessagesCache } from '~/utils';
 import ProjectChatList from './ProjectChatList';
 import ProjectFiles from './ProjectFiles';
 import HelloWorldRecipe from './HelloWorldRecipe';
+import AutomatedSEMRecipe from './AutomatedSEMRecipe';
 import store from '~/store';
 
 type ChatSortField = 'updatedAt' | 'createdAt';
@@ -186,6 +187,7 @@ export default function ProjectWorkspace() {
                 {localize('com_ui_chat_recipe_description')}
               </span>
             </button>
+            <AutomatedSEMRecipe projectId={project._id} />
             <HelloWorldRecipe projectId={project._id} />
           </div>
         </section>

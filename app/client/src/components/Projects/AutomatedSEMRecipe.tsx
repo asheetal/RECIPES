@@ -6,6 +6,7 @@ import { request, apiBaseUrl } from 'librechat-data-provider';
 import { cn } from '~/utils';
 
 type FileRow = { id: string; name: string; bytes: number };
+const STEP_LABELS = ['Preview workbook','Schema resolve','Taxonomy','Search grid','Thresholds','Filter','Theory review','Bootstrap','Descriptives','Topology','Render diagram','Report','Package'];
 type StepInfo = { ok: boolean };
 type RunState = { status: 'idle' | 'running' | 'done' | 'failed'; fileId?: string | null; fileName?: string | null; steps?: Record<string, StepInfo>; error?: string | null };
 
@@ -93,7 +94,10 @@ export default function AutomatedSEMRecipe({ projectId }: { projectId: string })
         <span className="flex min-w-0 items-center gap-2"><FileJson className="h-4 w-4 shrink-0 text-text-secondary" aria-hidden="true" /><span className="truncate text-base font-semibold text-text-primary">Automated SEM Pipeline</span></span>
         <span className="mt-2 flex items-center gap-2 text-sm">
           {state.status === 'running' && <Spinner className="h-4 w-4" />}
+          {state.status === 'running' && <span className="text-text-secondary">{(() => { const done = latestStep(); const cur = done >= 13 ? 13 : done + 1; const lbl = STEP_LABELS[cur - 1] || ''; return `Step ${cur}/13 · ${lbl}`; })()}</span>}
+          {state.status === 'failed' && <span className="text-red-600 dark:text-red-400" title={state.error ?? 'Failed'}>{state.error ? state.error.slice(0, 80) : 'Failed'}</span>}
           {state.status === 'done' && <Check className="h-4 w-4 text-green-600 dark:text-green-400" />}
+          {state.status === 'done' && <span className="text-text-secondary">13/13 · complete</span>}
           {have && state.status !== 'running' && (
             <button type="button" onClick={(e) => { e.stopPropagation(); download(); }} aria-label="Download step JSON" className="rounded p-1 hover:bg-surface-hover"><Download className="h-4 w-4" /></button>
           )}

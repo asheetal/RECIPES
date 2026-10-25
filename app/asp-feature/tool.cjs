@@ -24,6 +24,37 @@ async function resolveProjectId(req) {
 }
 const TOOL_STEPS = new Set([1, 4, 6, 8, 9, 11, 13]);
 
+
+function validateStep10(payload) {
+  const models = payload.models;
+  if (!Array.isArray(models) || models.length === 0) throw new Error('step 10: models must be a non-empty array');
+  const nodeIds = new Set();
+  for (const m of models) {
+    if (!m || !Array.isArray(m.nodes) || m.nodes.length === 0) throw new Error('step 10: each model needs non-empty nodes[]');
+    for (const n of m.nodes) if (n && n.id) nodeIds.add(n.id);
+  }
+  for (let i = 0; i < models.length; i++) {
+    const paths = Array.isArray(models[i].paths) ? models[i].paths : null;
+    if (!paths || paths.length === 0) throw new Error(`step 10: models[${i}].paths must be a non-empty array`);
+    for (let j = 0; j < paths.length; j++) {
+      const p = paths[j] || {};
+      const checkEndpoint = (kind, val) => {
+        if (typeof val !== 'string' || !val) throw new Error(`step 10: models[${i}].paths[${j}].${kind} must be a non-empty string`);
+        if (val.includes('->')) {
+          const parts = val.split('->').map((x) => x.trim());
+          if (parts.length !== 2) throw new Error(`step 10: models[${i}].paths[${j}].${kind}="${val}" malformed stem; must be "<node>-><node>"`);
+          for (const part of parts) if (!nodeIds.has(part)) throw new Error(`step 10: models[${i}].paths[${j}].${kind}="${val}" references unknown node "${part}"`);
+          return;
+        }
+        if (val.includes('*')) throw new Error(`step 10: models[${i}].paths[${j}].${kind}="${val}" uses '*' (interaction); use {from:"W", to:"X->M"} for a moderated path`);
+        if (!nodeIds.has(val)) throw new Error(`step 10: models[${i}].paths[${j}].${kind}="${val}" references unknown node`);
+      };
+      checkEndpoint('from', p.from);
+      checkEndpoint('to', p.to);
+    }
+  }
+}
+
 function validateStep7(payload) {
   const sm = payload.shortlisted_models;
   if (!Array.isArray(sm) || sm.length === 0) throw new Error('step 7: shortlisted_models must be a non-empty array');
@@ -361,6 +392,7 @@ async function invoke(req, args) {
       if (schemaErr) throw new Error(schemaErr);
       validateCognitive(step, merged);
       if (step === 7) validateStep7(merged);
+      if (step === 10) validateStep10(merged);
       validateEvidence(step, merged);
       const result = await pipeline.runStep({ step, runId: currentState.runId, payload: merged });
       await stateSvc.completeStep(s, step, merged, null);

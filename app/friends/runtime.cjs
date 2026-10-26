@@ -21,19 +21,21 @@ async function admin(req,res,next){
  catch{return fail(res,503,'Cannot verify administrator access.');}
 }
 function clampInt(v,min,max,fallback){const n=Number.parseInt(v,10);return Number.isFinite(n)?Math.min(max,Math.max(min,n)):fallback;}
+function registrationURL(){const url=new URL(process.env.DOMAIN_CLIENT);url.pathname=url.pathname.replace(/\/+$/,'')+'/register';url.search='?friend=1';url.hash='';return url.toString();}
 async function generate(req,res){
  const daysValid=clampInt(req.body?.daysValid,1,3650,7);
  const maxRedemptions=clampInt(req.body?.maxRedemptions,1,10000,1);
  const code=newCode(),now=new Date(),expiresAt=new Date(now.getTime()+daysValid*DAY);
- await codes().insertOne({_id:codeHash(code),label:code.slice(-4),createdAt:now,expiresAt,state:'unused',maxRedemptions,redemptionsUsed:0,createdBy:idOf(req.user)});
- const url=new URL(process.env.DOMAIN_CLIENT);url.pathname=url.pathname.replace(/\/+$/,'')+'/register';url.search='?friend=1';url.hash='';
- res.json({code,expiresAt,daysValid,maxRedemptions,registrationURL:url.toString()});
+ await codes().insertOne({_id:codeHash(code),code,label:code.slice(-4),createdAt:now,expiresAt,state:'unused',maxRedemptions,redemptionsUsed:0,createdBy:idOf(req.user)});
+ res.json({code,expiresAt,daysValid,maxRedemptions,registrationURL:registrationURL()});
 }
 async function list(req,res){
  const rows=await members().find({}).sort({expiresAt:1}).toArray();
  const data=[];for(const r of rows){const u=await users().findOne({_id:new mongoose.Types.ObjectId(r._id)},{projection:{name:1,email:1,role:1}});if(u)data.push({id:r._id,name:u.name,email:u.email,state:r.state,expiresAt:r.expiresAt,registeredAt:r.registeredAt,remindedAt:r.remindedAt});}
- const pending=await codes().find({state:'unused',expiresAt:{$gt:new Date()},$expr:{$lt:[{$ifNull:['$redemptionsUsed',0]},{$ifNull:['$maxRedemptions',1]}]}},{projection:{label:1,expiresAt:1,maxRedemptions:1,redemptionsUsed:1}}).sort({expiresAt:1}).limit(100).toArray();
- res.json({friends:data,codes:pending.map(c=>({id:c._id,label:c.label,expiresAt:c.expiresAt,maxRedemptions:c.maxRedemptions??1,redemptionsUsed:c.redemptionsUsed??0}))});
+ const now=new Date();
+ const live=await codes().find({expiresAt:{$gt:now}},{projection:{code:1,label:1,expiresAt:1,maxRedemptions:1,redemptionsUsed:1}}).sort({createdAt:-1}).limit(100).toArray();
+ const ru=registrationURL();
+ res.json({friends:data,codes:live.map(c=>{const used=c.redemptionsUsed??0,max=c.maxRedemptions??1;return{id:c._id,code:c.code??null,label:c.label,expiresAt:c.expiresAt,daysRemaining:Math.max(0,Math.ceil((c.expiresAt-now)/DAY)),maxRedemptions:max,redemptionsUsed:used,exhausted:used>=max,registrationURL:ru};})});
 }
 async function revoke(req,res){await codes().deleteOne({_id:req.params.codeId,state:'unused'});res.json({message:'Code revoked.'});}
 async function convert(req,res){
@@ -141,7 +143,10 @@ async function sweep(){
 let timer;
 async function start(){
  if(timer)return;
- await codes().createIndex({expiresAt:1},{expireAfterSeconds:0});await members().createIndex({state:1,expiresAt:1});
+ // v188: remove TTL on expiresAt (drop if present) — expired codes remain for audit/repair.
+ try{for(const ix of await codes().indexes())if(ix.key?.expiresAt===1&&ix.expireAfterSeconds!==undefined){await codes().dropIndex(ix.name);break;}}catch(e){console.error('[Friends] TTL drop deferred:',e.name);}
+ try{await codes().createIndex({expiresAt:1});}catch(e){console.error('[Friends] expiresAt index kept as-is:',e.name);}
+ await members().createIndex({state:1,expiresAt:1});
  timer=setInterval(()=>void sweep(),60000);timer.unref();void sweep();
 }
 const wrap=fn=>(req,res,next)=>Promise.resolve(fn(req,res,next)).catch(e=>{console.error('[Friends] Request failed:',e.name);if(!res.headersSent)fail(res,503,'Request could not be completed. Please retry.');});

@@ -353,6 +353,10 @@ services:
       target: /app/client/dist
       read_only: true
     - type: bind
+      source: /home/sheetal/librechat-src/app/packages/data-schemas/dist
+      target: /app/packages/data-schemas/dist
+      read_only: true
+    - type: bind
       source: /home/sheetal/librechat-src/app/admin-tools
       target: /app/admin-tools
       read_only: true

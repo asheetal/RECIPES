@@ -236,6 +236,21 @@ export function createConversationMethods(
         }
       }
 
+      /* PROJECT-REQUIRED SECURITY GATE (v190).
+       * All recipes must exist inside a project. A create (upsert) without a
+       * verified, owned `chatProjectId` is rejected with PROJECT_REQUIRED.
+       * An update of an existing conversation passes through untouched. */
+      if (metadata?.noUpsert !== true && !update.chatProjectId) {
+        const exists = await Conversation.exists({ conversationId, user: userId });
+        if (exists == null) {
+          const gateErr = new Error(
+            'PROJECT_REQUIRED: conversations must be created inside a project (chatProjectId)',
+          );
+          (gateErr as Error & { code?: string }).code = 'PROJECT_REQUIRED';
+          throw gateErr;
+        }
+      }
+
       const mayChangeProjectMembership =
         Object.prototype.hasOwnProperty.call(update, 'chatProjectId') ||
         Object.prototype.hasOwnProperty.call(unsetFields, 'chatProjectId');

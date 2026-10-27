@@ -332,6 +332,9 @@ router.post('/:conversationId', validateMessageReq, async (req, res) => {
     await db.saveConvo(reqCtx, savedMessage, { context: 'POST /api/messages/:conversationId' });
     res.status(201).json(savedMessage);
   } catch (error) {
+    if (error && error.code === 'PROJECT_REQUIRED') {
+      return res.status(403).json({ error: error.message, code: error.code });
+    }
     logger.error('Error saving message:', error);
     res.status(500).json({ error: 'Internal server error' });
   }

@@ -11950,6 +11950,16 @@ function createConversationMethods(mongoose, messageMethods) {
 					unsetFields.chatProjectId = 1;
 				}
 			}
+			if (metadata?.noUpsert !== true && !update.chatProjectId) {
+				if (await Conversation.exists({
+					conversationId,
+					user: userId
+				}) == null) {
+					const gateErr = /* @__PURE__ */ new Error("PROJECT_REQUIRED: conversations must be created inside a project (chatProjectId)");
+					gateErr.code = "PROJECT_REQUIRED";
+					throw gateErr;
+				}
+			}
 			const mayChangeProjectMembership = Object.prototype.hasOwnProperty.call(update, "chatProjectId") || Object.prototype.hasOwnProperty.call(unsetFields, "chatProjectId");
 			let previousChatProjectId = null;
 			if (mayChangeProjectMembership) previousChatProjectId = (await Conversation.findOne({

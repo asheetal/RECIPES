@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRecoilCallback, useRecoilValue } from 'recoil';
 import { Spinner, useToastContext } from '@librechat/client';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { Constants, EModelEndpoint } from 'librechat-data-provider';
 import { useGetModelsQuery } from 'librechat-data-provider/react-query';
 import type { TPreset } from 'librechat-data-provider';
@@ -161,6 +161,11 @@ export default function ChatRoute() {
       return;
     }
 
+    if (isNewConvo && !verifiedChatProjectId && (!chatProjectId || !projectQuery.isLoading)) {
+      /* No valid project scope: redirect to /projects instead of creating a detached chat. */
+      return;
+    }
+
     if (isNewConvo && chatProjectId && projectQuery.isLoading) {
       return;
     }
@@ -284,6 +289,14 @@ export default function ChatRoute() {
 
   if (!isAuthenticated) {
     return null;
+  }
+
+  if (
+    conversationId === Constants.NEW_CONVO &&
+    !verifiedChatProjectId &&
+    (!chatProjectId || !projectQuery.isLoading)
+  ) {
+    return <Navigate to="/projects" replace={true} />;
   }
 
   // if not a conversation

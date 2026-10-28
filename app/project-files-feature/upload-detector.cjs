@@ -11,7 +11,7 @@ function systemMime(bytes){
    if(error){error.status=503;reject(error);}else resolve(result);
   }
   child.on('error',()=>finish(Error('File detector is unavailable.')));
-  child.stdin.on('error',()=>finish(Error('File detector could not read the upload.')));
+  child.stdin.on('error',(e)=>{if(e.code!=='EPIPE')finish(Error('File detector could not read the upload.'));});
   child.stdout.on('data',chunk=>{
    length+=chunk.length;
    if(length>4096){child.kill();finish(Error('Invalid file detector response.'));}

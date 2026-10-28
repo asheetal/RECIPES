@@ -104,12 +104,12 @@ export default function AQRPTile({ projectId }: { projectId: string }) {
 
   const download = useCallback(async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const step = state.lastStepOk ?? state.currentStep ?? 1;
+    const step = state.lastStepOk ?? 0;
     try {
       const blob = (await request.get(`${base}/output/${step}`, { responseType: 'blob' })) as unknown as Blob;
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url; a.download = `step${step}_out.json`;
+      a.href = url; a.download = step === 0 ? (state.fileName || 'corpus.json') : `step${step}_out.json`;
       document.body.appendChild(a); a.click(); a.remove();
       URL.revokeObjectURL(url);
     } catch { /* surfaced by tile state */ }

@@ -5,13 +5,21 @@ import { request, apiBaseUrl } from 'librechat-data-provider';
 type Model = { endpoint: string; model: string; label: string };
 type Assignment = { endpoint: string; model: string } | null;
 type Workflow = { uninterruptedIterations: number; maxDirectorIterations: number };
-type Criterion = { ok: boolean; latency_ms?: number; error?: string; used?: string };
+type Criterion = {
+  ok: boolean;
+  latency_ms?: number;
+  error?: string;
+  used?: string;
+  reasoning_tokens?: number | null;
+  note?: string;
+};
 type SlotTest = {
   slot: number;
   ok: boolean;
   criteria: {
     connection?: Criterion;
     silenceable?: Criterion;
+    no_chattiness?: Criterion;
     json_schema?: Criterion;
     json_object?: Criterion;
   };
@@ -23,22 +31,33 @@ type Settings = {
   assignments: Record<string, Assignment>;
   panelMembers: Assignment[];
 };
+type SaveResponse = {
+  assignments: Record<string, Assignment>;
+  panelMembers: Assignment[];
+  workflow: Workflow;
+  panelTest?: { slots: SlotTest[] } | null;
+};
 const PANEL_MAX = 10;
+const LATENCY_WARN_MS = 8000;
 const url = () => `${apiBaseUrl()}/api/admin/users/llm-roles`;
 const key = (m: Assignment) => m ? JSON.stringify([m.endpoint, m.model]) : '';
 const errorText = (e: any) =>
   e?.response?.data?.message || 'Unable to update LLM assignments';
-const slotTestFrom = (e: any): SlotTest[] | null => {
-  const slots = e?.response?.data?.panelTest?.slots;
+const slotsFrom = (payload: any): SlotTest[] | null => {
+  const slots = payload?.panelTest?.slots;
   return Array.isArray(slots) ? slots : null;
 };
-const criterionLabel = (label: string, c?: Criterion) => {
+const renderCriterion = (label: string, c?: Criterion) => {
   if (!c) return null;
+  const parts: string[] = [];
+  if (c.latency_ms != null) parts.push(`${c.latency_ms} ms`);
+  if (c.reasoning_tokens != null) parts.push(`reasoning=${c.reasoning_tokens}`);
+  if (c.used) parts.push(c.used);
+  const detail = parts.length ? ` (${parts.join(', ')})` : '';
   const state = c.ok ? 'pass' : 'FAIL';
-  const tail = c.ok
-    ? (c.latency_ms != null ? ` (${c.latency_ms} ms, ${c.used ?? 'ok'})` : ` (${c.used ?? 'ok'})`)
-    : ` — ${c.error ?? 'failed'}`;
-  return { label, state, text: `${label}: ${state}${tail}`, ok: c.ok };
+  const tail = c.ok ? detail : ` — ${c.error ?? 'failed'}`;
+  const slow = !!(c.ok && c.latency_ms != null && c.latency_ms > LATENCY_WARN_MS);
+  return { label, ok: c.ok, slow, text: `${label}: ${state}${tail}` };
 };
 
 export default function LLMRoleSettings({ section = 'models' }: { section?: 'models' | 'workflow' }) {
@@ -47,6 +66,7 @@ export default function LLMRoleSettings({ section = 'models' }: { section?: 'mod
   const [panelMembers, setPanelMembers] = useState<Assignment[]>([]);
   const [workflow, setWorkflow] = useState<Workflow>({ uninterruptedIterations: 20, maxDirectorIterations: 5 });
   const [panelTest, setPanelTest] = useState<SlotTest[] | null>(null);
+  const [panelTestFailed, setPanelTestFailed] = useState(false);
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -79,15 +99,18 @@ export default function LLMRoleSettings({ section = 'models' }: { section?: 'mod
     setBusy(true);
     setNotice('');
     setPanelTest(null);
+    setPanelTestFailed(false);
     try {
-      const result = await request.post(url(), { assignments: draft, workflow, panelMembers });
+      const result = await request.post<SaveResponse>(url(), { assignments: draft, workflow, panelMembers });
       setDraft(result.assignments);
       setWorkflow(result.workflow);
       setPanelMembers(result.panelMembers ?? []);
+      const slots = slotsFrom(result);
+      if (slots) { setPanelTest(slots); setPanelTestFailed(false); }
       setNotice('Saved.');
     } catch (e) {
-      const slots = slotTestFrom(e);
-      if (slots) setPanelTest(slots);
+      const slots = slotsFrom(e?.response?.data);
+      if (slots) { setPanelTest(slots); setPanelTestFailed(true); }
       setNotice(errorText(e));
     } finally {
       setBusy(false);
@@ -150,10 +173,11 @@ export default function LLMRoleSettings({ section = 'models' }: { section?: 'mod
                 });
                 setNotice('');
                 setPanelTest(null);
+                setPanelTestFailed(false);
               }} />
           </label>
           <p className="text-xs text-text-secondary">
-            Only the surgeon can invoke this panel. Each member receives the surgeon&apos;s query and returns a strict JSON report; the report is frozen as advisory evidence. Each agent is tested for silenceability and JSON conformance on save.
+            Only the surgeon can invoke this panel. Each member receives the surgeon&apos;s query and returns a strict JSON report; the report is frozen as advisory evidence. On every save, each agent is probed for silenceability, zero reasoning tokens, and JSON conformance. Re-saving the panel re-runs the probe.
           </p>
           {panelMembers.map((member, i) => (
             <div key={`panel-${i}`} className="grid grid-cols-[110px_minmax(0,1fr)] items-center gap-3">
@@ -170,6 +194,7 @@ export default function LLMRoleSettings({ section = 'models' }: { section?: 'mod
                     : p));
                   setNotice('');
                   setPanelTest(null);
+                  setPanelTestFailed(false);
                 }}
               >
                 <option value="">Not assigned</option>
@@ -183,22 +208,42 @@ export default function LLMRoleSettings({ section = 'models' }: { section?: 'mod
             </div>
           ))}
           {panelTest && panelTest.length > 0 && (
-            <div role="alert" className="rounded-lg border border-red-300 bg-red-50 p-3 text-xs">
-              <p className="mb-2 font-semibold">Panel eligibility check failed — nothing was saved.</p>
+            <div
+              role={panelTestFailed ? 'alert' : 'status'}
+              className={
+                panelTestFailed
+                  ? 'rounded-lg border border-red-300 bg-red-50 p-3 text-xs'
+                  : 'rounded-lg border border-border-medium bg-surface-secondary p-3 text-xs'
+              }
+            >
+              <p className="mb-2 font-semibold">
+                {panelTestFailed
+                  ? 'Panel eligibility check failed — nothing was saved.'
+                  : 'Panel eligibility check passed.'}
+              </p>
               {panelTest.map(slot => (
                 <div key={`slot-test-${slot.slot}`} className="mb-2">
                   <p className="font-medium">Slot {slot.slot}: {slot.ok ? 'pass' : 'FAIL'}</p>
                   <ul className="ml-4 list-disc">
                     {[
-                      criterionLabel('Connection', slot.criteria.connection),
-                      criterionLabel('Silenceable (reasoning off)', slot.criteria.silenceable),
-                      criterionLabel('JSON schema conformance', slot.criteria.json_schema),
-                      criterionLabel('JSON object fallback', slot.criteria.json_object),
-                    ].filter(Boolean).map((row, k) => (
-                      <li key={k} className={row!.ok ? 'text-text-secondary' : 'text-red-700'}>
-                        {row!.text}
-                      </li>
-                    ))}
+                      renderCriterion('Connection', slot.criteria.connection),
+                      renderCriterion('Silenceable (reasoning off)', slot.criteria.silenceable),
+                      renderCriterion('No chattiness', slot.criteria.no_chattiness),
+                      renderCriterion('JSON schema conformance', slot.criteria.json_schema),
+                      renderCriterion('JSON object fallback', slot.criteria.json_object),
+                    ].filter(Boolean).map((row, k) => {
+                      const r = row!;
+                      const cls = !r.ok
+                        ? 'text-red-700'
+                        : r.slow
+                          ? 'text-amber-700'
+                          : 'text-text-secondary';
+                      return (
+                        <li key={k} className={cls}>
+                          {r.text}{r.slow ? ' — slow' : ''}
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               ))}

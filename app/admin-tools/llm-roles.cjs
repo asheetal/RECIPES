@@ -76,6 +76,7 @@ async function save(req,res){
   if(Array.isArray(rawPanel)&&rawPanel.length>PANEL_MAX)
    return res.status(400).json({message:'Assistant panel cannot exceed '+PANEL_MAX+' agents'});
   let panelMembers;
+  let panelTest=null;
   if(Array.isArray(rawPanel)){
    panelMembers=[];
    for(let i=0;i<rawPanel.length;i++){
@@ -86,17 +87,16 @@ async function save(req,res){
      return res.status(400).json({message:'Panel slot '+(i+1)+': choose an available model'});
     panelMembers.push({endpoint:v.endpoint,model:v.model});
    }
-   const previousPanel=Array.isArray(existingDoc?.panelMembers)?existingDoc.panelMembers:[];
-   const panelChanged=JSON.stringify(panelMembers)!==JSON.stringify(previousPanel);
-   if(panelChanged&&panelMembers.length){
+   if(panelMembers.length){
     let probe;
     try{ probe=await require('./panel-probe.cjs').probeMembers(panelMembers); }
     catch(e){ return res.status(500).json({message:'Panel eligibility check failed: '+(e.message||e)}); }
+    panelTest={slots:probe};
     const failing=probe.filter(p=>!p.ok);
     if(failing.length){
      return res.status(400).json({
       message:'Assistant panel eligibility check failed for '+(failing.length===1?('slot '+failing[0].slot):(failing.length+' slots')),
-      panelTest:{slots:probe}
+      panelTest
      });
     }
    }
@@ -120,7 +120,7 @@ async function save(req,res){
   await collection().updateOne({_id:'assignments'},{$set:{
    assignments,panelMembers,workflow,updatedAt:new Date(),updatedBy:String(req.user.id||req.user._id)
   }},{upsert:true});
-  res.json({assignments,panelMembers,workflow});
+  res.json({assignments,panelMembers,workflow,panelTest});
  }catch(e){
   console.error('[LLMRoleSettings] Save failed',e);
   res.status(500).json({message:'Unable to save LLM assignments'});

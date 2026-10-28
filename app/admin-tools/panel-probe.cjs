@@ -1,16 +1,37 @@
 'use strict';
 const access=require('./model-access.cjs');
-const PROBE_SCHEMA=Object.freeze({type:'object',properties:{ok:{type:'boolean'}},required:['ok'],additionalProperties:false});
-const PROBE_SYSTEM='Return ONLY a JSON object matching this schema: '+JSON.stringify(PROBE_SCHEMA)+'. No prose.';
-const PROBE_USER='Return {"ok":true}.';
-const PROBE_TIMEOUT_MS=20000;
-function extractError(obj){
-  if(!obj) return 'unknown error';
-  if(typeof obj==='string') return obj;
-  if(obj.error&&typeof obj.error==='string') return obj.error;
-  if(obj.error&&obj.error.message) return obj.error.message;
-  if(obj.message) return obj.message;
-  return JSON.stringify(obj).slice(0,300);
+const PROBE_TOPICS=Object.freeze(['AI identity crisis','Death of authorship','AI governance and power','AI-human partnership']);
+const PROBE_SCHEMA=Object.freeze({
+  type:'object',
+  properties:{
+    codings:{
+      type:'array',
+      items:{
+        type:'object',
+        properties:{ topic:{type:'string'}, present:{type:'boolean'} },
+        required:['topic','present'],
+        additionalProperties:false
+      }
+    }
+  },
+  required:['codings'],
+  additionalProperties:false
+});
+const PROBE_TEXT='Tracey Follows, CEO of Futuremade, a UK-based futures consultancy, says: As we look to the future, we might assume that the biggest existential threats to humanity lie in climate change and nuclear wars. The confusion and crisis over individuals AI-aided identity could cause individuals turmoil in 8 billion inner worlds, and this could lead to the total destruction of humans from within. If humans can find ways to collaborate, co-pilot and co-mingle with AI in a partnership, it could be that AI can extend and augment our personality and inner selves. All will depend on the power of those in whose hands AI resides - will the governance of these powerful technologies lie in the hands of an elite group of tech titans or in the hands of individual people? There are many implications around autonomy, not least for those working in the creative industries and arts. The whole notion of authorship is dead. There will no longer be any original creative output that is created solely by humans. AI will, from now on, always have a part to play, mainly in mixing and remixing and in general re-arranging what already has been created by others. Can we even be the author of our own personal identity in the digital world? Likely not, as the role of AI or personal agents will be to study and monitor us and represent us in virtual rather than physical media. If we become disconnected from our own identity creation because a machine is doing much of it on our behalf, we will start to have identity crises. Plural identities residing in external AI agents could well lead to severe mental challenges, especially for those in the West who are culturally wedded to the notion of authenticity. Education will play a major role in our future. As AI becomes integrated into education over the next five to seven years, we will see whether it may be destined to be used for indoctrination or for positive exploration.';
+const PROBE_SYSTEM='You are a qualitative researcher. Return ONLY a JSON object matching this schema exactly: '+JSON.stringify(PROBE_SCHEMA)+'. No prose, no markdown fences.';
+const PROBE_USER='Code the text below against these four topics: '+PROBE_TOPICS.join('; ')+'. Return exactly four coding rows, one per topic, in the given order. For each: topic (exactly as listed), present (true if discussed, false otherwise). Text:\n\n'+PROBE_TEXT;
+const SILENCEABLE_TIMEOUT_MS=10000;
+const REALISTIC_TIMEOUT_MS=30000;
+const CHATTINESS_MAX=0;
+function reasoningTokens(usage){
+  if(!usage||typeof usage!=='object') return null;
+  const d=usage.completion_tokens_details;
+  if(d&&typeof d.reasoning_tokens==='number') return d.reasoning_tokens;
+  if(typeof usage.reasoning_tokens==='number') return usage.reasoning_tokens;
+  return null;
+}
+function isTimeout(e){
+  return e&&(e.name==='TimeoutError'||e.name==='AbortError'||/timeout|aborted/i.test(String(e.message||e)));
 }
 async function probeSlot(binding){
   const criteria={};
@@ -26,40 +47,84 @@ async function probeSlot(binding){
   {
     const t=Date.now();
     try{
-      const r=await send({model:conn.model,messages:[{role:'user',content:'Reply with the single word OK.'}],max_tokens:8,stream:false,reasoning:{enabled:false,exclude:true}},PROBE_TIMEOUT_MS);
+      const r=await send({model:conn.model,messages:[{role:'user',content:'Reply with the single word OK.'}],max_tokens:8,stream:false,reasoning:{enabled:false,exclude:true}},SILENCEABLE_TIMEOUT_MS);
       criteria.silenceable={ok:r.ok,latency_ms:Date.now()-t};
-      if(!r.ok){const t2=await r.text().catch(()=>'');let p;try{p=JSON.parse(t2);}catch(e){p=null;}criteria.silenceable.error=p?extractError(p):String(t2).slice(0,300);}
+      if(!r.ok){const t2=await r.text().catch(()=>'');let p;try{p=JSON.parse(t2);}catch(e){p=null;}criteria.silenceable.error=p?(p.error&&p.error.message?p.error.message:(p.message||JSON.stringify(p).slice(0,300))):String(t2).slice(0,300);}
     }catch(e){criteria.silenceable={ok:false,latency_ms:Date.now()-t,error:String(e.message||e).slice(0,300)};}
     if(!criteria.silenceable.ok) return {ok:false,criteria};
   }
+  let chattinessSource=null;
+  let timedOut=false;
   {
     const t=Date.now();
     try{
-      const r=await send({model:conn.model,messages:[{role:'system',content:PROBE_SYSTEM},{role:'user',content:PROBE_USER}],max_tokens:64,stream:false,reasoning:{enabled:false,exclude:true},response_format:{type:'json_schema',json_schema:{name:'probe',schema:PROBE_SCHEMA,strict:true}}},PROBE_TIMEOUT_MS);
-      criteria.json_schema={ok:false,latency_ms:Date.now()-t};
+      const r=await send({model:conn.model,messages:[{role:'system',content:PROBE_SYSTEM},{role:'user',content:PROBE_USER}],max_tokens:512,stream:false,reasoning:{enabled:false,exclude:true},response_format:{type:'json_schema',json_schema:{name:'probe',schema:PROBE_SCHEMA,strict:true}}},REALISTIC_TIMEOUT_MS);
+      const elapsed=Date.now()-t;
+      criteria.json_schema={ok:false,latency_ms:elapsed};
       if(r.ok){
-        const d=await r.json(); const raw=d?.choices?.[0]?.message?.content;
-        try{const p=JSON.parse(raw);if(p&&typeof p.ok==='boolean'){criteria.json_schema.ok=true;criteria.json_schema.used='json_schema';}else criteria.json_schema.error='schema mismatch';}
-        catch(e){criteria.json_schema.error='non-JSON: '+String(raw||'').slice(0,200);}
+        const d=await r.json();
+        const raw=d?.choices?.[0]?.message?.content;
+        try{
+          const p=JSON.parse(raw);
+          if(p&&Array.isArray(p.codings)&&p.codings.length>0){
+            criteria.json_schema.ok=true;
+            chattinessSource={reasoning_tokens:reasoningTokens(d?.usage),latency_ms:elapsed,format:'json_schema'};
+          } else criteria.json_schema.error='schema mismatch';
+        }catch(e){criteria.json_schema.error='non-JSON: '+String(raw||'').slice(0,200);}
       }else{const t2=await r.text().catch(()=>'');criteria.json_schema.error='HTTP '+r.status+' '+String(t2).slice(0,200);}
-    }catch(e){criteria.json_schema={ok:false,latency_ms:Date.now()-t,error:String(e.message||e).slice(0,300)};}
+    }catch(e){
+      const elapsed=Date.now()-t;
+      if(isTimeout(e)){
+        timedOut=true;
+        criteria.json_schema={ok:false,latency_ms:elapsed,error:'timed out after '+(elapsed/1000).toFixed(1)+'s under realistic load — likely reasoning'};
+      } else {
+        criteria.json_schema={ok:false,latency_ms:elapsed,error:String(e.message||e).slice(0,300)};
+      }
+    }
   }
-  if(!criteria.json_schema.ok){
+  if(!criteria.json_schema.ok&&!timedOut){
     const t=Date.now();
     try{
-      const r=await send({model:conn.model,messages:[{role:'system',content:PROBE_SYSTEM},{role:'user',content:PROBE_USER}],max_tokens:64,stream:false,reasoning:{enabled:false,exclude:true},response_format:{type:'json_object'}},PROBE_TIMEOUT_MS);
-      criteria.json_object={ok:false,latency_ms:Date.now()-t};
+      const r=await send({model:conn.model,messages:[{role:'system',content:PROBE_SYSTEM},{role:'user',content:PROBE_USER}],max_tokens:512,stream:false,reasoning:{enabled:false,exclude:true},response_format:{type:'json_object'}},REALISTIC_TIMEOUT_MS);
+      const elapsed=Date.now()-t;
+      criteria.json_object={ok:false,latency_ms:elapsed};
       if(r.ok){
-        const d=await r.json(); const raw=d?.choices?.[0]?.message?.content;
-        try{const p=JSON.parse(raw);if(p&&typeof p.ok==='boolean'){criteria.json_object.ok=true;criteria.json_object.used='json_object';}else criteria.json_object.error='schema mismatch';}
-        catch(e){criteria.json_object.error='non-JSON: '+String(raw||'').slice(0,200);}
+        const d=await r.json();
+        const raw=d?.choices?.[0]?.message?.content;
+        try{
+          const p=JSON.parse(raw);
+          if(p&&Array.isArray(p.codings)&&p.codings.length>0){
+            criteria.json_object.ok=true;
+            chattinessSource={reasoning_tokens:reasoningTokens(d?.usage),latency_ms:elapsed,format:'json_object'};
+          } else criteria.json_object.error='schema mismatch';
+        }catch(e){criteria.json_object.error='non-JSON: '+String(raw||'').slice(0,200);}
       }else{const t2=await r.text().catch(()=>'');criteria.json_object.error='HTTP '+r.status+' '+String(t2).slice(0,200);}
-    }catch(e){criteria.json_object={ok:false,latency_ms:Date.now()-t,error:String(e.message||e).slice(0,300)};}
+    }catch(e){
+      const elapsed=Date.now()-t;
+      if(isTimeout(e)){
+        timedOut=true;
+        criteria.json_object={ok:false,latency_ms:elapsed,error:'timed out after '+(elapsed/1000).toFixed(1)+'s under realistic load — likely reasoning'};
+      } else {
+        criteria.json_object={ok:false,latency_ms:elapsed,error:String(e.message||e).slice(0,300)};
+      }
+    }
   }
-  const ok=criteria.connection.ok&&criteria.silenceable.ok&&(criteria.json_schema.ok||(criteria.json_object&&criteria.json_object.ok));
+  if(timedOut){
+    criteria.no_chattiness={ok:false,error:'timed out under realistic load — likely reasoning'};
+  } else if(chattinessSource&&chattinessSource.reasoning_tokens!=null){
+    const rt=chattinessSource.reasoning_tokens;
+    const over=rt>CHATTINESS_MAX;
+    criteria.no_chattiness={ok:!over,reasoning_tokens:rt,latency_ms:chattinessSource.latency_ms,format:chattinessSource.format};
+    if(over) criteria.no_chattiness.error='model produced '+rt+' reasoning tokens despite reasoning disabled';
+  } else if(chattinessSource){
+    criteria.no_chattiness={ok:true,reasoning_tokens:null,note:'usage block absent; chattiness not measurable',latency_ms:chattinessSource.latency_ms};
+  } else {
+    criteria.no_chattiness={ok:false,error:'no successful structured response to measure'};
+  }
+  const ok=criteria.connection.ok&&criteria.silenceable.ok&&criteria.no_chattiness.ok&&(criteria.json_schema.ok||(criteria.json_object&&criteria.json_object.ok));
   return {ok,criteria};
 }
 async function probeMembers(members){
   return Promise.all(members.map((m,i)=>probeSlot(m).then(r=>({slot:i+1,...r})).catch(e=>({slot:i+1,ok:false,criteria:{connection:{ok:false,error:String(e.message||e)}}}))));
 }
-module.exports={probeSlot,probeMembers,PROBE_SCHEMA};
+module.exports={probeSlot,probeMembers,PROBE_SCHEMA,PROBE_TOPICS,CHATTINESS_MAX};

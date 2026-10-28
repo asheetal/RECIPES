@@ -24,7 +24,7 @@ async function invoke(req, args) {
     const currentState = await stateSvc.getState(s);
     if (currentState.status !== 'running') throw new Error(`no active run (status=${currentState.status})`);
     if (step === 1) {
-      let fileId = args.file_id;
+      let fileId = args.file_id || args.fileId || args.projectFileId;
       if (!fileId && currentState.fileId) fileId = currentState.fileId;
       if (!fileId) throw new Error('file_id required for step 1');
       const { file, buffer } = await projectFiles.read(s, fileId);
@@ -59,7 +59,7 @@ function makeTool(req) {
   const { z } = require('zod');
   return new DynamicStructuredTool({
     name: NAME, description: def.description,
-    schema: z.object({ plan: z.any().optional(), step: z.number().int(), file_id: z.string().optional(), payload: z.union([z.record(z.any()), z.string()]).optional() }).strip(),
+    schema: z.object({ plan: z.any().optional(), step: z.coerce.number().int(), file_id: z.string().optional(), fileId: z.string().optional(), projectFileId: z.string().optional(), payload: z.union([z.record(z.any()), z.string()]).optional() }).strip(),
     func: (a) => invoke(req, a),
   });
 }

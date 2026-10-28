@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AlertTriangle, Check, Download, FileJson, Play, Trash2, Upload } from 'lucide-react';
+import { AlertTriangle, Check, Download, FileJson, Trash2, Upload } from 'lucide-react';
 import { Spinner } from '@librechat/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { request, apiBaseUrl } from 'librechat-data-provider';
@@ -91,17 +91,6 @@ export default function AQRPTile({ projectId }: { projectId: string }) {
     refresh();
   }, [selected, base, refresh]);
 
-  const next = useCallback(async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    try {
-      const res = await postJson(`${base}/next`, {});
-      if (res && res.state) setState(res.state);
-    } catch (err) {
-      setState((s) => ({ ...s, status: 'failed', error: (err as Error).message }));
-    }
-    refresh();
-  }, [base, refresh]);
-
   const download = useCallback(async (e: React.MouseEvent) => {
     e.stopPropagation();
     const step = state.lastStepOk ?? 0;
@@ -150,7 +139,6 @@ export default function AQRPTile({ projectId }: { projectId: string }) {
       return (
         <span className="mt-2 flex items-center gap-2 text-sm text-text-secondary">
           Step {state.currentStep} complete
-          <button type="button" onClick={next} aria-label="Run next step" className="ml-1 rounded p-1 hover:bg-surface-hover"><Play className="h-4 w-4" /></button>
           <button type="button" onClick={download} aria-label="Download last step output" className="rounded p-1 hover:bg-surface-hover"><Download className="h-4 w-4" /></button>
           <button type="button" onClick={remove} aria-label="Delete run" className="rounded p-1 hover:bg-surface-hover"><Trash2 className="h-4 w-4" /></button>
         </span>

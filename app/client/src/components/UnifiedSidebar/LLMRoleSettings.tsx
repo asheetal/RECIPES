@@ -10,7 +10,9 @@ type Settings = {
   roles: string[];
   models: Model[];
   assignments: Record<string, Assignment>;
+  panelMembers: Assignment[];
 };
+const PANEL_MAX = 10;
 const url = () => `${apiBaseUrl()}/api/admin/users/llm-roles`;
 const key = (m: Assignment) => m ? JSON.stringify([m.endpoint, m.model]) : '';
 const errorText = (e: any) =>
@@ -19,6 +21,7 @@ const errorText = (e: any) =>
 export default function LLMRoleSettings({ section = 'models' }: { section?: 'models' | 'workflow' }) {
   const [data, setData] = useState<Settings | null>(null);
   const [draft, setDraft] = useState<Record<string, Assignment>>({});
+  const [panelMembers, setPanelMembers] = useState<Assignment[]>([]);
   const [workflow, setWorkflow] = useState<Workflow>({ uninterruptedIterations: 20, maxDirectorIterations: 5 });
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
@@ -28,12 +31,19 @@ export default function LLMRoleSettings({ section = 'models' }: { section?: 'mod
     const load = (refresh = false) => request.get<Settings>(url()).then(result => {
       if (!mounted) return;
       setData(result);
-      if (!refresh) { setDraft(result.assignments); setWorkflow(result.workflow); }
-      else setDraft(previous => Object.fromEntries(result.roles.map(role => {
-        const current = previous[role];
-        const valid = current && result.models.some(m => key(m) === key(current));
-        return [role, valid ? current : result.assignments[role]];
-      })));
+      if (!refresh) {
+        setDraft(result.assignments);
+        setWorkflow(result.workflow);
+        setPanelMembers(result.panelMembers ?? []);
+      } else {
+        setDraft(previous => Object.fromEntries(result.roles.map(role => {
+          const current = previous[role];
+          const valid = current && result.models.some(m => key(m) === key(current));
+          return [role, valid ? current : result.assignments[role]];
+        })));
+        setPanelMembers(previous => previous.map(member =>
+          member && result.models.some(m => key(m) === key(member)) ? member : null));
+      }
     }).catch(e => { if (mounted) setNotice(errorText(e)); });
     void load();
     const refresh = () => { void load(true); };
@@ -45,9 +55,10 @@ export default function LLMRoleSettings({ section = 'models' }: { section?: 'mod
     setBusy(true);
     setNotice('');
     try {
-      const result = await request.post(url(), { assignments: draft, workflow });
+      const result = await request.post(url(), { assignments: draft, workflow, panelMembers });
       setDraft(result.assignments);
       setWorkflow(result.workflow);
+      setPanelMembers(result.panelMembers ?? []);
       setNotice('Saved.');
     } catch (e) {
       setNotice(errorText(e));
@@ -55,6 +66,8 @@ export default function LLMRoleSettings({ section = 'models' }: { section?: 'mod
       setBusy(false);
     }
   }
+
+  const panelIncomplete = section === 'models' && panelMembers.some(m => m === null);
 
   return (
     <section className="space-y-3">
@@ -94,6 +107,54 @@ export default function LLMRoleSettings({ section = 'models' }: { section?: 'mod
           )}
         </div>
       ))}
+      {section === 'models' && data && (
+        <div className="space-y-3 border-t border-border-medium pt-3">
+          <label className="flex items-center justify-between gap-3 text-sm" htmlFor="panel-size">
+            Assistant panel — number of agents
+            <input id="panel-size" type="number" min={0} max={PANEL_MAX} disabled={busy}
+              className="w-24 rounded-lg border border-border-medium bg-surface-primary px-2 py-2 text-text-primary"
+              value={panelMembers.length}
+              onChange={e => {
+                const n = Math.max(0, Math.min(PANEL_MAX, Number(e.target.value) || 0));
+                setPanelMembers(previous => {
+                  const next = previous.slice(0, n);
+                  while (next.length < n) next.push(null);
+                  return next;
+                });
+                setNotice('');
+              }} />
+          </label>
+          <p className="text-xs text-text-secondary">
+            Only the surgeon can invoke this panel. Each member receives the surgeon&apos;s query and returns a strict JSON report; the report is frozen as advisory evidence.
+          </p>
+          {panelMembers.map((member, i) => (
+            <div key={`panel-${i}`} className="grid grid-cols-[110px_minmax(0,1fr)] items-center gap-3">
+              <label htmlFor={`panel-member-${i}`} className="text-sm">Panel agent {i + 1}</label>
+              <select
+                id={`panel-member-${i}`}
+                value={key(member)}
+                disabled={busy}
+                className="min-w-0 rounded-lg border border-border-medium bg-surface-primary px-2 py-2 text-sm text-text-primary"
+                onChange={e => {
+                  const selected = data.models.find(m => key(m) === e.target.value);
+                  setPanelMembers(previous => previous.map((p, j) => j === i
+                    ? (selected ? { endpoint: selected.endpoint, model: selected.model } : null)
+                    : p));
+                  setNotice('');
+                }}
+              >
+                <option value="">Not assigned</option>
+                {member && !data.models.some(m => key(m) === key(member)) && (
+                  <option value={key(member)} disabled>Previously assigned model unavailable</option>
+                )}
+                {data.models.map(m => (
+                  <option key={key(m)} value={key(m)}>{m.label}</option>
+                ))}
+              </select>
+            </div>
+          ))}
+        </div>
+      )}
       {data && <>
         <div hidden={section !== 'workflow'}>
         <label className="flex items-center justify-between gap-3 text-sm" htmlFor="uninterrupted-iterations">
@@ -105,7 +166,7 @@ export default function LLMRoleSettings({ section = 'models' }: { section?: 'mod
         </label>
         <p className="text-xs text-text-secondary">Model and tool steps. A tool batch finishes before a progress review.</p>
         <label className="flex items-center justify-between gap-3 text-sm" htmlFor="director-iterations">
-          Max Director's iterations
+          Max Director&apos;s iterations
           <input id="director-iterations" type="number" min={0} max={20} disabled={busy}
             className="w-24 rounded-lg border border-border-medium bg-surface-primary px-2 py-2 text-text-primary"
             value={workflow.maxDirectorIterations}
@@ -113,7 +174,7 @@ export default function LLMRoleSettings({ section = 'models' }: { section?: 'mod
         </label>
         <p className="text-xs text-text-secondary">Maximum continuation decisions after the initial set. New settings apply to new requests.</p>
         </div>
-        <Button disabled={busy} onClick={save}>Save {section === 'models' ? 'assignments' : 'workflow settings'}</Button>
+        <Button disabled={busy || panelIncomplete} onClick={save}>Save {section === 'models' ? 'assignments' : 'workflow settings'}</Button>
       </>}
       {notice && <p role="status" className="text-sm">{notice}</p>}
     </section>

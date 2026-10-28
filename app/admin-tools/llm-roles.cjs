@@ -4,13 +4,17 @@ const app=require('node:module').createRequire('/app/package.json');
 const ROLES=Object.freeze([
  'LLM_TRIAGE','LLM_SURGERY','LLM_OPD','LLM_BILLING','LLM_ERP','LLM_DIRECTOR'
 ]);
+const PANEL_MAX=10;
 const collection=()=>app('mongoose').connection.db.collection('lab_llm_role_settings');
 async function catalog(){return require('./model-access.cjs').catalog();}
 async function read(){
  const saved=await collection().findOne({_id:'assignments'});
  return Object.fromEntries(ROLES.map(role=>[role,saved?.assignments?.[role]||null]));
 }
-
+async function readPanelMembers(){
+ const saved=await collection().findOne({_id:'assignments'});
+ return Array.isArray(saved?.panelMembers)?saved.panelMembers:[];
+}
 const WORKFLOW_DEFAULTS=Object.freeze({
  uninterruptedIterations:20,maxDirectorIterations:5
 });
@@ -39,7 +43,9 @@ async function resolve(role){
 async function get(req,res){
  try{
   res.set('Cache-Control','no-store').json({
-   roles:ROLES,models:await catalog(),assignments:await read(),workflow:await readWorkflow()
+   roles:ROLES,models:await catalog(),assignments:await read(),
+   panelMembers:await readPanelMembers(),
+   workflow:await readWorkflow()
   });
  }catch(e){
   console.error('[LLMRoleSettings] Read failed',e);
@@ -63,8 +69,28 @@ async function save(req,res){
    }catch(error){
     return res.status(400).json({message:error.message});
    }
-   const existing=await read();
-   const assignments={};
+  const existingDoc=await collection().findOne({_id:'assignments'});
+  const rawPanel=req.body?.panelMembers;
+  if(rawPanel!=null&&!Array.isArray(rawPanel))
+   return res.status(400).json({message:'Panel members must be an array'});
+  if(Array.isArray(rawPanel)&&rawPanel.length>PANEL_MAX)
+   return res.status(400).json({message:'Assistant panel cannot exceed '+PANEL_MAX+' agents'});
+  let panelMembers;
+  if(Array.isArray(rawPanel)){
+   panelMembers=[];
+   for(let i=0;i<rawPanel.length;i++){
+    const v=rawPanel[i];
+    if(v==null||typeof v!=='object')
+     return res.status(400).json({message:'Panel slot '+(i+1)+' is empty'});
+    if(!allowed.has(JSON.stringify([v.endpoint,v.model])))
+     return res.status(400).json({message:'Panel slot '+(i+1)+': choose an available model'});
+    panelMembers.push({endpoint:v.endpoint,model:v.model});
+   }
+  }else{
+   panelMembers=Array.isArray(existingDoc?.panelMembers)?existingDoc.panelMembers:[];
+  }
+  const existing=Object.fromEntries(ROLES.map(role=>[role,existingDoc?.assignments?.[role]||null]));
+  const assignments={};
   for(const role of ROLES){
    const value=Object.hasOwn(input,role)?input[role]:existing[role];
    if(value==null){assignments[role]=null;continue;}
@@ -78,12 +104,12 @@ async function save(req,res){
    assignments[role]={endpoint:value.endpoint,model:value.model};
   }
   await collection().updateOne({_id:'assignments'},{$set:{
-   assignments,workflow,updatedAt:new Date(),updatedBy:String(req.user.id||req.user._id)
+   assignments,panelMembers,workflow,updatedAt:new Date(),updatedBy:String(req.user.id||req.user._id)
   }},{upsert:true});
-  res.json({assignments,workflow});
+  res.json({assignments,panelMembers,workflow});
  }catch(e){
   console.error('[LLMRoleSettings] Save failed',e);
   res.status(500).json({message:'Unable to save LLM assignments'});
  }
 }
-module.exports={ROLES,read,readWorkflow,resolve,get,save};
+module.exports={ROLES,PANEL_MAX,read,readPanelMembers,readWorkflow,resolve,get,save};

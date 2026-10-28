@@ -1,6 +1,6 @@
 'use strict';
 const NAME = 'aqrp_step_run';
-const FINAL_STEP = 2;
+const { FINAL_STEP } = require('./steps.cjs');
 const def = {
   name: NAME,
   description: `AQRP step dispatcher. Run exactly one step per call, in order. Steps implemented: 1 (load JSON corpus), 2 (topical search). Step 1 input: {file_id}. Step 2 input: {payload:{topics,P01}}. Returns {status:'step_complete', step, output}.`,

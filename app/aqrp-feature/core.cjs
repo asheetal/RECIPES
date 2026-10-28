@@ -1,6 +1,6 @@
 'use strict';
 const crypto = require('node:crypto');
-const FINAL_STEP = 1;
+const { FINAL_STEP } = require('./steps.cjs');
 const IDLE_TIMEOUT_MS = 15 * 60 * 1000;
 function fail(status, message) { const e = new Error(message); e.status = status; throw e; }
 function owner(req) {

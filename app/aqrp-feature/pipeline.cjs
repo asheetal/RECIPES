@@ -35,6 +35,22 @@ async function step2({ filePath }) {
   if (!Array.isArray(payload.topics)) throw new Error("Step 2: topics must be an array");
   if (!payload.P01 || typeof payload.P01 !== "object" || Array.isArray(payload.P01)) throw new Error("Step 2: P01 must be an object");
     if (typeof payload.P01.pool_id !== "string") throw new Error("Step 2: P01.pool_id required");
+    if (!Array.isArray(payload.P01.top_k)) throw new Error("Step 2: P01.top_k must be an array");
+    const REQ_FIELDS = ["authors", "year", "title", "journal", "doi"];
+    for (let i = 0; i < payload.P01.top_k.length; i++) {
+      const k = payload.P01.top_k[i];
+      const at = "Step 2: P01.top_k[" + i + "]";
+      if (!k || typeof k !== "object" || Array.isArray(k)) throw new Error(at + " must be an object");
+      for (const f of REQ_FIELDS) {
+        if (!(f in k) || k[f] === null || k[f] === undefined || k[f] === "") throw new Error(at + " missing required field '" + f + "'");
+      }
+      if (!Array.isArray(k.authors) || k.authors.length === 0) throw new Error(at + ".authors must be a non-empty array");
+      if (!Number.isInteger(k.year)) throw new Error(at + ".year must be an integer");
+      if (typeof k.title !== "string" || !k.title.trim()) throw new Error(at + ".title must be a non-empty string");
+      if (typeof k.journal !== "string" || !k.journal.trim()) throw new Error(at + ".journal must be a non-empty string");
+      const doi = String(k.doi).replace(/^https?:\/\/doi\.org\//i, "");
+      if (!/^10\.\d{4,9}\//.test(doi)) throw new Error(at + ".doi must be a DOI");
+    }
   return { output: Object.assign({}, payload, { status: "TOPICS_IDENTIFIED" }) };
 }
 async function step3({ filePath }) {

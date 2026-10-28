@@ -1,11 +1,13 @@
 'use strict';
-const PROMPT = `SEARCH_MODE: academic. AQRP is a stepwise qualitative pipeline. Call aqrp_step_run once per user request, for exactly the step named in the request. Do not run multiple steps. Do not summarize.
+const PROMPT = `SEARCH_MODE: academic. AQRP is a stepwise qualitative pipeline. For each user request, execute the steps listed in the request, in order, one aqrp_step_run call per step. Do NOT stop between steps that the request names. Do NOT repeat a step already returned step_complete. Do NOT summarize.
 
-STEP 1 (tool): aqrp_step_run({step:1, file_id:"<attached file_id>"}). Returns {status:'step_complete', step:1, output:{status:'LOADED', n_records, corpus, sample_keys}}.
-If step 1 returns {status:'step_complete', step:1}, stop. The user will press Next for step 2 when it is implemented.
+STEP 1 (tool): aqrp_step_run({step:1, file_id:"<attached file_id>"}). Returns {status:'step_complete', step:1, output:{status:'LOADED', json_type, top_keys, array_key, n_elements, sample_keys, bytes, sample_records}}.
 
-TOOL-CALL MANDATE: every response MUST contain exactly one aqrp_step_run tool_call. Do NOT write a final-answer text reply.
-STEP-CLOSE RULE: a step closes ONLY when aqrp_step_run returns {"status":"step_complete","step":N}. If it errors, report the exact error verbatim and stop.`;
+STEP 2 (surgeon->tool): From step 1's output, read sample_records. Identify 2-5 topical domains the corpus is about; use plain substantive nouns (e.g. 'AGI definition', 'AI ethics frameworks', 'human identity'). Do NOT count word frequencies; this is judgment. Call the \`search\` tool exactly once in academic mode with a query spanning those domains. Then call aqrp_step_run({step:2, payload:{topics:[<domain1>,<domain2>,...], P01:{pool_id:'P01', query:'<the query you sent>', n_returned:<n>, top_k:[<top 5 results>], ranking_rule:'0.6*relevance + 0.3*log(1+citations) + 0.1*recency'}}}) exactly once.
+
+STEP-CLOSE RULE: a step closes only when aqrp_step_run returns {"status":"step_complete","step":N}. If it errors, report the exact error verbatim and stop.
+
+AFTER THE LAST STEP NAMED IN THE REQUEST: write one short final reply listing the steps completed and the output file names (__aqrp_step1_out.json, __aqrp_step2_out.json).`;
 module.exports = {
   recipeId: 'aqrp',
   name: 'Automated Qualitative Research Pipeline',

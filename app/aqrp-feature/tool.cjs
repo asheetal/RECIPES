@@ -1,9 +1,9 @@
 'use strict';
 const NAME = 'aqrp_step_run';
-const FINAL_STEP = 1;
+const FINAL_STEP = 2;
 const def = {
   name: NAME,
-  description: `AQRP step dispatcher. Run exactly one step per call, in order. Steps implemented: 1 (load JSON corpus). Step 1 input: {file_id}. Returns {status:'step_complete', step, output}.`,
+  description: `AQRP step dispatcher. Run exactly one step per call, in order. Steps implemented: 1 (load JSON corpus), 2 (topical search). Step 1 input: {file_id}. Step 2 input: {payload:{topics,P01}}. Returns {status:'step_complete', step, output}.`,
 };
 async function resolveProjectId(req) {
   if (req?.__aqrpProjectId) return req.__aqrpProjectId;
@@ -41,6 +41,21 @@ async function invoke(req, args) {
       await stateSvc.completeStep(s, step, result.output, null);
       gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, step, status: 'ok' });
       return JSON.stringify({ status: 'step_complete', step, output: result.output });
+    }
+    if (step === 2) {
+      const payload = args.payload;
+      if (!payload) throw new Error('payload required for step 2');
+      const p2 = typeof payload === 'string' ? JSON.parse(payload) : payload;
+      const os2 = require('node:os'); const path2 = require('node:path'); const fs2 = require('node:fs');
+      const tmp2 = path2.join(os2.tmpdir(), 'aqrp-step2-' + Date.now() + '.json');
+      fs2.writeFileSync(tmp2, JSON.stringify(p2));
+      const pipeline2 = require('/app/aqrp-feature/pipeline.cjs');
+      let result2;
+      try { result2 = await pipeline2.runStep({ step, filePath: tmp2 }); }
+      finally { try { fs2.unlinkSync(tmp2); } catch (_) {} }
+      await stateSvc.completeStep(s, step, result2.output, null);
+      gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, step, status: 'ok' });
+      return JSON.stringify({ status: 'step_complete', step, output: result2.output });
     }
     throw new Error(`step ${step} not routed`);
   } catch (e) {

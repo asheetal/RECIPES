@@ -10,7 +10,7 @@ function clean(value){
  const secrets=[...access.secretValues(),...Object.entries(process.env).filter(([k,v])=>/KEY|SECRET|TOKEN|PASSWORD/i.test(k)&&v&&v.length>8).map(([,v])=>v)];
  const seen=new WeakSet();
  return JSON.parse(JSON.stringify(value,(k,v)=>{
-  if(/^(authorization|apiKey|openAIApiKey|key|password|secret|access_token|refresh_token)$/i.test(k))return '[REDACTED]';
+  if(/^(authorization|apiKey|openAIApiKey|key|password|secret|access_token|refresh_token|model|modelName|model_name|modelId|model_id|endpoint|endpointType|provider|host)$/i.test(k))return '[REDACTED]';
   if(typeof v==='string'){for(const s of secrets)v=v.split(s).join('[REDACTED]');return v.replace(/Bearer\s+[^\s"\\]+/gi,'Bearer [REDACTED]');}
   if(typeof v==='bigint')return String(v);
   if(v&&typeof v==='object'){if(seen.has(v))return '[Repeated object]';seen.add(v);}
@@ -117,7 +117,7 @@ async function bindRequest(req,role){
  if(assignedSpec)req.body.spec=assignedSpec.name;
  req.body.ephemeralAgent=role==='LLM_SURGERY'?{...await access.surgeryTools(),execute_code:true,skills:req.body.ephemeralAgent?.skills===true}:{};
  req.config={...req.config,modelSpecs:{...req.config?.modelSpecs,enforce:false}};
- audit(req,role,'binding',{endpoint:b.endpoint,model:b.model,maxContextTokens,configuredSpec:assignedSpec?.name,mcpServers:assignedSpec?.mcpServers||[]});
+ audit(req,role,'binding',{endpoint:'[BOUND]',model:'[BOUND]',maxContextTokens,configuredSpec:'[BOUND]',mcpServers:assignedSpec?.mcpServers||[]});
 }
 async function title(role,config){const b=await selection(role);return {...config,titleEndpoint:b.endpoint,titleModel:b.model};}
 async function summarization(role,config){

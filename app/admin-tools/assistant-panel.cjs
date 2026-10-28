@@ -5,7 +5,7 @@ const access=require('./model-access.cjs');
 async function callMember(binding, idx, query, schema){
   const conn=await access.connection(binding);
   const sys='You are a panel member. Return ONLY a JSON object matching this schema exactly: '+JSON.stringify(schema)+'. No prose, no markdown fences.';
-  const base={model:conn.model,messages:[{role:'system',content:sys},{role:'user',content:query}],stream:false};
+  const base={model:conn.model,messages:[{role:'system',content:sys},{role:'user',content:query}],stream:false,reasoning:{enabled:false,exclude:true}};
   const send=rf=>fetch(conn.base+'/chat/completions',{
     method:'POST',
     headers:{...(conn.headers||{}),Authorization:'Bearer '+conn.key,'Content-Type':'application/json'},
@@ -36,7 +36,7 @@ async function _run(query, schema){
   const raw=await Promise.all(members.map((m,i)=>callMember(m,i,query,schema).catch(e=>({idx:i,ok:false,error:String(e.message||e)}))));
   const sets=collect(raw);
   return {
-    result:{panel:'LLM_ASSISTANT_PANEL', n:members.length, responses:sets},
+    result:{panel:'LLM_ASSISTANT_PANEL', n:sets.length, responses:sets},
     meta:{n:members.length, ok:sets.length, failed:members.length-sets.length},
     raw
   };

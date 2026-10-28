@@ -5,6 +5,17 @@ import { request, apiBaseUrl } from 'librechat-data-provider';
 type Model = { endpoint: string; model: string; label: string };
 type Assignment = { endpoint: string; model: string } | null;
 type Workflow = { uninterruptedIterations: number; maxDirectorIterations: number };
+type Criterion = { ok: boolean; latency_ms?: number; error?: string; used?: string };
+type SlotTest = {
+  slot: number;
+  ok: boolean;
+  criteria: {
+    connection?: Criterion;
+    silenceable?: Criterion;
+    json_schema?: Criterion;
+    json_object?: Criterion;
+  };
+};
 type Settings = {
   workflow: Workflow;
   roles: string[];
@@ -17,12 +28,25 @@ const url = () => `${apiBaseUrl()}/api/admin/users/llm-roles`;
 const key = (m: Assignment) => m ? JSON.stringify([m.endpoint, m.model]) : '';
 const errorText = (e: any) =>
   e?.response?.data?.message || 'Unable to update LLM assignments';
+const slotTestFrom = (e: any): SlotTest[] | null => {
+  const slots = e?.response?.data?.panelTest?.slots;
+  return Array.isArray(slots) ? slots : null;
+};
+const criterionLabel = (label: string, c?: Criterion) => {
+  if (!c) return null;
+  const state = c.ok ? 'pass' : 'FAIL';
+  const tail = c.ok
+    ? (c.latency_ms != null ? ` (${c.latency_ms} ms, ${c.used ?? 'ok'})` : ` (${c.used ?? 'ok'})`)
+    : ` — ${c.error ?? 'failed'}`;
+  return { label, state, text: `${label}: ${state}${tail}`, ok: c.ok };
+};
 
 export default function LLMRoleSettings({ section = 'models' }: { section?: 'models' | 'workflow' }) {
   const [data, setData] = useState<Settings | null>(null);
   const [draft, setDraft] = useState<Record<string, Assignment>>({});
   const [panelMembers, setPanelMembers] = useState<Assignment[]>([]);
   const [workflow, setWorkflow] = useState<Workflow>({ uninterruptedIterations: 20, maxDirectorIterations: 5 });
+  const [panelTest, setPanelTest] = useState<SlotTest[] | null>(null);
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -54,6 +78,7 @@ export default function LLMRoleSettings({ section = 'models' }: { section?: 'mod
   async function save() {
     setBusy(true);
     setNotice('');
+    setPanelTest(null);
     try {
       const result = await request.post(url(), { assignments: draft, workflow, panelMembers });
       setDraft(result.assignments);
@@ -61,6 +86,8 @@ export default function LLMRoleSettings({ section = 'models' }: { section?: 'mod
       setPanelMembers(result.panelMembers ?? []);
       setNotice('Saved.');
     } catch (e) {
+      const slots = slotTestFrom(e);
+      if (slots) setPanelTest(slots);
       setNotice(errorText(e));
     } finally {
       setBusy(false);
@@ -122,10 +149,11 @@ export default function LLMRoleSettings({ section = 'models' }: { section?: 'mod
                   return next;
                 });
                 setNotice('');
+                setPanelTest(null);
               }} />
           </label>
           <p className="text-xs text-text-secondary">
-            Only the surgeon can invoke this panel. Each member receives the surgeon&apos;s query and returns a strict JSON report; the report is frozen as advisory evidence.
+            Only the surgeon can invoke this panel. Each member receives the surgeon&apos;s query and returns a strict JSON report; the report is frozen as advisory evidence. Each agent is tested for silenceability and JSON conformance on save.
           </p>
           {panelMembers.map((member, i) => (
             <div key={`panel-${i}`} className="grid grid-cols-[110px_minmax(0,1fr)] items-center gap-3">
@@ -141,6 +169,7 @@ export default function LLMRoleSettings({ section = 'models' }: { section?: 'mod
                     ? (selected ? { endpoint: selected.endpoint, model: selected.model } : null)
                     : p));
                   setNotice('');
+                  setPanelTest(null);
                 }}
               >
                 <option value="">Not assigned</option>
@@ -153,6 +182,28 @@ export default function LLMRoleSettings({ section = 'models' }: { section?: 'mod
               </select>
             </div>
           ))}
+          {panelTest && panelTest.length > 0 && (
+            <div role="alert" className="rounded-lg border border-red-300 bg-red-50 p-3 text-xs">
+              <p className="mb-2 font-semibold">Panel eligibility check failed — nothing was saved.</p>
+              {panelTest.map(slot => (
+                <div key={`slot-test-${slot.slot}`} className="mb-2">
+                  <p className="font-medium">Slot {slot.slot}: {slot.ok ? 'pass' : 'FAIL'}</p>
+                  <ul className="ml-4 list-disc">
+                    {[
+                      criterionLabel('Connection', slot.criteria.connection),
+                      criterionLabel('Silenceable (reasoning off)', slot.criteria.silenceable),
+                      criterionLabel('JSON schema conformance', slot.criteria.json_schema),
+                      criterionLabel('JSON object fallback', slot.criteria.json_object),
+                    ].filter(Boolean).map((row, k) => (
+                      <li key={k} className={row!.ok ? 'text-text-secondary' : 'text-red-700'}>
+                        {row!.text}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
       {data && <>

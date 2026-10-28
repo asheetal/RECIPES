@@ -86,6 +86,20 @@ async function save(req,res){
      return res.status(400).json({message:'Panel slot '+(i+1)+': choose an available model'});
     panelMembers.push({endpoint:v.endpoint,model:v.model});
    }
+   const previousPanel=Array.isArray(existingDoc?.panelMembers)?existingDoc.panelMembers:[];
+   const panelChanged=JSON.stringify(panelMembers)!==JSON.stringify(previousPanel);
+   if(panelChanged&&panelMembers.length){
+    let probe;
+    try{ probe=await require('./panel-probe.cjs').probeMembers(panelMembers); }
+    catch(e){ return res.status(500).json({message:'Panel eligibility check failed: '+(e.message||e)}); }
+    const failing=probe.filter(p=>!p.ok);
+    if(failing.length){
+     return res.status(400).json({
+      message:'Assistant panel eligibility check failed for '+(failing.length===1?('slot '+failing[0].slot):(failing.length+' slots')),
+      panelTest:{slots:probe}
+     });
+    }
+   }
   }else{
    panelMembers=Array.isArray(existingDoc?.panelMembers)?existingDoc.panelMembers:[];
   }

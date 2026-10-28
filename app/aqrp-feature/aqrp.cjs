@@ -94,7 +94,7 @@ function registerRoutes(router, projectFilesService) {
       const output = await svc.getOutput(s, step);
       if (output) {
         res.set('Content-Type', 'application/json');
-        res.set('Content-Disposition', `attachment; filename="step${step}_out.json"`);
+        res.set('Content-Disposition', `attachment; filename="aqrp_step${step}_out.json"`);
         return res.send(JSON.stringify(output, null, 2));
       }
       const st = await svc.getState(s);

@@ -6,9 +6,12 @@ const def = {
   description: `AQRP step dispatcher. Run exactly one step per call, in order. Steps implemented: 1 (load JSON corpus). Step 1 input: {file_id}. Returns {status:'step_complete', step, output}.`,
 };
 async function resolveProjectId(req) {
-  const fromReq = req?.body?.projectId || req?.conversation?.chatProjectId || req?.projectId;
-  if (fromReq) return String(fromReq);
-  return null;
+  if (req?.__aqrpProjectId) return req.__aqrpProjectId;
+  const convId = req?.body?.conversationId;
+  if (!convId || convId === 'new') return null;
+  const mongoose = require('mongoose');
+  const convo = await mongoose.connection.db.collection('conversations').findOne({ conversationId: convId }, { projection: { chatProjectId: 1 } });
+  return convo?.chatProjectId || null;
 }
 async function invoke(req, args) {
   const gateway = require('/app/admin-tools/role-gateway.cjs');

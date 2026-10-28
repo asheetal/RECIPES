@@ -8,8 +8,13 @@ const PROBE_SCHEMA=Object.freeze({
       type:'array',
       items:{
         type:'object',
-        properties:{ topic:{type:'string'}, present:{type:'boolean'} },
-        required:['topic','present'],
+        properties:{
+          topic:{type:'string',enum:PROBE_TOPICS},
+          present:{type:'boolean'},
+          evidence_quote:{type:'string'},
+          intensity:{type:'string',enum:['weak','moderate','strong']}
+        },
+        required:['topic','present','evidence_quote','intensity'],
         additionalProperties:false
       }
     }
@@ -17,9 +22,9 @@ const PROBE_SCHEMA=Object.freeze({
   required:['codings'],
   additionalProperties:false
 });
-const PROBE_TEXT='Tracey Follows, CEO of Futuremade, a UK-based futures consultancy, says: As we look to the future, we might assume that the biggest existential threats to humanity lie in climate change and nuclear wars. The confusion and crisis over individuals AI-aided identity could cause individuals turmoil in 8 billion inner worlds, and this could lead to the total destruction of humans from within. If humans can find ways to collaborate, co-pilot and co-mingle with AI in a partnership, it could be that AI can extend and augment our personality and inner selves. All will depend on the power of those in whose hands AI resides - will the governance of these powerful technologies lie in the hands of an elite group of tech titans or in the hands of individual people? There are many implications around autonomy, not least for those working in the creative industries and arts. The whole notion of authorship is dead. There will no longer be any original creative output that is created solely by humans. AI will, from now on, always have a part to play, mainly in mixing and remixing and in general re-arranging what already has been created by others. Can we even be the author of our own personal identity in the digital world? Likely not, as the role of AI or personal agents will be to study and monitor us and represent us in virtual rather than physical media. If we become disconnected from our own identity creation because a machine is doing much of it on our behalf, we will start to have identity crises. Plural identities residing in external AI agents could well lead to severe mental challenges, especially for those in the West who are culturally wedded to the notion of authenticity. Education will play a major role in our future. As AI becomes integrated into education over the next five to seven years, we will see whether it may be destined to be used for indoctrination or for positive exploration.';
-const PROBE_SYSTEM='You are a qualitative researcher. Return ONLY a JSON object matching this schema exactly: '+JSON.stringify(PROBE_SCHEMA)+'. No prose, no markdown fences.';
-const PROBE_USER='Code the text below against these four topics: '+PROBE_TOPICS.join('; ')+'. Return exactly four coding rows, one per topic, in the given order. For each: topic (exactly as listed), present (true if discussed, false otherwise). Text:\n\n'+PROBE_TEXT;
+const PROBE_TEXT=`Tracey Follows, CEO of Futuremade, a UK-based futures consultancy, says: As we look to the future, we might assume that the biggest existential threats to humanity lie in climate change and nuclear wars. As massive as those problems are, they are problems of the 'outer world,' ones that we can apply ourselves to. The confusion and crisis over individuals' AI-aided (or addled) identity/identities could cause individuals turmoil in 8 billion inner worlds, and this could lead to the total destruction of humans from within. This is the real existential threat of the 21st Century. But, if humans can find ways to collaborate, co-pilot and co-mingle with AI in a partnership, it could be that AI can extend and augment our personality and inner selves. If AI acts as an agent on our behalf while retaining our agency and can talk like us, work like us, promote our goals and negotiate on our behalf, it could augment every human to fulfill their potential. All will depend on the power of those in whose hands AI resides - will the governance of these powerful technologies lie in the hands of an elite group of tech titans or in the hands of individual people? It is the governance of AI that is in question. There are many implications around autonomy, not least for those working in the creative industries and arts. It could be said that the whole notion of 'authorship' is dead. Much like when Walter Benjamin grieved the loss of awe in art at the advent of mechanical photography, we are now grieving the loss of awe in identity with the advent of digital technology. For there will no longer be any 'original' creative output that is created solely by humans. AI will, from now on, always have a part to play, mainly in mixing and remixing and in general re-arranging what already has been created by others. We might call it copying. If this is the case, we might say that this is the 'death of the artist', for in the digital world, it seems, there are no originals, only copies, and therefore no originator. Ergo, no authentic 'author' as such. Can we even be the 'author' of our own personal identity in the digital world? Likely not, as the role of AI or personal agents will be to study and monitor us and represent us in virtual rather than physical media. To this degree much of our own identity will be presented and re-presented by AI. If we become disconnected from our own identity creation because a machine is doing much of it on our behalf, we will start to have identity crises. Plural identities residing in external AI agents could well lead to severe mental challenges, especially for those in the West who are culturally wedded to the notion of 'authenticity.' Education will play a major role in our future. As AI becomes integrated into education over the next five to seven years, we will see whether it may be destined to be used for indoctrination or for positive exploration.`;
+const PROBE_SYSTEM='You are a panel member. Return ONLY a JSON object matching this schema exactly: '+JSON.stringify(PROBE_SCHEMA)+'. No prose, no markdown fences.';
+const PROBE_USER='You are a qualitative management researcher. Code the text below against exactly these four topics: '+PROBE_TOPICS.map((t,i)=>(i+1)+'. '+t).join('; ')+'. Return exactly four coding rows, one per topic, in the given order. For each: present (true if the topic is discussed, false otherwise), evidence_quote (a verbatim span of <=25 words copied exactly from the text, or empty string if not present), intensity (weak/moderate/strong based on how central the topic is to the argument). Do not paraphrase the evidence_quote; it must be word-for-word from the text. Text:\n\n'+PROBE_TEXT;
 const SILENCEABLE_TIMEOUT_MS=10000;
 const REALISTIC_TIMEOUT_MS=30000;
 const CHATTINESS_MAX=0;
@@ -58,7 +63,7 @@ async function probeSlot(binding){
   {
     const t=Date.now();
     try{
-      const r=await send({model:conn.model,messages:[{role:'system',content:PROBE_SYSTEM},{role:'user',content:PROBE_USER}],max_tokens:512,stream:false,reasoning:{enabled:false,exclude:true},response_format:{type:'json_schema',json_schema:{name:'probe',schema:PROBE_SCHEMA,strict:true}}},REALISTIC_TIMEOUT_MS);
+      const r=await send({model:conn.model,messages:[{role:'system',content:PROBE_SYSTEM},{role:'user',content:PROBE_USER}],max_tokens:1024,stream:false,reasoning:{enabled:false,exclude:true},response_format:{type:'json_schema',json_schema:{name:'panel_answer',schema:PROBE_SCHEMA,strict:true}}},REALISTIC_TIMEOUT_MS);
       const elapsed=Date.now()-t;
       criteria.json_schema={ok:false,latency_ms:elapsed};
       if(r.ok){
@@ -74,18 +79,14 @@ async function probeSlot(binding){
       }else{const t2=await r.text().catch(()=>'');criteria.json_schema.error='HTTP '+r.status+' '+String(t2).slice(0,200);}
     }catch(e){
       const elapsed=Date.now()-t;
-      if(isTimeout(e)){
-        timedOut=true;
-        criteria.json_schema={ok:false,latency_ms:elapsed,error:'timed out after '+(elapsed/1000).toFixed(1)+'s under realistic load — likely reasoning'};
-      } else {
-        criteria.json_schema={ok:false,latency_ms:elapsed,error:String(e.message||e).slice(0,300)};
-      }
+      if(isTimeout(e)){timedOut=true;criteria.json_schema={ok:false,latency_ms:elapsed,error:'timed out after '+(elapsed/1000).toFixed(1)+'s under realistic load — likely reasoning'};}
+      else{criteria.json_schema={ok:false,latency_ms:elapsed,error:String(e.message||e).slice(0,300)};}
     }
   }
   if(!criteria.json_schema.ok&&!timedOut){
     const t=Date.now();
     try{
-      const r=await send({model:conn.model,messages:[{role:'system',content:PROBE_SYSTEM},{role:'user',content:PROBE_USER}],max_tokens:512,stream:false,reasoning:{enabled:false,exclude:true},response_format:{type:'json_object'}},REALISTIC_TIMEOUT_MS);
+      const r=await send({model:conn.model,messages:[{role:'system',content:PROBE_SYSTEM},{role:'user',content:PROBE_USER}],max_tokens:1024,stream:false,reasoning:{enabled:false,exclude:true},response_format:{type:'json_object'}},REALISTIC_TIMEOUT_MS);
       const elapsed=Date.now()-t;
       criteria.json_object={ok:false,latency_ms:elapsed};
       if(r.ok){
@@ -101,12 +102,8 @@ async function probeSlot(binding){
       }else{const t2=await r.text().catch(()=>'');criteria.json_object.error='HTTP '+r.status+' '+String(t2).slice(0,200);}
     }catch(e){
       const elapsed=Date.now()-t;
-      if(isTimeout(e)){
-        timedOut=true;
-        criteria.json_object={ok:false,latency_ms:elapsed,error:'timed out after '+(elapsed/1000).toFixed(1)+'s under realistic load — likely reasoning'};
-      } else {
-        criteria.json_object={ok:false,latency_ms:elapsed,error:String(e.message||e).slice(0,300)};
-      }
+      if(isTimeout(e)){timedOut=true;criteria.json_object={ok:false,latency_ms:elapsed,error:'timed out after '+(elapsed/1000).toFixed(1)+'s under realistic load — likely reasoning'};}
+      else{criteria.json_object={ok:false,latency_ms:elapsed,error:String(e.message||e).slice(0,300)};}
     }
   }
   if(timedOut){

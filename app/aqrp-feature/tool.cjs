@@ -3,7 +3,7 @@ const NAME = 'aqrp_step_run';
 const { FINAL_STEP } = require('./steps.cjs');
 const def = {
   name: NAME,
-  description: `AQRP step dispatcher. Run exactly one step per call, in order. Steps implemented: 1 (load JSON corpus), 2 (topical search). Step 1 input: {file_id}. Step 2 input: {payload:{topics,P01}}. Returns {status:'step_complete', step, output}.`,
+  description: `AQRP step dispatcher. Run exactly one step per call, in order. Steps implemented: 1 (load JSON corpus), 2 (topical search), 3 (familiarization). Step 1 input: {file_id}. Step 2 input: {payload:{topics,P01}}. Step 3 input: {payload:{coding_brief,notes,rdf_records}} where rdf_records is an array (R3 scope, P01 pool; R3a granularity, P00 methods pool). Returns {status:'step_complete', step, output}.`,
 };
 async function resolveProjectId(req) {
   if (req?.__aqrpProjectId) return req.__aqrpProjectId;
@@ -41,6 +41,40 @@ async function invoke(req, args) {
       await stateSvc.completeStep(s, step, result.output, null);
       gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, step, status: 'ok' });
       return JSON.stringify({ status: 'step_complete', step, output: result.output });
+    }
+    if (step === 3) {
+      const payload = args.payload;
+      if (!payload) throw new Error('payload required for step 3');
+      const p3 = typeof payload === 'string' ? JSON.parse(payload) : payload;
+      const os3 = require('node:os'); const path3 = require('node:path'); const fs3 = require('node:fs');
+      const tmp3 = path3.join(os3.tmpdir(), 'aqrp-step3-' + Date.now() + '.json');
+      fs3.writeFileSync(tmp3, JSON.stringify(p3));
+      const pipeline3 = require('/app/aqrp-feature/pipeline.cjs');
+      let result3;
+      try { result3 = await pipeline3.runStep({ step, filePath: tmp3 }); }
+      finally { try { fs3.unlinkSync(tmp3); } catch (_) {} }
+      await stateSvc.completeStep(s, step, result3.output, null);
+      gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, step, status: 'ok' });
+      const s2 = await stateSvc.getOutput(s, '2');
+      const pool = (s2 && s2.P01 && Array.isArray(s2.P01.top_k)) ? s2.P01.top_k : [];
+      const norm = (d) => String(d || '').replace(/^https?:\/\/doi\.org\//i, '').trim();
+      const poolDois = new Set(pool.map(k => norm(k.doi)));
+      const METHODS_NORMS = new Set(['10.1177/1094428112452151','10.1191/1478088706qp063oa','10.5465/amr.2009.0486']);
+      const rdfs = result3.output.rdf_records || [];
+      for (const r of rdfs) {
+        const cites = Array.isArray(r.citations_used) ? r.citations_used : [];
+        if ((r.citation_status === 'pool_selected' || r.citation_status === 'partial') && cites.length === 0) {
+          throw new Error('Step 3: ' + r.rdf_id + '.citations_used must be non-empty when citation_status is ' + r.citation_status);
+        }
+        if (r.pool_id === 'P01') {
+          const bad = cites.filter(d => !poolDois.has(norm(d)));
+          if (bad.length) throw new Error('Step 3: ' + r.rdf_id + ' cites DOIs not in P01.top_k: ' + bad.join(', '));
+        } else if (r.pool_id === 'P00') {
+          const bad = cites.filter(d => !METHODS_NORMS.has(norm(d)));
+          if (bad.length) throw new Error('Step 3: ' + r.rdf_id + ' cites DOIs not in P00 methods allowlist: ' + bad.join(', '));
+        }
+      }
+      return JSON.stringify({ status: 'step_complete', step, output: result3.output });
     }
     if (step === 2) {
       const payload = args.payload;

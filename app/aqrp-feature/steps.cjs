@@ -13,11 +13,12 @@
 // from here so a single bump is enough and the "run closed after step 1"
 // failure mode cannot recur.
 // ============================================================
-const FINAL_STEP = 2;
+const FINAL_STEP = 3;
 
 const IMPLEMENTED = {
   1: { name: 'Load',           type: 'tool' },
   2: { name: 'Topical search', type: 'surgeon->tool' },
+  3: { name: 'Familiarization', type: 'surgeon' },
 };
 
 module.exports = { FINAL_STEP, IMPLEMENTED };

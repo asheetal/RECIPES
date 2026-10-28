@@ -3,6 +3,7 @@ const FINAL_STEP = 3;
 async function runStep({ step, filePath }) {
   if (Number(step) === 3) return step3({ filePath });
   if (Number(step) === 2) return step2({ filePath });
+  if (Number(step) === 3) return step3({ filePath });
   if (Number(step) !== 1) throw new Error(`step ${step} not implemented yet (FINAL_STEP=${FINAL_STEP})`);
   const fs = require("node:fs");
   const raw = fs.readFileSync(filePath, "utf8");
@@ -58,9 +59,49 @@ async function step3({ filePath }) {
   const raw = fs.readFileSync(filePath, "utf8");
   let payload;
   try { payload = JSON.parse(raw); } catch (e) { throw new Error("step 3 payload is not valid JSON: " + e.message); }
-  if (typeof payload.coding_brief !== "object" || payload.coding_brief === null || Array.isArray(payload.coding_brief)) throw new Error("Step 3: coding_brief must be an object");
-  if (!Array.isArray(payload.notes)) throw new Error("Step 3: notes must be an array");
+  if (payload.rdf_record) throw new Error("Step 3: use rdf_records (array), not rdf_record (singular)");
+  const cb = payload.coding_brief;
+  if (!cb || typeof cb !== "object" || Array.isArray(cb)) throw new Error("Step 3: coding_brief must be an object");
+  for (const f of ["code_for", "ignore", "flag"]) {
+    if (!Array.isArray(cb[f])) throw new Error("Step 3: coding_brief." + f + " must be an array");
+    if (cb[f].some(x => typeof x !== "string" || !x.trim())) throw new Error("Step 3: coding_brief." + f + " must contain non-empty strings");
+  }
+  if (cb.code_for.length === 0) throw new Error("Step 3: coding_brief.code_for must be non-empty");
+  if (typeof cb.granularity !== "string" || !cb.granularity.trim()) throw new Error("Step 3: coding_brief.granularity required");
+  if (typeof payload.notes !== "string") throw new Error("Step 3: notes must be a string");
+  if (payload.notes.trim().length < 600) throw new Error("Step 3: notes must be at least 600 characters (a familiarization memo, not a summary)");
+  const rdfs = payload.rdf_records;
+  if (!Array.isArray(rdfs) || rdfs.length < 2) throw new Error("Step 3: rdf_records must be an array of at least 2 (R3 scope + R3a granularity)");
+  const METHODS_NORMS = new Set(["10.1177/1094428112452151","10.1191/1478088706qp063oa","10.5465/amr.2009.0486"]);
+  const norm = (d) => String(d || "").replace(/^https?:\/\/doi\.org\//i, "").trim();
+  const seen = new Set();
+  for (let i = 0; i < rdfs.length; i++) {
+    const r = rdfs[i];
+    if (!r || typeof r !== "object" || Array.isArray(r)) throw new Error("Step 3: rdf_records[" + i + "] must be an object");
+    if (typeof r.rdf_id !== "string" || !r.rdf_id) throw new Error("Step 3: rdf_records[" + i + "].rdf_id required");
+    if (seen.has(r.rdf_id)) throw new Error("Step 3: duplicate rdf_id " + r.rdf_id);
+    seen.add(r.rdf_id);
+    if (!Array.isArray(r.options) || r.options.length < 2) throw new Error("Step 3: rdf_records[" + i + "].options must be array >=2");
+    if (typeof r.chosen !== "string" || !r.options.includes(r.chosen)) throw new Error("Step 3: rdf_records[" + i + "].chosen must be one of options");
+    if (typeof r.rationale !== "string" || !r.rationale.trim()) throw new Error("Step 3: rdf_records[" + i + "].rationale required");
+    if (!Array.isArray(r.citations_used)) throw new Error("Step 3: rdf_records[" + i + "].citations_used must be an array");
+    if (r.pool_id !== "P01" && r.pool_id !== "P00") throw new Error("Step 3: rdf_records[" + i + "].pool_id must be 'P01' (topical) or 'P00' (methods)");
+    const CS = ["pool_selected", "partial", "none_gut_feeling"];
+    if (!CS.includes(r.citation_status)) throw new Error("Step 3: rdf_records[" + i + "].citation_status must be one of " + CS.join(","));
+    if (r.citation_status === "none_gut_feeling" && (typeof r.gut_rationale !== "string" || !r.gut_rationale.trim())) throw new Error("Step 3: rdf_records[" + i + "].gut_rationale required when none_gut_feeling");
+  }
+  const scope = rdfs.find(r => r.rdf_id === "R3");
+  if (!scope) throw new Error("Step 3: missing R3 (scope decision RDF)");
+  if (scope.pool_id !== "P01") throw new Error("Step 3: R3.pool_id must be 'P01' (scope cites the topical pool)");
+  const gr = rdfs.find(r => r.rdf_id === "R3a");
+  if (!gr) throw new Error("Step 3: missing R3a (granularity decision RDF)");
+  if (gr.pool_id !== "P00") throw new Error("Step 3: R3a.pool_id must be 'P00' (granularity cites methods pool)");
+  if (gr.citation_status !== "none_gut_feeling") {
+    const ok = gr.citations_used.some(d => METHODS_NORMS.has(norm(d)));
+    if (!ok) throw new Error("Step 3: R3a.citations_used must include a coding-granularity norm (10.1177/1094428112452151 Gioia 2013, 10.1191/1478088706qp063oa Braun&Clarke 2006, or 10.5465/amr.2009.0486 Corley&Gioia 2011)");
+  }
   return { output: Object.assign({}, payload, { status: "FAMILIARIZATION_COMPLETE" }) };
 }
+
 async function readStep() { return null; }
 module.exports = { runStep, readStep, FINAL_STEP };

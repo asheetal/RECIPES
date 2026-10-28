@@ -149,6 +149,10 @@ services:
       target: /app/asp-feature
       read_only: true
     - type: bind
+      source: /home/sheetal/librechat-src/app/aqrp-feature
+      target: /app/aqrp-feature
+      read_only: true
+    - type: bind
       source: /home/sheetal/librechat-src/app/workflow-feature
       target: /app/workflow-feature
       read_only: true

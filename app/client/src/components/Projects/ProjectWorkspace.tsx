@@ -15,6 +15,7 @@ import ProjectChatList from './ProjectChatList';
 import ProjectFiles from './ProjectFiles';
 import HelloWorldRecipe from './HelloWorldRecipe';
 import AutomatedSEMRecipe from './AutomatedSEMRecipe';
+import AQRPTile from './AQRPTile';
 import store from '~/store';
 
 type ChatSortField = 'updatedAt' | 'createdAt';
@@ -163,7 +164,10 @@ export default function ProjectWorkspace() {
           >
             {localize('com_ui_recipes')}
           </h2>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <AutomatedSEMRecipe projectId={project._id} />
+            <AQRPTile projectId={project._id} />
+            <HelloWorldRecipe projectId={project._id} />
             <button
               type="button"
               onClick={startProjectChat}
@@ -180,15 +184,13 @@ export default function ProjectWorkspace() {
                   aria-hidden="true"
                 />
                 <span className="truncate text-base font-semibold text-text-primary">
-                  {localize('com_ui_chat_recipe')}
+                  Conversations
                 </span>
               </span>
               <span className="mt-2 line-clamp-2 text-sm text-text-secondary">
                 {localize('com_ui_chat_recipe_description')}
               </span>
             </button>
-            <AutomatedSEMRecipe projectId={project._id} />
-            <HelloWorldRecipe projectId={project._id} />
           </div>
         </section>
 

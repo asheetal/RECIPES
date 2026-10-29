@@ -103,6 +103,12 @@ function makeTally(db, runId, projectId) {
   const col = db.collection('aqrp_progress');
   const rows = db.collection('aqrp_rows');
   const runs = db.collection('aqrpruns');
+  async function sync() {
+    const doc = await col.findOne({ runId, step: 4 });
+    if (!doc) return;
+    const now = new Date();
+    await runs.updateOne({ projectId }, { $set: { progress: { step: 4, done: doc.done || 0, total: doc.total || 0, inFlight: Math.max(0, doc.inFlight || 0), etaSeconds: doc.etaSeconds == null ? null : doc.etaSeconds, updatedAt: now }, lastProgressAt: now } });
+  }
   return {
     async ensure(total, concurrency) {
       const done = await rows.find({ runId, step: 4 }, { projection: { record_id: 1, _id: 0 } }).toArray();
@@ -112,12 +118,13 @@ function makeTally(db, runId, projectId) {
         { $set: { total, done: skipIds.length, inFlight: 0, concurrency, updatedAt: new Date() }, $setOnInsert: { startedAt: new Date(), etaSeconds: null, n: null } },
         { upsert: true }
       );
+      await sync();
       return skipIds;
     },
     async onEvent(ev) {
       const now = new Date();
-      if (ev.event === 'start') { await col.updateOne({ runId, step: 4 }, { $inc: { inFlight: 1 }, $set: { updatedAt: now } }); return; }
-      if (ev.event === 'error') { await col.updateOne({ runId, step: 4 }, { $inc: { inFlight: -1 }, $set: { updatedAt: now } }); return; }
+      if (ev.event === 'start') { await col.updateOne({ runId, step: 4 }, { $inc: { inFlight: 1 }, $set: { updatedAt: now } }); await sync(); return; }
+      if (ev.event === 'error') { await col.updateOne({ runId, step: 4 }, { $inc: { inFlight: -1 }, $set: { updatedAt: now } }); await sync(); return; }
       if (ev.event !== 'done') return;
       const res = await rows.updateOne(
         { runId, step: 4, record_id: String(ev.record_id) },
@@ -137,7 +144,7 @@ function makeTally(db, runId, projectId) {
       const rate = done > 0 ? done / (elapsed / 1000) : 0;
       const etaSeconds = rate > 0 ? Math.max(0, Math.round((total - done) / rate)) : null;
       await col.updateOne({ runId, step: 4 }, { $set: { etaSeconds } });
-      await runs.updateOne({ projectId }, { $set: { progress: { step: 4, done, total, inFlight: Math.max(0, doc ? doc.inFlight : 0), etaSeconds, updatedAt: now }, lastProgressAt: now } });
+      await sync();
     },
     async envelope(records, recordId) {
       const doc = await col.findOne({ runId, step: 4 });

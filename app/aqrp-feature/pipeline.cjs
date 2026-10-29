@@ -129,11 +129,15 @@ async function step4({ filePath, expectedRecordIds }) {
       if (typeof row.record_id !== "string" || !row.record_id.trim()) throw new Error(ra + ".record_id required");
       if (!Array.isArray(row.codes) || row.codes.length === 0) throw new Error(ra + ".codes must be a non-empty array");
       if (row.codes.some(c => typeof c !== "string" || !c.trim())) throw new Error(ra + ".codes must contain non-empty strings");
+      const canon = (x) => String(x).trim().replace(/\.+$/, '').toLowerCase();
+      const SENT = [' about ', ' spanning ', 'claims', 'claim ', 'describe', 'prediction', 'normative vs', 'descriptive claim', 'ambiguity ', 'ambiguous '];
+      row.codes = row.codes.map(canon);
       for (const c of row.codes) {
+        if (!c) throw new Error(ra + ".codes has an empty code after canonicalization");
         if (c.length > 40) throw new Error(ra + ".codes has an over-long code (" + c.length + " chars, likely echoed text): " + c.slice(0, 80));
-        if (c !== c.toLowerCase()) throw new Error(ra + ".codes must be lowercase: " + c);
-        if (c.trim().split(/\s+/).length > 6) throw new Error(ra + ".codes code is a sentence, not a code: " + c.slice(0, 100));
-        if (/\.$/.test(c.trim())) throw new Error(ra + ".codes code ends with a period: " + c);
+        if (c.split(/\s+/).length > 6) throw new Error(ra + ".codes code is a sentence, not a code: " + c.slice(0, 100));
+        const padded = ' ' + c + ' ';
+        for (const m of SENT) if (padded.includes(m)) throw new Error(ra + ".codes code is a sentence marker: " + c.slice(0, 80));
       }
       if (typeof row.quote !== "string" || !row.quote.trim()) throw new Error(ra + ".quote required (verbatim span from the record justifying the codes)");
       const key = row.record_id + "|" + r.coder_id;

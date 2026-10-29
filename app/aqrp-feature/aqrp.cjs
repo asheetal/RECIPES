@@ -181,7 +181,15 @@ function registerRoutes(router, projectFilesService) {
       const stepNums = Object.keys(st.steps || {}).map(Number).filter(n => Number.isInteger(n) && n >= 1).sort((a, b) => a - b);
       for (const n of stepNums) {
         const out = await svc.getOutput(s, n);
-        if (out) { zip.file(`__aqrp_step${n}_out.json`, JSON.stringify(out, null, 2)); count++; }
+        if (out) {
+          zip.file(`__aqrp_step${n}_out.json`, JSON.stringify(out, null, 2));
+          if (n === 32 && out.submission_paper_tex) {
+            zip.file('submission_paper.tex', out.submission_paper_tex);
+            if (out.supplementary_rdf_tex) zip.file('supplementary_rdf.tex', out.supplementary_rdf_tex);
+            if (out.aqrp_report) zip.file('aqrp_report.rdf', JSON.stringify(out.aqrp_report, null, 2));
+          }
+          count++;
+        }
       }
       const out4 = await svc.getOutput(s, 4);
       if (!out4) {

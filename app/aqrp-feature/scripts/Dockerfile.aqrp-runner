@@ -1,0 +1,6 @@
+FROM rocker/verse:4.3.3
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    texlive-latex-extra texlive-fonts-recommended lmodern \
+ && rm -rf /var/lib/apt/lists/*
+COPY app/aqrp-feature/scripts/ /opt/aqrp/scripts/
+WORKDIR /opt/aqrp

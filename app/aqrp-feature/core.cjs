@@ -130,6 +130,18 @@ function makeService(repo, deps) {
     }
     return { panel: 'LLM_ASSISTANT_PANEL_BATCH', n, responses: slots.map((x, i) => ({ coder_id: x.coder_id || ('panel-slot-' + i), rows: x.rows })) };
   }
-  return { scope, getState, startRun, completeStep, failRun, killRun, deleteRun, getOutput, getExtra, getMaxBatchRecords, getBatchConcurrency, assembleStep4Envelope };
+  async function getStepOutput(s, n) {
+    const r = await repo.getRun(s);
+    if (!r || !r.steps || !r.steps[String(n)]) return null;
+    return r.steps[String(n)].output || null;
+  }
+  async function getAllStepOutputs(s) {
+    const r = await repo.getRun(s);
+    if (!r || !r.steps) return {};
+    const out = {};
+    for (const [k, v] of Object.entries(r.steps)) out[k] = (v && v.output) || null;
+    return out;
+  }
+  return { scope, getState, startRun, completeStep, failRun, killRun, deleteRun, getOutput, getExtra, getStepOutput, getAllStepOutputs, getMaxBatchRecords, getBatchConcurrency, assembleStep4Envelope };
 }
 module.exports = { makeService, sha256, FINAL_STEP };

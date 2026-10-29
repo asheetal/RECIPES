@@ -3,7 +3,7 @@ const NAME = 'aqrp_step_run';
 const { FINAL_STEP } = require('./steps.cjs');
 const def = {
   name: NAME,
-  description: `AQRP step dispatcher. Run exactly one step per call, in order. Steps implemented: 1 (load JSON corpus), 2 (topical search), 3 (familiarization). Step 1 input: {file_id}. Step 2 input: {payload:{topics,P01}}. Step 3 input: {payload:{coding_brief,notes,rdf_records}} where rdf_records is an array (R3 scope, P01 pool; R3a granularity, P00 methods pool). Returns {status:'step_complete', step, output}.`,
+  description: `AQRP step dispatcher. Run exactly one step per call, in order. Steps implemented: 1 (load JSON corpus), 2 (topical search), 3 (familiarization), 4 (open coding). Step 1 input: {file_id}. Step 2 input: {payload:{topics,P01}}. Step 3 input: {payload:{coding_brief,notes,rdf_records}} where rdf_records is an array (R3 scope, P01 pool; R3a granularity, P00 methods pool). Returns {status:'step_complete', step, output}.`,
 };
 async function resolveProjectId(req) {
   if (req?.__aqrpProjectId) return req.__aqrpProjectId;
@@ -41,6 +41,21 @@ async function invoke(req, args) {
       await stateSvc.completeStep(s, step, result.output, null);
       gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, step, status: 'ok' });
       return JSON.stringify({ status: 'step_complete', step, output: result.output });
+    }
+    if (step === 4) {
+      const payload = args.payload;
+      if (!payload) throw new Error('payload required for step 4');
+      const p4 = typeof payload === 'string' ? JSON.parse(payload) : payload;
+      const os4 = require('node:os'); const path4 = require('node:path'); const fs4 = require('node:fs');
+      const tmp4 = path4.join(os4.tmpdir(), 'aqrp-step4-' + Date.now() + '.json');
+      fs4.writeFileSync(tmp4, JSON.stringify(p4));
+      const pipeline4 = require('/app/aqrp-feature/pipeline.cjs');
+      let result4;
+      try { result4 = await pipeline4.runStep({ step, filePath: tmp4 }); }
+      finally { try { fs4.unlinkSync(tmp4); } catch (_) {} }
+      await stateSvc.completeStep(s, step, result4.output, null);
+      gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, step, status: 'ok' });
+      return JSON.stringify({ status: 'step_complete', step, output: result4.output });
     }
     if (step === 3) {
       const payload = args.payload;

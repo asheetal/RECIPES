@@ -2,6 +2,7 @@
 const FINAL_STEP = 3;
 async function runStep({ step, filePath }) {
   if (Number(step) === 3) return step3({ filePath });
+  if (Number(step) === 4) return step4({ filePath });
   if (Number(step) === 2) return step2({ filePath });
   if (Number(step) === 3) return step3({ filePath });
   if (Number(step) !== 1) throw new Error(`step ${step} not implemented yet (FINAL_STEP=${FINAL_STEP})`);
@@ -103,5 +104,40 @@ async function step3({ filePath }) {
   return { output: Object.assign({}, payload, { status: "FAMILIARIZATION_COMPLETE" }) };
 }
 
+async function step4({ filePath }) {
+  const fs = require("node:fs");
+  const raw = fs.readFileSync(filePath, "utf8");
+  let payload;
+  try { payload = JSON.parse(raw); } catch (e) { throw new Error("step 4 payload is not valid JSON: " + e.message); }
+  const cm = payload.code_matrix;
+  if (!Array.isArray(cm) || cm.length === 0) throw new Error("Step 4: code_matrix must be a non-empty array");
+  const seen = new Set();
+  for (let i = 0; i < cm.length; i++) {
+    const row = cm[i];
+    const at = "Step 4: code_matrix[" + i + "]";
+    if (!row || typeof row !== "object" || Array.isArray(row)) throw new Error(at + " must be an object");
+    if (typeof row.record_id !== "string" || !row.record_id.trim()) throw new Error(at + ".record_id required");
+    if (typeof row.coder_id !== "string" || !row.coder_id.trim()) throw new Error(at + ".coder_id required");
+    if (!Array.isArray(row.codes) || row.codes.length === 0) throw new Error(at + ".codes must be a non-empty array");
+    if (row.codes.some(c => typeof c !== "string" || !c.trim())) throw new Error(at + ".codes must contain non-empty strings");
+    const key = row.record_id + "|" + row.coder_id;
+    if (seen.has(key)) throw new Error(at + " duplicate record_id/coder_id pair " + key);
+    seen.add(key);
+  }
+  const dis = payload.disagreements;
+  if (!Array.isArray(dis)) throw new Error("Step 4: disagreements must be an array");
+  for (let i = 0; i < dis.length; i++) {
+    const d = dis[i];
+    const at = "Step 4: disagreements[" + i + "]";
+    if (!d || typeof d !== "object" || Array.isArray(d)) throw new Error(at + " must be an object");
+    if (typeof d.record_id !== "string" || !d.record_id.trim()) throw new Error(at + ".record_id required");
+    if (!d.coders || typeof d.coders !== "object" || Array.isArray(d.coders)) throw new Error(at + ".coders must be an object");
+    for (const k of Object.keys(d.coders)) {
+      if (typeof k !== "string" || !k.trim()) throw new Error(at + ".coders has empty coder id");
+      if (!Array.isArray(d.coders[k])) throw new Error(at + ".coders." + k + " must be an array");
+    }
+  }
+  return { output: Object.assign({}, payload, { status: "OPEN_CODING_COMPLETE" }) };
+}
 async function readStep() { return null; }
 module.exports = { runStep, readStep, FINAL_STEP };

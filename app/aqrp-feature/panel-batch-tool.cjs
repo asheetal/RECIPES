@@ -41,6 +41,12 @@ async function invoke(req, args) {
       try { schema = JSON.parse(schema); } catch (e) { throw new Error('schema string is not valid JSON: ' + e.message); }
     }
     if (!schema || typeof schema !== 'object' || Array.isArray(schema)) throw new Error('schema required (JSON Schema object or JSON string)');
+    if (!schema.type && schema.properties && typeof schema.properties === 'object') {
+      schema = { ...schema, type: 'object' };
+    }
+    if (typeof records === 'string') {
+      try { records = JSON.parse(records); } catch (e) { throw new Error('records string is not valid JSON: ' + e.message); }
+    }
     if (!Array.isArray(records) || !records.length) throw new Error('records required (non-empty array)');
     const mod = require('/app/admin-tools/assistant-panel-batch.cjs');
     const result = await mod.batch({ query, schema, records });
@@ -57,7 +63,7 @@ function makeTool(req) {
   return new DynamicStructuredTool({
     name: NAME,
     description: def.description,
-    schema: z.object({ plan: z.any().optional(), query: z.string(), schema: z.union([z.record(z.any()), z.string()]), records: z.array(z.any()).optional(), file_id: z.string().optional(), fileId: z.string().optional(), projectFileId: z.string().optional() }).strip(),
+    schema: z.object({ plan: z.any().optional(), query: z.string(), schema: z.union([z.record(z.any()), z.string()]), records: z.union([z.array(z.any()), z.string()]).optional(), file_id: z.string().optional(), fileId: z.string().optional(), projectFileId: z.string().optional() }).strip(),
     func: (a) => invoke(req, a),
   });
 }

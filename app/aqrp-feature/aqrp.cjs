@@ -153,12 +153,12 @@ function registerRoutes(router, projectFilesService) {
       const JSZip = require('jszip');
       const zip = new JSZip();
       let count = 0;
-      let out4 = null;
-      for (let n = 1; n <= FINAL_STEP; n++) {
+      const stepNums = Object.keys(st.steps || {}).map(Number).filter(n => Number.isInteger(n) && n >= 1).sort((a, b) => a - b);
+      for (const n of stepNums) {
         const out = await svc.getOutput(s, n);
-        if (n === 4) out4 = out;
         if (out) { zip.file(`__aqrp_step${n}_out.json`, JSON.stringify(out, null, 2)); count++; }
       }
+      const out4 = await svc.getOutput(s, 4);
       if (!out4) {
         const mongoose = require('mongoose');
         const rowsRaw = await mongoose.connection.db.collection('aqrp_rows').find({ runId: st.runId, step: 4 }).toArray();

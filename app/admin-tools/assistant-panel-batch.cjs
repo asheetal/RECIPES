@@ -26,7 +26,7 @@ function codesOf(json) {
   return null;
 }
 
-async function batch({ query, schema, records }) {
+async function batch({ query, schema, records, onRecord }) {
   if (typeof query !== 'string' || !query.trim()) throw Error('query is required');
   if (!schema || typeof schema !== 'object' || schema.type !== 'object' || typeof schema.properties !== 'object')
     throw Error('schema must be a JSON Schema object with type=object and properties');
@@ -76,6 +76,11 @@ async function batch({ query, schema, records }) {
       } else {
         slots[s].rows.push({ record_id: id, codes: ['NA'] });
       }
+    }
+    if (typeof onRecord === 'function') {
+      const perCoder = [];
+      for (let s = 0; s < N; s++) perCoder.push({ coder_id: (slots[s] && slots[s].coder_id) || ('panel-slot-' + s), codes: (slots[s] && slots[s].rows[slots[s].rows.length - 1] || {}).codes || ['NA'] });
+      try { await onRecord({ i, record_id: id, total: M, perCoder }); } catch (e) {}
     }
   }
 

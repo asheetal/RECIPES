@@ -12,6 +12,7 @@ type RunState = {
   fileName?: string | null;
   currentStep?: number;
   lastStepOk?: number | null;
+  progress?: { step: number; done: number; total: number } | null;
   error?: string | null;
 };
 
@@ -134,6 +135,7 @@ export default function AQRPTile({ projectId }: { projectId: string }) {
       return (
         <span className="mt-2 flex flex-wrap items-center gap-2 text-sm text-text-secondary">
           <Spinner className="h-4 w-4" /> Running step {(state.lastStepOk ?? 0) + 1}
+          {state.progress && typeof state.progress.done === 'number' ? ` (${state.progress.done}/${state.progress.total})` : ''}
           {(state.lastStepOk ?? 0) > 0 && (
             <button type="button" onClick={downloadBundle} aria-label="Download completed steps as zip" className="inline-flex items-center gap-1 rounded border border-border-medium px-2 py-1 text-xs font-medium text-text-primary hover:bg-surface-hover">
               <Archive className="h-3 w-3" /> Zip

@@ -49,7 +49,25 @@ async function invoke(req, args) {
     }
     if (!Array.isArray(records) || !records.length) throw new Error('records required (non-empty array)');
     const mod = require('/app/admin-tools/assistant-panel-batch.cjs');
-    const result = await mod.batch({ query, schema, records });
+    const projectId2 = await resolveProjectId(req);
+    let runId = null; let progressOk = false;
+    if (projectId2) {
+      try {
+        const svc = require('/app/aqrp-feature/aqrp.cjs').service();
+        const scope = { user: String(req.user.id || req.user._id), tenant: String(req.user.tenantId || ''), projectId: projectId2 };
+        const st = await svc.getState(scope);
+        if (st && st.runId) { runId = st.runId; progressOk = true; }
+      } catch (e) { progressOk = false; }
+    }
+    const onRecord = progressOk ? async ({ record_id, total, perCoder }) => {
+      const mongoose = require('mongoose');
+      const db = mongoose.connection.db;
+      const now = new Date();
+      await db.collection('aqrp_rows').updateOne({ runId, step: 4, record_id: String(record_id) }, { $set: { runId, step: 4, record_id: String(record_id), perCoder, updatedAt: now } }, { upsert: true });
+      const done = await db.collection('aqrp_rows').countDocuments({ runId, step: 4 });
+      await db.collection('aqrpruns').updateOne({ projectId: projectId2 }, { $set: { progress: { step: 4, done, total, updatedAt: now }, lastProgressAt: now } });
+    } : undefined;
+    const result = await mod.batch({ query, schema, records, onRecord });
     gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, status: 'ok', n: result && result.n, m: records.length });
     return JSON.stringify(result);
   } catch (e) {

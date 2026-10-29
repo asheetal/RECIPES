@@ -136,9 +136,31 @@ function registerRoutes(router, projectFilesService) {
       const JSZip = require('jszip');
       const zip = new JSZip();
       let count = 0;
+      let out4 = null;
       for (let n = 1; n <= FINAL_STEP; n++) {
         const out = await svc.getOutput(s, n);
+        if (n === 4) out4 = out;
         if (out) { zip.file(`__aqrp_step${n}_out.json`, JSON.stringify(out, null, 2)); count++; }
+      }
+      if (!out4) {
+        const mongoose = require('mongoose');
+        const rows = await mongoose.connection.db.collection('aqrp_rows').find({ runId: st.runId, step: 4 }).sort({ record_id: 1 }).toArray();
+        if (rows.length) {
+          const cm = [];
+          const byRecord = new Map();
+          for (const r of rows) for (const pc of (r.perCoder || [])) {
+            cm.push({ record_id: r.record_id, coder_id: pc.coder_id, codes: pc.codes });
+            if (!byRecord.has(r.record_id)) byRecord.set(r.record_id, {});
+            byRecord.get(r.record_id)[pc.coder_id] = pc.codes;
+          }
+          const disagreements = [];
+          for (const [rid, coders] of byRecord) {
+            const sets = Object.values(coders).map(cs => JSON.stringify(cs.slice().sort()));
+            if (!sets.every(v => v === sets[0])) disagreements.push({ record_id: rid, coders });
+          }
+          zip.file('__aqrp_step4_partial.json', JSON.stringify({ status: 'OPEN_CODING_PARTIAL', records_done: rows.length, code_matrix: cm, disagreements }, null, 2));
+          count++;
+        }
       }
       if (!count) return res.status(404).json({ error: 'no step outputs to bundle' });
       const buf = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });

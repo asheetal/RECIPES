@@ -1,5 +1,9 @@
 'use strict';
 const { makeService } = require('./core.cjs');
+const { FINAL_STEP } = require('./steps.cjs');
+const RUN_ABORTS = new Map();
+const RUN_ABORT_MS = 6 * 60 * 60 * 1000;
+const runKeyOf = (s) => `${s.user}|${s.tenant}|${s.projectId}`;
 let instance;
 function service() {
   if (instance) return instance;
@@ -45,16 +49,23 @@ function registerRoutes(router, projectFilesService) {
       const token = jwt.sign({ id: s.user }, process.env.JWT_SECRET, { expiresIn: '10m' });
       const base = `http://127.0.0.1:${process.env.PORT || 3080}`;
       console.error('[AQRP] dispatching to chat', conversationId);
+      const rk = runKeyOf(s);
+      const ctl = new AbortController();
+      RUN_ABORTS.set(rk, ctl);
       fetch(`${base}/api/agents/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'User-Agent': req.headers['user-agent'] || 'LibreChat/0.8.7' },
         body: JSON.stringify({ conversationId, text: recipe.prompt + '\n\nCorpus file_id: ' + fileId, parentMessageId: null, tools: recipe.tools || [], files: [{ file_id: fileId, projectFileId: fileId, filename: file.name }], recipeWorkflow: recipe.workflow || null }),
-        signal: AbortSignal.timeout(600000),
+        signal: AbortSignal.any([ctl.signal, AbortSignal.timeout(RUN_ABORT_MS)]),
       }).then(async (r) => {
         const body = await r.text().catch(() => '');
         console.error('[AQRP] chat response', r.status, body.slice(0, 2000));
-        if (!r.ok) await svc.failRun(s, `chat ${r.status}: ${body.slice(0, 200)}`);
-      }).catch(async (e) => { console.error('[AQRP] chat fetch error', e.message); await svc.failRun(s, e.message); });
+        if (!r.ok) { const cur = await svc.getState(s); if (cur.status !== 'killed') await svc.failRun(s, `chat ${r.status}: ${body.slice(0, 200)}`); }
+      }).catch(async (e) => {
+        console.error('[AQRP] chat fetch error', e.message);
+        const cur = await svc.getState(s);
+        if (cur.status !== 'killed') await svc.failRun(s, e.message);
+      }).finally(() => { RUN_ABORTS.delete(rk); });
     } catch (e) { next(e); }
   });
 
@@ -78,8 +89,8 @@ function registerRoutes(router, projectFilesService) {
       fetch(`${base}/api/agents/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'User-Agent': req.headers['user-agent'] || 'LibreChat/0.8.7' },
-        body: JSON.stringify({ conversationId: conversation.conversationId, text: `Run step ${nextStep} only. Call aqrp_step_run({step:${nextStep}}) exactly once and stop.`, parentMessageId: null, tools: recipe.tools || [], recipeWorkflow: recipe.workflow || null }),
-        signal: AbortSignal.timeout(600000),
+        body: JSON.stringify({ conversationId: conversation.conversationId, text: `Run step ${nextStep}.`, parentMessageId: null, tools: recipe.tools || [], recipeWorkflow: recipe.workflow || null }),
+        signal: AbortSignal.timeout(RUN_ABORT_MS),
       }).then(async (r) => {
         const body = await r.text().catch(() => '');
         if (!r.ok) await svc.failRun(s, `chat ${r.status}: ${body.slice(0, 200)}`);
@@ -109,8 +120,41 @@ function registerRoutes(router, projectFilesService) {
     } catch (e) { next(e); }
   });
 
+  router.post('/:projectId/aqrp/kill', async (req, res, next) => {
+    try {
+      const s = await svc.scope(req, req.params.projectId);
+      const ctl = RUN_ABORTS.get(runKeyOf(s));
+      if (ctl) { try { ctl.abort(); } catch (_) {} RUN_ABORTS.delete(runKeyOf(s)); }
+      res.json(await svc.killRun(s, 'killed by user'));
+    } catch (e) { next(e); }
+  });
+
+  router.get('/:projectId/aqrp/bundle', async (req, res, next) => {
+    try {
+      const s = await svc.scope(req, req.params.projectId);
+      const st = await svc.getState(s);
+      const JSZip = require('jszip');
+      const zip = new JSZip();
+      let count = 0;
+      for (let n = 1; n <= FINAL_STEP; n++) {
+        const out = await svc.getOutput(s, n);
+        if (out) { zip.file(`__aqrp_step${n}_out.json`, JSON.stringify(out, null, 2)); count++; }
+      }
+      if (!count) return res.status(404).json({ error: 'no step outputs to bundle' });
+      const buf = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+      res.set('Content-Type', 'application/zip');
+      res.set('Content-Disposition', `attachment; filename="aqrp_${st.runId || 'run'}_steps.zip"`);
+      return res.send(buf);
+    } catch (e) { next(e); }
+  });
+
   router.delete('/:projectId/aqrp', async (req, res, next) => {
-    try { const s = await svc.scope(req, req.params.projectId); res.json(await svc.deleteRun(s)); } catch (e) { next(e); }
+    try {
+      const s = await svc.scope(req, req.params.projectId);
+      const ctl = RUN_ABORTS.get(runKeyOf(s));
+      if (ctl) { try { ctl.abort(); } catch (_) {} RUN_ABORTS.delete(runKeyOf(s)); }
+      res.json(await svc.deleteRun(s));
+    } catch (e) { next(e); }
   });
 }
 module.exports = { registerRoutes, service };

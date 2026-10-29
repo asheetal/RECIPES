@@ -57,6 +57,14 @@ function makeService(repo, deps) {
     r.status = 'failed'; r.error = String(message).slice(0, 800); r.finishedAt = new Date();
     await repo.putRun(s, r);
   }
+  async function killRun(s, message) {
+    const r = await repo.getRun(s);
+    if (!r) return { status: 'idle' };
+    if (r.status !== 'running') return await getState(s);
+    r.status = 'killed'; r.error = String(message || 'killed by user').slice(0, 800); r.finishedAt = new Date();
+    await repo.putRun(s, r);
+    return await getState(s);
+  }
   async function deleteRun(s) { await repo.delRun(s); return { status: 'idle' }; }
   async function getOutput(s, step) {
     const r = await repo.getRun(s);
@@ -68,6 +76,6 @@ function makeService(repo, deps) {
     if (!r || !r.steps || !r.steps[String(step)]) return null;
     return r.steps[String(step)].extra || null;
   }
-  return { scope, getState, startRun, completeStep, failRun, deleteRun, getOutput, getExtra };
+  return { scope, getState, startRun, completeStep, failRun, killRun, deleteRun, getOutput, getExtra };
 }
 module.exports = { makeService, sha256, FINAL_STEP };

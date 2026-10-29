@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AlertTriangle, Check, Download, FileJson, Trash2, Upload } from 'lucide-react';
+import { AlertTriangle, Archive, Check, Download, FileJson, Square, Trash2, Upload } from 'lucide-react';
 import { Spinner } from '@librechat/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { request, apiBaseUrl } from 'librechat-data-provider';
@@ -7,7 +7,7 @@ import { cn } from '~/utils';
 
 type FileRow = { id: string; name: string; bytes: number };
 type RunState = {
-  status: 'idle' | 'running' | 'done' | 'failed';
+  status: 'idle' | 'running' | 'done' | 'failed' | 'killed';
   fileId?: string | null;
   fileName?: string | null;
   currentStep?: number;
@@ -111,11 +111,33 @@ export default function AQRPTile({ projectId }: { projectId: string }) {
     queryClient.invalidateQueries();
   }, [base, queryClient]);
 
+  const kill = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try { await postJson(`${base}/kill`, {}); } catch { /* surfaced by refresh */ }
+    refresh();
+  }, [base, refresh]);
+
+  const downloadBundle = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const blob = (await request.get(`${base}/bundle`, { responseType: 'blob' })) as unknown as Blob;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'aqrp_steps.zip';
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    } catch { /* surfaced by tile state */ }
+  }, [base]);
+
   const statusLine = () => {
     if (state.status === 'running') {
       return (
         <span className="mt-2 flex items-center gap-2 text-sm text-text-secondary">
           <Spinner className="h-4 w-4" /> Running step {(state.lastStepOk ?? 0) + 1}
+          {(state.lastStepOk ?? 0) > 0 && (
+            <button type="button" onClick={downloadBundle} aria-label="Download completed steps as zip" className="rounded p-1 hover:bg-surface-hover"><Archive className="h-4 w-4" /></button>
+          )}
+          <button type="button" onClick={kill} aria-label="Kill run" className="rounded p-1 hover:bg-surface-hover"><Square className="h-4 w-4" /></button>
         </span>
       );
     }
@@ -126,11 +148,21 @@ export default function AQRPTile({ projectId }: { projectId: string }) {
         </span>
       );
     }
+    if (state.status === 'killed') {
+      return (
+        <span className="mt-2 flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
+          <AlertTriangle className="h-4 w-4" /> Killed at step {state.lastStepOk ?? 0}
+          <button type="button" onClick={downloadBundle} aria-label="Download completed steps as zip" className="ml-1 rounded p-1 hover:bg-surface-hover"><Archive className="h-4 w-4" /></button>
+          <button type="button" onClick={remove} aria-label="Delete run" className="rounded p-1 hover:bg-surface-hover"><Trash2 className="h-4 w-4" /></button>
+        </span>
+      );
+    }
     if (state.status === 'done') {
       return (
         <span className="mt-2 flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
           <Check className="h-4 w-4" /> Done (step {state.lastStepOk ?? state.currentStep})
           <button type="button" onClick={download} aria-label="Download last step output" className="ml-1 rounded p-1 hover:bg-surface-hover"><Download className="h-4 w-4" /></button>
+          <button type="button" onClick={downloadBundle} aria-label="Download completed steps as zip" className="rounded p-1 hover:bg-surface-hover"><Archive className="h-4 w-4" /></button>
           <button type="button" onClick={remove} aria-label="Delete run" className="rounded p-1 hover:bg-surface-hover"><Trash2 className="h-4 w-4" /></button>
         </span>
       );
@@ -140,6 +172,7 @@ export default function AQRPTile({ projectId }: { projectId: string }) {
         <span className="mt-2 flex items-center gap-2 text-sm text-text-secondary">
           Step {state.currentStep} complete
           <button type="button" onClick={download} aria-label="Download last step output" className="rounded p-1 hover:bg-surface-hover"><Download className="h-4 w-4" /></button>
+          <button type="button" onClick={downloadBundle} aria-label="Download completed steps as zip" className="rounded p-1 hover:bg-surface-hover"><Archive className="h-4 w-4" /></button>
           <button type="button" onClick={remove} aria-label="Delete run" className="rounded p-1 hover:bg-surface-hover"><Trash2 className="h-4 w-4" /></button>
         </span>
       );

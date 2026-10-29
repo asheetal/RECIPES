@@ -24,7 +24,17 @@ function registerRoutes(router, projectFilesService) {
   const svc = service();
 
   router.get('/:projectId/aqrp', async (req, res, next) => {
-    try { const s = await svc.scope(req, req.params.projectId); res.json(await svc.getState(s)); } catch (e) { next(e); }
+    try {
+      const s = await svc.scope(req, req.params.projectId);
+      let st = await svc.getState(s);
+      if (st.status === 'running' && st.runId && !RUN_ABORTS.has(runKeyOf(s))) {
+        const idleMs = st.lastProgressAt ? (Date.now() - new Date(st.lastProgressAt).getTime()) : Infinity;
+        if (idleMs > 90000) {
+          st = await svc.failRun(s, 'dispatcher not alive: chat fetch ended or container restarted. Completed steps and partial step outputs are downloadable.');
+        }
+      }
+      res.json(st);
+    } catch (e) { next(e); }
   });
 
   router.post('/:projectId/aqrp/start', async (req, res, next) => {
@@ -125,7 +135,14 @@ function registerRoutes(router, projectFilesService) {
       const s = await svc.scope(req, req.params.projectId);
       const ctl = RUN_ABORTS.get(runKeyOf(s));
       if (ctl) { try { ctl.abort(); } catch (_) {} RUN_ABORTS.delete(runKeyOf(s)); }
-      res.json(await svc.killRun(s, 'killed by user'));
+      const killed = await svc.killRun(s, 'killed by user');
+      try {
+        if (killed && killed.runId) {
+          const mongoose = require('mongoose');
+          await mongoose.connection.db.collection('aqrp_progress').updateOne({ runId: killed.runId, step: 4 }, { $set: { inFlight: 0, updatedAt: new Date() } });
+        }
+      } catch (e) {}
+      res.json(killed);
     } catch (e) { next(e); }
   });
 
@@ -144,7 +161,8 @@ function registerRoutes(router, projectFilesService) {
       }
       if (!out4) {
         const mongoose = require('mongoose');
-        const rows = await mongoose.connection.db.collection('aqrp_rows').find({ runId: st.runId, step: 4 }).sort({ record_id: 1 }).toArray();
+        const rowsRaw = await mongoose.connection.db.collection('aqrp_rows').find({ runId: st.runId, step: 4 }).toArray();
+        const rows = rowsRaw.sort((a, b) => Number(a.record_id) - Number(b.record_id));
         if (rows.length) {
           const cm = [];
           const byRecord = new Map();

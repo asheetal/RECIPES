@@ -155,8 +155,15 @@ export default function AQRPTile({ projectId }: { projectId: string }) {
     }
     if (state.status === 'failed') {
       return (
-        <span className="mt-2 flex items-center gap-2 text-sm text-red-600 dark:text-red-400" title={state.error ?? 'Failed'}>
+        <span className="mt-2 flex flex-wrap items-center gap-2 text-sm text-red-600 dark:text-red-400">
           <AlertTriangle className="h-4 w-4" /> Step {(state.lastStepOk ?? 0) + 1} failed
+          {state.error && <span className="max-w-full truncate text-xs text-text-secondary" title={state.error}>{state.error}</span>}
+          {(state.lastStepOk ?? 0) > 0 && (
+            <button type="button" onClick={downloadBundle} aria-label="Download completed steps as zip" className="inline-flex items-center gap-1 rounded border border-border-medium px-2 py-1 text-xs font-medium text-text-primary hover:bg-surface-hover">
+              <Archive className="h-3 w-3" /> Zip completed steps
+            </button>
+          )}
+          <button type="button" onClick={remove} aria-label="Delete run" className="rounded p-1 hover:bg-surface-hover"><Trash2 className="h-4 w-4" /></button>
         </span>
       );
     }

@@ -53,9 +53,10 @@ function makeService(repo, deps) {
   }
   async function failRun(s, message) {
     const r = await repo.getRun(s);
-    if (!r) return;
+    if (!r) return await getState(s);
     r.status = 'failed'; r.error = String(message).slice(0, 800); r.finishedAt = new Date();
     await repo.putRun(s, r);
+    return await getState(s);
   }
   async function killRun(s, message) {
     const r = await repo.getRun(s);

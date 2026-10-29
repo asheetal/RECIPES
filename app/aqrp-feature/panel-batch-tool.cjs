@@ -65,6 +65,22 @@ async function invoke(req, args) {
         }
       } catch (e) { progressOk = false; }
     }
+    let storeRunId = runId;
+    if (progressOk) {
+      try {
+        const runDoc = await db.collection('aqrpruns').findOne({ projectId: projectId2 });
+        if (runDoc) {
+          const siblings = await db.collection('aqrpruns').find({ projectId: projectId2, fileId: runDoc.fileId, sha256: runDoc.sha256 }).toArray();
+          for (const cand of siblings) {
+            const p = await db.collection('aqrp_progress').findOne({ runId: cand.runId, step: 4 });
+            if (p && Number.isInteger(p.total) && p.total > 0 && Number.isInteger(p.done) && p.done === p.total && Number.isInteger(p.n)) {
+              storeRunId = cand.runId;
+              break;
+            }
+          }
+        }
+      } catch (e) {}
+    }
     const corpusTotal = records.length;
     let recordsCapped = false;
     if (progressOk) {
@@ -76,7 +92,7 @@ async function invoke(req, args) {
         }
       } catch (e) {}
     }
-    const tally = progressOk ? makeTally(db, runId, projectId2) : null;
+    const tally = progressOk ? makeTally(db, storeRunId, projectId2) : null;
     if (tally) {
       skipIds = await tally.ensure(records.length, concurrency);
       await db.collection('aqrpruns').updateOne({ projectId: projectId2 }, { $set: { records_capped: recordsCapped, corpus_total: corpusTotal, lastProgressAt: new Date() } });

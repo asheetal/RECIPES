@@ -46,6 +46,9 @@ function registerRoutes(router, projectFilesService) {
       const { file, buffer } = await projectFilesService.read(pfScope, fileId);
       if (!/\.json$/i.test(file.name)) return res.status(415).json({ error: 'AQRP accepts JSON only' });
       const started = await svc.startRun(s, fileId, file.name, buffer);
+      const rk = runKeyOf(s);
+      const ctl = new AbortController();
+      RUN_ABORTS.set(rk, ctl);
       res.json({ status: 'started', state: await svc.getState(s) });
 
       const jwt = require('jsonwebtoken');
@@ -59,9 +62,6 @@ function registerRoutes(router, projectFilesService) {
       const token = jwt.sign({ id: s.user }, process.env.JWT_SECRET, { expiresIn: '10m' });
       const base = `http://127.0.0.1:${process.env.PORT || 3080}`;
       console.error('[AQRP] dispatching to chat', conversationId);
-      const rk = runKeyOf(s);
-      const ctl = new AbortController();
-      RUN_ABORTS.set(rk, ctl);
       fetch(`${base}/api/agents/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'User-Agent': req.headers['user-agent'] || 'LibreChat/0.8.7' },

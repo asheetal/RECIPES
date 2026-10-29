@@ -32,7 +32,7 @@ function makeService(repo, deps) {
     for (const [k, v] of Object.entries(r.steps || {})) summary[k] = { ok: !!(v && v.ok) };
     const closed = Object.keys(summary).filter(k => summary[k].ok).map(Number).sort((a,b)=>a-b);
     const lastStepOk = closed.length ? closed[closed.length-1] : null;
-    return { status: r.status, progress: r.progress || null, sha256: r.sha256 || null, fileId: r.fileId || null, fileName: r.fileName || null, runId: r.runId || null, steps: summary, currentStep: lastStepOk, lastStepOk, error: r.error || null, startedAt: r.startedAt || null, finishedAt: r.finishedAt || null };
+    return { status: r.status, progress: r.progress || null, lastProgressAt: r.lastProgressAt || null, sha256: r.sha256 || null, fileId: r.fileId || null, fileName: r.fileName || null, runId: r.runId || null, steps: summary, currentStep: lastStepOk, lastStepOk, error: r.error || null, startedAt: r.startedAt || null, finishedAt: r.finishedAt || null };
   }
   async function startRun(s, fileId, fileName, buffer) {
     const runId = crypto.randomBytes(8).toString('hex');

@@ -1809,6 +1809,10 @@ const panelTool = require("/app/aqrp-feature/panel-tool.cjs");
 module.exports.loadAgentTools = panelTool.wrapLoad(module.exports.loadAgentTools);
 module.exports.loadToolsForExecution = panelTool.wrapExecution(module.exports.loadToolsForExecution);
 
+const panelBatchTool = require("/app/aqrp-feature/panel-batch-tool.cjs");
+module.exports.loadAgentTools = panelBatchTool.wrapLoad(module.exports.loadAgentTools);
+module.exports.loadToolsForExecution = panelBatchTool.wrapExecution(module.exports.loadToolsForExecution);
+
 const searchModeTools=require('/app/workflow-feature/search-mode/flow.cjs');
 const searchModeExecution=module.exports.loadToolsForExecution;
 module.exports.loadAgentTools=searchModeTools.wrapLoad(module.exports.loadAgentTools,searchModeExecution);

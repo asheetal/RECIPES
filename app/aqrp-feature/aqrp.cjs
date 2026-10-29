@@ -146,6 +146,31 @@ function registerRoutes(router, projectFilesService) {
     } catch (e) { next(e); }
   });
 
+  router.get('/:projectId/aqrp/debug', async (req, res, next) => {
+    try {
+      const s = await svc.scope(req, req.params.projectId);
+      const st = await svc.getState(s);
+      const stepKeys = Object.keys(st.steps || {});
+      const perStep = {};
+      for (const k of stepKeys) {
+        const out = await svc.getOutput(s, Number(k));
+        perStep[k] = out ? 'present' : 'null';
+      }
+      const mongoose = require('mongoose');
+      const run = await mongoose.connection.db.collection('aqrpruns').findOne({ projectId: s.projectId, user: s.user, tenant: s.tenant });
+      res.json({
+        scope: { user: s.user, tenant: s.tenant, projectId: s.projectId },
+        st_runId: st.runId, st_status: st.status, st_stepKeys: stepKeys, st_lastStepOk: st.lastStepOk,
+        perStep,
+        runDoc_found: !!run,
+        runDoc_runId: run ? run.runId : null,
+        runDoc_status: run ? run.status : null,
+        runDoc_stepKeys: run ? Object.keys(run.steps || {}) : [],
+        runDoc_has_output_per_step: run ? Object.fromEntries(Object.entries(run.steps || {}).map(([k, v]) => [k, !!(v && v.output)])) : {},
+      });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+  });
+
   router.get('/:projectId/aqrp/bundle', async (req, res, next) => {
     try {
       const s = await svc.scope(req, req.params.projectId);

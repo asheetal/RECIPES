@@ -115,14 +115,14 @@ export default function AQRPTile({ projectId }: { projectId: string }) {
     if (state.status === 'running') {
       return (
         <span className="mt-2 flex items-center gap-2 text-sm text-text-secondary">
-          <Spinner className="h-4 w-4" /> Running step {state.currentStep ?? '…'}
+          <Spinner className="h-4 w-4" /> Running step {(state.lastStepOk ?? 0) + 1}
         </span>
       );
     }
     if (state.status === 'failed') {
       return (
         <span className="mt-2 flex items-center gap-2 text-sm text-red-600 dark:text-red-400" title={state.error ?? 'Failed'}>
-          <AlertTriangle className="h-4 w-4" /> Step {state.currentStep ?? '?'} failed
+          <AlertTriangle className="h-4 w-4" /> Step {(state.lastStepOk ?? 0) + 1} failed
         </span>
       );
     }

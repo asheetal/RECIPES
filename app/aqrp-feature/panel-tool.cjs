@@ -2,7 +2,7 @@
 const NAME = 'llm_assistant_panel';
 const def = {
   name: NAME,
-  description: 'Consult LLM_ASSISTANT_PANEL. Submit {query: string, schema: object}. Receives one collated JSON object {panel:"LLM_ASSISTANT_PANEL", n:<N>, responses:[<N complete sets>]}. Each set conforms to the submitted schema. Blackbox: the panel fans out to N tool-free agents and returns all N sets; the caller reconciles them. Do not introspect the panel.',
+  description: 'Advisory multi-agent panel. Blackbox: submit {query, schema}, receive {panel, n, responses} where responses is an array of n complete sets conforming to schema. The panel fans out to its configured members; the caller reconciles the sets. Recipe-agnostic. Not a search, file, research, bash, or computation tool. Do not introspect the panel; do not call it more than once per logical invocation.',
 };
 async function invoke(req, args) {
   const gateway = require('/app/admin-tools/role-gateway.cjs');

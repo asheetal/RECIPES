@@ -3,7 +3,7 @@ const NAME = 'llm_assistant_panel_batch';
 const def = {
   name: NAME,
   description:
-    'Advisory multi-agent panel, batched over records. Blackbox: submit {query, schema, records} or {query, schema, file_id}, receive {panel, n, responses} where n is the roster size and responses is n complete sets each carrying coder_id and rows (rows spans all records in input order). With file_id it reads every record from that JSON corpus. Per record, all members run in parallel with up to 5 trials of exponential backoff; a member still failing is reported as a row with codes:["NA"]. Recipe-agnostic. Not a search, research, bash, or computation tool.',
+    'Advisory multi-agent panel over records. Submit {query, schema, records} or {query, schema, file_id}; with file_id it reads every record of that JSON corpus. Returns {panel, n, responses}: n complete sets, each with coder_id and rows, rows spanning the input records in order. Recipe-agnostic. Not a search, research, bash, or computation tool.',
 };
 async function resolveProjectId(req) {
   if (req?.__aqrpProjectId) return req.__aqrpProjectId;

@@ -2,16 +2,17 @@
 const NAME = 'llm_assistant_panel';
 const def = {
   name: NAME,
-  description: 'Advisory multi-agent panel. Blackbox: submit {query, schema}, receive {panel, n, responses} where responses is an array of n complete sets conforming to schema. The panel fans out to its configured members; the caller reconciles the sets. Recipe-agnostic. Not a search, file, research, bash, or computation tool. Do not introspect the panel; do not call it more than once per logical invocation.',
+  description: 'Advisory multi-agent panel. Blackbox: submit {query, schema}, receive {panel, n, responses} where responses is an array of n complete sets conforming to schema. The panel fans out to its configured members; the caller reconciles the sets. Recipe-agnostic. Not a search, file, research, bash, or computation tool.',
 };
 async function invoke(req, args) {
   const gateway = require('/app/admin-tools/role-gateway.cjs');
   gateway.audit(req, 'LLM_SURGERY', 'tool_call', { tool: NAME });
   try {
     const query = args.query;
-    const schema = args.schema;
+    let schema = args.schema;
     if (typeof query !== 'string' || !query.trim()) throw new Error('query required (non-empty string)');
-    if (!schema || typeof schema !== 'object' || Array.isArray(schema)) throw new Error('schema required (JSON Schema object)');
+    if (typeof schema === 'string') { try { schema = JSON.parse(schema); } catch (e) { throw new Error('schema string is not valid JSON: ' + e.message); } }
+    if (!schema || typeof schema !== 'object' || Array.isArray(schema)) throw new Error('schema required (JSON Schema object or JSON string)');
     const panel = require('/app/admin-tools/assistant-panel.cjs');
     const result = await panel.ask({ query, schema });
     gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, status: 'ok', n: result && result.n });
@@ -26,7 +27,7 @@ function makeTool(req) {
   const { z } = require('zod');
   return new DynamicStructuredTool({
     name: NAME, description: def.description,
-    schema: z.object({ plan: z.any().optional(), query: z.string(), schema: z.record(z.any()) }).strip(),
+    schema: z.object({ plan: z.any().optional(), query: z.string(), schema: z.union([z.record(z.any()), z.string()]) }).strip(),
     func: (a) => invoke(req, a),
   });
 }

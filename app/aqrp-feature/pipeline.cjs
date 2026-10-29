@@ -109,35 +109,42 @@ async function step4({ filePath }) {
   const raw = fs.readFileSync(filePath, "utf8");
   let payload;
   try { payload = JSON.parse(raw); } catch (e) { throw new Error("step 4 payload is not valid JSON: " + e.message); }
-  const cm = payload.code_matrix;
-  if (!Array.isArray(cm) || cm.length === 0) throw new Error("Step 4: code_matrix must be a non-empty array");
+  const pr = payload.panel_result;
+  if (!pr || typeof pr !== "object" || Array.isArray(pr)) throw new Error("Step 4: panel_result must be an object");
+  if (!Number.isInteger(pr.n) || pr.n < 1) throw new Error("Step 4: panel_result.n must be a positive integer");
+  if (!Array.isArray(pr.responses) || pr.responses.length !== pr.n) throw new Error("Step 4: panel_result.responses must be an array of length n");
+  const cm = [];
+  const byRecord = new Map();
   const seen = new Set();
-  for (let i = 0; i < cm.length; i++) {
-    const row = cm[i];
-    const at = "Step 4: code_matrix[" + i + "]";
-    if (!row || typeof row !== "object" || Array.isArray(row)) throw new Error(at + " must be an object");
-    if (typeof row.record_id !== "string" || !row.record_id.trim()) throw new Error(at + ".record_id required");
-    if (typeof row.coder_id !== "string" || !row.coder_id.trim()) throw new Error(at + ".coder_id required");
-    if (!Array.isArray(row.codes) || row.codes.length === 0) throw new Error(at + ".codes must be a non-empty array");
-    if (row.codes.some(c => typeof c !== "string" || !c.trim())) throw new Error(at + ".codes must contain non-empty strings");
-    const key = row.record_id + "|" + row.coder_id;
-    if (seen.has(key)) throw new Error(at + " duplicate record_id/coder_id pair " + key);
-    seen.add(key);
-  }
-  const dis = payload.disagreements;
-  if (!Array.isArray(dis)) throw new Error("Step 4: disagreements must be an array");
-  for (let i = 0; i < dis.length; i++) {
-    const d = dis[i];
-    const at = "Step 4: disagreements[" + i + "]";
-    if (!d || typeof d !== "object" || Array.isArray(d)) throw new Error(at + " must be an object");
-    if (typeof d.record_id !== "string" || !d.record_id.trim()) throw new Error(at + ".record_id required");
-    if (!d.coders || typeof d.coders !== "object" || Array.isArray(d.coders)) throw new Error(at + ".coders must be an object");
-    for (const k of Object.keys(d.coders)) {
-      if (typeof k !== "string" || !k.trim()) throw new Error(at + ".coders has empty coder id");
-      if (!Array.isArray(d.coders[k])) throw new Error(at + ".coders." + k + " must be an array");
+  for (let i = 0; i < pr.responses.length; i++) {
+    const r = pr.responses[i];
+    const at = "Step 4: panel_result.responses[" + i + "]";
+    if (!r || typeof r !== "object" || Array.isArray(r)) throw new Error(at + " must be an object");
+    if (typeof r.coder_id !== "string" || !r.coder_id.trim()) throw new Error(at + ".coder_id required");
+    if (!Array.isArray(r.rows) || r.rows.length === 0) throw new Error(at + ".rows must be a non-empty array");
+    for (let j = 0; j < r.rows.length; j++) {
+      const row = r.rows[j];
+      const ra = at + ".rows[" + j + "]";
+      if (!row || typeof row !== "object" || Array.isArray(row)) throw new Error(ra + " must be an object");
+      if (typeof row.record_id !== "string" || !row.record_id.trim()) throw new Error(ra + ".record_id required");
+      if (!Array.isArray(row.codes) || row.codes.length === 0) throw new Error(ra + ".codes must be a non-empty array");
+      if (row.codes.some(c => typeof c !== "string" || !c.trim())) throw new Error(ra + ".codes must contain non-empty strings");
+      const key = row.record_id + "|" + r.coder_id;
+      if (seen.has(key)) throw new Error("Step 4: duplicate record_id/coder_id pair " + key);
+      seen.add(key);
+      cm.push({ record_id: row.record_id, coder_id: r.coder_id, codes: row.codes.slice() });
+      if (!byRecord.has(row.record_id)) byRecord.set(row.record_id, {});
+      byRecord.get(row.record_id)[r.coder_id] = row.codes.slice();
     }
   }
-  return { output: Object.assign({}, payload, { status: "OPEN_CODING_COMPLETE" }) };
+  const disagreements = [];
+  for (const entry of byRecord) {
+    const rid = entry[0]; const coders = entry[1];
+    const sets = Object.values(coders).map(cs => JSON.stringify(cs.slice().sort()));
+    const allSame = sets.every(v => v === sets[0]);
+    if (!allSame) disagreements.push({ record_id: rid, coders });
+  }
+  return { output: { status: "OPEN_CODING_COMPLETE", code_matrix: cm, disagreements } };
 }
 async function readStep() { return null; }
 module.exports = { runStep, readStep, FINAL_STEP };

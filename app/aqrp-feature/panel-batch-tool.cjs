@@ -49,39 +49,116 @@ async function invoke(req, args) {
     }
     if (!Array.isArray(records) || !records.length) throw new Error('records required (non-empty array)');
     const mod = require('/app/admin-tools/assistant-panel-batch.cjs');
+    const mongoose = require('mongoose');
+    const db = mongoose.connection.db;
     const projectId2 = await resolveProjectId(req);
-    let runId = null; let progressOk = false;
+    let runId = null; let progressOk = false; let concurrency = 4; let skipIds = [];
     if (projectId2) {
       try {
         const svc = require('/app/aqrp-feature/aqrp.cjs').service();
         const scope = { user: String(req.user.id || req.user._id), tenant: String(req.user.tenantId || ''), projectId: projectId2 };
         const st = await svc.getState(scope);
-        if (st && st.runId) { runId = st.runId; progressOk = true; }
+        if (st && st.runId) {
+          runId = st.runId;
+          if (typeof svc.getBatchConcurrency === 'function') concurrency = await svc.getBatchConcurrency();
+          progressOk = true;
+        }
       } catch (e) { progressOk = false; }
     }
     const corpusTotal = records.length;
     let recordsCapped = false;
     if (progressOk) {
       try {
-        const maxR = await require('/app/aqrp-feature/aqrp.cjs').service().getMaxBatchRecords();
-        if (records.length > maxR) { records = records.slice(0, maxR); recordsCapped = true; }
+        const svc = require('/app/aqrp-feature/aqrp.cjs').service();
+        if (typeof svc.getMaxBatchRecords === 'function') {
+          const maxR = await svc.getMaxBatchRecords();
+          if (records.length > maxR) { records = records.slice(0, maxR); recordsCapped = true; }
+        }
       } catch (e) {}
     }
-    const onRecord = progressOk ? async ({ record_id, total, perCoder }) => {
-      const mongoose = require('mongoose');
-      const db = mongoose.connection.db;
-      const now = new Date();
-      await db.collection('aqrp_rows').updateOne({ runId, step: 4, record_id: String(record_id) }, { $set: { runId, step: 4, record_id: String(record_id), perCoder, updatedAt: now } }, { upsert: true });
-      const done = await db.collection('aqrp_rows').countDocuments({ runId, step: 4 });
-      await db.collection('aqrpruns').updateOne({ projectId: projectId2 }, { $set: { progress: { step: 4, done, total, updatedAt: now }, records_capped: recordsCapped, corpus_total: corpusTotal, lastProgressAt: now } });
-    } : undefined;
-    const result = await mod.batch({ query, schema, records, onRecord });
+    const tally = progressOk ? makeTally(db, runId, projectId2) : null;
+    if (tally) {
+      skipIds = await tally.ensure(records.length, concurrency);
+      await db.collection('aqrpruns').updateOne({ projectId: projectId2 }, { $set: { records_capped: recordsCapped, corpus_total: corpusTotal, lastProgressAt: new Date() } });
+      if (skipIds.length >= records.length) {
+        const built = await tally.envelope(records, mod.recordId);
+        if (built) { gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, status: 'ok', resumed: true, n: built.n, m: records.length }); return JSON.stringify(built); }
+      }
+    }
+    const onProgress = tally ? async (ev) => { try { await tally.onEvent(ev); } catch (e) {} } : undefined;
+    let result = null;
+    try {
+      result = await mod.batch({ query, schema, records, onProgress, skipIds, concurrency });
+    } finally {
+      if (tally) { try { const built = await tally.envelope(records, mod.recordId); if (built) result = built; } catch (e) {} }
+    }
     gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, status: 'ok', n: result && result.n, m: records.length, corpus_total: corpusTotal, records_capped: recordsCapped });
     return JSON.stringify(result);
   } catch (e) {
     gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, status: 'error', error: e.message });
     throw e;
   }
+}
+function makeTally(db, runId, projectId) {
+  const col = db.collection('aqrp_progress');
+  const rows = db.collection('aqrp_rows');
+  const runs = db.collection('aqrpruns');
+  return {
+    async ensure(total, concurrency) {
+      const done = await rows.find({ runId, step: 4 }, { projection: { record_id: 1, _id: 0 } }).toArray();
+      const skipIds = done.map(r => String(r.record_id));
+      await col.updateOne(
+        { runId, step: 4 },
+        { $set: { total, done: skipIds.length, inFlight: 0, concurrency, updatedAt: new Date() }, $setOnInsert: { startedAt: new Date(), etaSeconds: null, n: null } },
+        { upsert: true }
+      );
+      return skipIds;
+    },
+    async onEvent(ev) {
+      const now = new Date();
+      if (ev.event === 'start') { await col.updateOne({ runId, step: 4 }, { $inc: { inFlight: 1 }, $set: { updatedAt: now } }); return; }
+      if (ev.event === 'error') { await col.updateOne({ runId, step: 4 }, { $inc: { inFlight: -1 }, $set: { updatedAt: now } }); return; }
+      if (ev.event !== 'done') return;
+      const res = await rows.updateOne(
+        { runId, step: 4, record_id: String(ev.record_id) },
+        { $set: { runId, step: 4, record_id: String(ev.record_id), perCoder: ev.perCoder, updatedAt: now } },
+        { upsert: true }
+      );
+      const inc = { inFlight: -1 };
+      if (res.upsertedCount) inc.done = 1;
+      const set = { updatedAt: now };
+      if (Array.isArray(ev.perCoder) && ev.perCoder.length > 0) set.n = ev.perCoder.length;
+      await col.updateOne({ runId, step: 4 }, { $inc: inc, $set: set });
+      const doc = await col.findOne({ runId, step: 4 });
+      const done = doc ? doc.done : 0;
+      const total = doc ? doc.total : 0;
+      const startedAt = doc && doc.startedAt ? new Date(doc.startedAt).getTime() : now.getTime();
+      const elapsed = Math.max(1000, now.getTime() - startedAt);
+      const rate = done > 0 ? done / (elapsed / 1000) : 0;
+      const etaSeconds = rate > 0 ? Math.max(0, Math.round((total - done) / rate)) : null;
+      await col.updateOne({ runId, step: 4 }, { $set: { etaSeconds } });
+      await runs.updateOne({ projectId }, { $set: { progress: { step: 4, done, total, inFlight: Math.max(0, doc ? doc.inFlight : 0), etaSeconds, updatedAt: now }, lastProgressAt: now } });
+    },
+    async envelope(records, recordId) {
+      const doc = await col.findOne({ runId, step: 4 });
+      const n = doc && Number.isInteger(doc.n) ? doc.n : 0;
+      if (!n) return null;
+      const all = await rows.find({ runId, step: 4 }).toArray();
+      const byId = new Map(all.map(r => [String(r.record_id), r.perCoder]));
+      const responses = [];
+      for (let s = 0; s < n; s++) responses.push({ coder_id: null, rows: [] });
+      for (let i = 0; i < records.length; i++) {
+        const id = recordId(records[i], i);
+        const per = byId.get(String(id));
+        for (let s = 0; s < n; s++) {
+          const pc = per && per[s];
+          if (!responses[s].coder_id && pc && pc.coder_id) responses[s].coder_id = pc.coder_id;
+          responses[s].rows.push({ record_id: String(id), codes: (pc && pc.codes) || ['NA'] });
+        }
+      }
+      return { panel: 'LLM_ASSISTANT_PANEL_BATCH', n, responses: responses.map((r, s) => ({ coder_id: r.coder_id || ('panel-slot-' + s), rows: r.rows })) };
+    },
+  };
 }
 function makeTool(req) {
   const { DynamicStructuredTool } = require('@librechat/agents/langchain/tools');

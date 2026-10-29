@@ -7,6 +7,8 @@ const ROLES=Object.freeze([
 const PANEL_MAX=10;
 const MAX_BATCH_RECORDS_DEFAULT=200;
 const MAX_BATCH_RECORDS_LIMIT=10000;
+const AQRP_CONCURRENCY_DEFAULT=4;
+const AQRP_CONCURRENCY_LIMIT=8;
 const collection=()=>app('mongoose').connection.db.collection('lab_llm_role_settings');
 async function catalog(){return require('./model-access.cjs').catalog();}
 async function read(){
@@ -17,6 +19,11 @@ async function readMaxBatchRecords(){
  const saved=await collection().findOne({_id:'assignments'});
  const v=Number(saved?.maxBatchRecords);
  return Number.isInteger(v)&&v>0&&v<=MAX_BATCH_RECORDS_LIMIT?v:MAX_BATCH_RECORDS_DEFAULT;
+}
+async function readAqrpBatchConcurrency(){
+ const saved=await collection().findOne({_id:'assignments'});
+ const v=Number(saved?.aqrpBatchConcurrency);
+ return Number.isInteger(v)&&v>=1&&v<=AQRP_CONCURRENCY_LIMIT?v:AQRP_CONCURRENCY_DEFAULT;
 }
 async function readPanelMembers(){
  const saved=await collection().findOne({_id:'assignments'});
@@ -53,6 +60,7 @@ async function get(req,res){
    roles:ROLES,models:await catalog(),assignments:await read(),
    panelMembers:await readPanelMembers(),
    maxBatchRecords:await readMaxBatchRecords(),
+   aqrpBatchConcurrency:await readAqrpBatchConcurrency(),
    workflow:await readWorkflow()
   });
  }catch(e){
@@ -120,6 +128,15 @@ async function save(req,res){
   }else{
    maxBatchRecords=await readMaxBatchRecords();
   }
+  let aqrpBatchConcurrency;
+  if(req.body?.aqrpBatchConcurrency!=null){
+   const v=Number(req.body.aqrpBatchConcurrency);
+   if(!Number.isInteger(v)||v<1||v>AQRP_CONCURRENCY_LIMIT)
+    return res.status(400).json({message:'AQRP batch concurrency must be an integer between 1 and '+AQRP_CONCURRENCY_LIMIT});
+   aqrpBatchConcurrency=v;
+  }else{
+   aqrpBatchConcurrency=await readAqrpBatchConcurrency();
+  }
   const existing=Object.fromEntries(ROLES.map(role=>[role,existingDoc?.assignments?.[role]||null]));
   const assignments={};
   for(const role of ROLES){
@@ -135,12 +152,12 @@ async function save(req,res){
    assignments[role]={endpoint:value.endpoint,model:value.model};
   }
   await collection().updateOne({_id:'assignments'},{$set:{
-   assignments,panelMembers,workflow,maxBatchRecords,updatedAt:new Date(),updatedBy:String(req.user.id||req.user._id)
+   assignments,panelMembers,workflow,maxBatchRecords,aqrpBatchConcurrency,updatedAt:new Date(),updatedBy:String(req.user.id||req.user._id)
   }},{upsert:true});
-  res.json({assignments,panelMembers,workflow,maxBatchRecords,panelTest});
+  res.json({assignments,panelMembers,workflow,maxBatchRecords,aqrpBatchConcurrency,panelTest});
  }catch(e){
   console.error('[LLMRoleSettings] Save failed',e);
   res.status(500).json({message:'Unable to save LLM assignments'});
  }
 }
-module.exports={ROLES,PANEL_MAX,MAX_BATCH_RECORDS_DEFAULT,MAX_BATCH_RECORDS_LIMIT,read,readPanelMembers,readMaxBatchRecords,readWorkflow,resolve,get,save};
+module.exports={ROLES,PANEL_MAX,MAX_BATCH_RECORDS_DEFAULT,MAX_BATCH_RECORDS_LIMIT,AQRP_CONCURRENCY_DEFAULT,AQRP_CONCURRENCY_LIMIT,read,readPanelMembers,readMaxBatchRecords,readAqrpBatchConcurrency,readWorkflow,resolve,get,save};

@@ -85,6 +85,15 @@ function makeService(repo, deps) {
     } catch (e) {}
     return 200;
   }
-  return { scope, getState, startRun, completeStep, failRun, killRun, deleteRun, getOutput, getExtra, getMaxBatchRecords };
+  async function getBatchConcurrency() {
+    try {
+      const mongoose = require('mongoose');
+      const doc = await mongoose.connection.db.collection('lab_llm_role_settings').findOne({ _id: 'assignments' });
+      const v = Number(doc && doc.aqrpBatchConcurrency);
+      if (Number.isInteger(v) && v >= 1 && v <= 8) return v;
+    } catch (e) {}
+    return 4;
+  }
+  return { scope, getState, startRun, completeStep, failRun, killRun, deleteRun, getOutput, getExtra, getMaxBatchRecords, getBatchConcurrency };
 }
 module.exports = { makeService, sha256, FINAL_STEP };

@@ -59,16 +59,24 @@ async function invoke(req, args) {
         if (st && st.runId) { runId = st.runId; progressOk = true; }
       } catch (e) { progressOk = false; }
     }
+    const corpusTotal = records.length;
+    let recordsCapped = false;
+    if (progressOk) {
+      try {
+        const maxR = await require('/app/aqrp-feature/aqrp.cjs').service().getMaxBatchRecords();
+        if (records.length > maxR) { records = records.slice(0, maxR); recordsCapped = true; }
+      } catch (e) {}
+    }
     const onRecord = progressOk ? async ({ record_id, total, perCoder }) => {
       const mongoose = require('mongoose');
       const db = mongoose.connection.db;
       const now = new Date();
       await db.collection('aqrp_rows').updateOne({ runId, step: 4, record_id: String(record_id) }, { $set: { runId, step: 4, record_id: String(record_id), perCoder, updatedAt: now } }, { upsert: true });
       const done = await db.collection('aqrp_rows').countDocuments({ runId, step: 4 });
-      await db.collection('aqrpruns').updateOne({ projectId: projectId2 }, { $set: { progress: { step: 4, done, total, updatedAt: now }, lastProgressAt: now } });
+      await db.collection('aqrpruns').updateOne({ projectId: projectId2 }, { $set: { progress: { step: 4, done, total, updatedAt: now }, records_capped: recordsCapped, corpus_total: corpusTotal, lastProgressAt: now } });
     } : undefined;
     const result = await mod.batch({ query, schema, records, onRecord });
-    gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, status: 'ok', n: result && result.n, m: records.length });
+    gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, status: 'ok', n: result && result.n, m: records.length, corpus_total: corpusTotal, records_capped: recordsCapped });
     return JSON.stringify(result);
   } catch (e) {
     gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, status: 'error', error: e.message });

@@ -76,6 +76,15 @@ function makeService(repo, deps) {
     if (!r || !r.steps || !r.steps[String(step)]) return null;
     return r.steps[String(step)].extra || null;
   }
-  return { scope, getState, startRun, completeStep, failRun, killRun, deleteRun, getOutput, getExtra };
+  async function getMaxBatchRecords() {
+    try {
+      const mongoose = require('mongoose');
+      const doc = await mongoose.connection.db.collection('lab_llm_role_settings').findOne({ _id: 'assignments' });
+      const v = Number(doc && doc.maxBatchRecords);
+      if (Number.isInteger(v) && v > 0) return v;
+    } catch (e) {}
+    return 200;
+  }
+  return { scope, getState, startRun, completeStep, failRun, killRun, deleteRun, getOutput, getExtra, getMaxBatchRecords };
 }
 module.exports = { makeService, sha256, FINAL_STEP };

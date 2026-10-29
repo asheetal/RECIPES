@@ -51,7 +51,9 @@ async function invoke(req, args) {
       fs4.writeFileSync(tmp4, JSON.stringify(p4));
       const pipeline4 = require('/app/aqrp-feature/pipeline.cjs');
       const s1 = (((currentState.steps || {})["1"] || {}).output) || {};
-      const expectedRecordIds = Array.isArray(s1.record_ids) ? s1.record_ids : (Number.isInteger(s1.n_elements) ? Array.from({ length: s1.n_elements }, (_, i) => String(i)) : []);
+      let expectedRecordIds = Array.isArray(s1.record_ids) ? s1.record_ids : (Number.isInteger(s1.n_elements) ? Array.from({ length: s1.n_elements }, (_, i) => String(i)) : []);
+      const maxBatch = await stateSvc.getMaxBatchRecords();
+      if (expectedRecordIds.length > maxBatch) expectedRecordIds = expectedRecordIds.slice(0, maxBatch);
       let result4;
       try { result4 = await pipeline4.runStep({ step, filePath: tmp4, expectedRecordIds }); }
       finally { try { fs4.unlinkSync(tmp4); } catch (_) {} }

@@ -116,6 +116,8 @@ async function step4({ filePath, expectedRecordIds }) {
   const cm = [];
   const byRecord = new Map();
   const seen = new Set();
+  let filteredCodes = 0;
+  const filteredCells = new Set();
   for (let i = 0; i < pr.responses.length; i++) {
     const r = pr.responses[i];
     const at = "Step 4: panel_result.responses[" + i + "]";
@@ -131,14 +133,19 @@ async function step4({ filePath, expectedRecordIds }) {
       if (row.codes.some(c => typeof c !== "string" || !c.trim())) throw new Error(ra + ".codes must contain non-empty strings");
       const canon = (x) => String(x).trim().replace(/\.+$/, '').toLowerCase();
       const SENT = [' about ', ' spanning ', 'claims', 'claim ', 'describe', 'prediction', 'normative vs', 'descriptive claim', 'ambiguity ', 'ambiguous '];
-      row.codes = row.codes.map(canon);
-      for (const c of row.codes) {
-        if (!c) throw new Error(ra + ".codes has an empty code after canonicalization");
-        if (c.length > 40) throw new Error(ra + ".codes has an over-long code (" + c.length + " chars, likely echoed text): " + c.slice(0, 80));
-        if (c.split(/\s+/).length > 6) throw new Error(ra + ".codes code is a sentence, not a code: " + c.slice(0, 100));
+      const codeOk = (c) => {
+        if (!c) return false;
+        if (c.length > 40) return false;
+        if (c.split(/\s+/).length > 6) return false;
         const padded = ' ' + c + ' ';
-        for (const m of SENT) if (padded.includes(m)) throw new Error(ra + ".codes code is a sentence marker: " + c.slice(0, 80));
-      }
+        for (const m of SENT) if (padded.includes(m)) return false;
+        return true;
+      };
+      const original = row.codes.map(canon);
+      const good = original.filter(codeOk);
+      const dropped = original.length - good.length;
+      if (dropped > 0) { filteredCodes += dropped; filteredCells.add(row.record_id); }
+      row.codes = good.length > 0 ? good : ['NA'];
       if (typeof row.quote !== "string" || !row.quote.trim()) throw new Error(ra + ".quote required (verbatim span from the record justifying the codes)");
       const key = row.record_id + "|" + r.coder_id;
       if (seen.has(key)) throw new Error("Step 4: duplicate record_id/coder_id pair " + key);
@@ -169,7 +176,7 @@ async function step4({ filePath, expectedRecordIds }) {
     const allSame = sets.every(v => v === sets[0]);
     if (!allSame) disagreements.push({ record_id: rid, coders });
   }
-  return { output: { status: "OPEN_CODING_COMPLETE", code_matrix: cm, disagreements } };
+  return { output: { status: "OPEN_CODING_COMPLETE", code_matrix: cm, disagreements, filtered_codes: filteredCodes, filtered_cells: Array.from(filteredCells) } };
 }
 async function readStep() { return null; }
 module.exports = { runStep, readStep, FINAL_STEP };

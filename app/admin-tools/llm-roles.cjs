@@ -5,11 +5,18 @@ const ROLES=Object.freeze([
  'LLM_TRIAGE','LLM_SURGERY','LLM_OPD','LLM_BILLING','LLM_ERP','LLM_DIRECTOR'
 ]);
 const PANEL_MAX=10;
+const MAX_BATCH_RECORDS_DEFAULT=200;
+const MAX_BATCH_RECORDS_LIMIT=10000;
 const collection=()=>app('mongoose').connection.db.collection('lab_llm_role_settings');
 async function catalog(){return require('./model-access.cjs').catalog();}
 async function read(){
  const saved=await collection().findOne({_id:'assignments'});
  return Object.fromEntries(ROLES.map(role=>[role,saved?.assignments?.[role]||null]));
+}
+async function readMaxBatchRecords(){
+ const saved=await collection().findOne({_id:'assignments'});
+ const v=Number(saved?.maxBatchRecords);
+ return Number.isInteger(v)&&v>0&&v<=MAX_BATCH_RECORDS_LIMIT?v:MAX_BATCH_RECORDS_DEFAULT;
 }
 async function readPanelMembers(){
  const saved=await collection().findOne({_id:'assignments'});
@@ -45,6 +52,7 @@ async function get(req,res){
   res.set('Cache-Control','no-store').json({
    roles:ROLES,models:await catalog(),assignments:await read(),
    panelMembers:await readPanelMembers(),
+   maxBatchRecords:await readMaxBatchRecords(),
    workflow:await readWorkflow()
   });
  }catch(e){
@@ -103,6 +111,15 @@ async function save(req,res){
   }else{
    panelMembers=Array.isArray(existingDoc?.panelMembers)?existingDoc.panelMembers:[];
   }
+  let maxBatchRecords;
+  if(req.body?.maxBatchRecords!=null){
+   const v=Number(req.body.maxBatchRecords);
+   if(!Number.isInteger(v)||v<1||v>MAX_BATCH_RECORDS_LIMIT)
+    return res.status(400).json({message:'Max batch records must be an integer between 1 and '+MAX_BATCH_RECORDS_LIMIT});
+   maxBatchRecords=v;
+  }else{
+   maxBatchRecords=await readMaxBatchRecords();
+  }
   const existing=Object.fromEntries(ROLES.map(role=>[role,existingDoc?.assignments?.[role]||null]));
   const assignments={};
   for(const role of ROLES){
@@ -118,12 +135,12 @@ async function save(req,res){
    assignments[role]={endpoint:value.endpoint,model:value.model};
   }
   await collection().updateOne({_id:'assignments'},{$set:{
-   assignments,panelMembers,workflow,updatedAt:new Date(),updatedBy:String(req.user.id||req.user._id)
+   assignments,panelMembers,workflow,maxBatchRecords,updatedAt:new Date(),updatedBy:String(req.user.id||req.user._id)
   }},{upsert:true});
-  res.json({assignments,panelMembers,workflow,panelTest});
+  res.json({assignments,panelMembers,workflow,maxBatchRecords,panelTest});
  }catch(e){
   console.error('[LLMRoleSettings] Save failed',e);
   res.status(500).json({message:'Unable to save LLM assignments'});
  }
 }
-module.exports={ROLES,PANEL_MAX,read,readPanelMembers,readWorkflow,resolve,get,save};
+module.exports={ROLES,PANEL_MAX,MAX_BATCH_RECORDS_DEFAULT,MAX_BATCH_RECORDS_LIMIT,read,readPanelMembers,readMaxBatchRecords,readWorkflow,resolve,get,save};

@@ -50,8 +50,10 @@ async function invoke(req, args) {
       const tmp4 = path4.join(os4.tmpdir(), 'aqrp-step4-' + Date.now() + '.json');
       fs4.writeFileSync(tmp4, JSON.stringify(p4));
       const pipeline4 = require('/app/aqrp-feature/pipeline.cjs');
+      const s1 = (((currentState.steps || {})["1"] || {}).output) || {};
+      const expectedRecordIds = Array.isArray(s1.record_ids) ? s1.record_ids : (Number.isInteger(s1.n_elements) ? Array.from({ length: s1.n_elements }, (_, i) => String(i)) : []);
       let result4;
-      try { result4 = await pipeline4.runStep({ step, filePath: tmp4 }); }
+      try { result4 = await pipeline4.runStep({ step, filePath: tmp4, expectedRecordIds }); }
       finally { try { fs4.unlinkSync(tmp4); } catch (_) {} }
       await stateSvc.completeStep(s, step, result4.output, null);
       gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, step, status: 'ok' });

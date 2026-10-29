@@ -3,15 +3,39 @@ const NAME = 'llm_assistant_panel_batch';
 const def = {
   name: NAME,
   description:
-    'Advisory multi-agent panel, batched over records. Blackbox: submit {query, schema, records}, receive the identical envelope as llm_assistant_panel: {panel, n, responses} where n is the roster size and responses is n complete sets each carrying coder_id and rows (rows spans all records in input order). Per record, all members run in parallel with up to 5 trials of exponential backoff; a member still failing is reported as a row with codes:["NA"]. Use this instead of llm_assistant_panel only when the corpus does not fit one member context budget; the choice depends on token size, never on record count. Recipe-agnostic. Not a search, file, research, bash, or computation tool.',
+    'Advisory multi-agent panel, batched over records. Blackbox: submit {query, schema, records} or {query, schema, file_id}, receive {panel, n, responses} where n is the roster size and responses is n complete sets each carrying coder_id and rows (rows spans all records in input order). With file_id it reads every record from that JSON corpus. Per record, all members run in parallel with up to 5 trials of exponential backoff; a member still failing is reported as a row with codes:["NA"]. Recipe-agnostic. Not a search, research, bash, or computation tool.',
 };
+async function resolveProjectId(req) {
+  if (req?.__aqrpProjectId) return req.__aqrpProjectId;
+  const convId = req?.body?.conversationId;
+  if (!convId || convId === 'new') return null;
+  const mongoose = require('mongoose');
+  const convo = await mongoose.connection.db.collection('conversations').findOne({ conversationId: convId }, { projection: { chatProjectId: 1 } });
+  return convo?.chatProjectId || null;
+}
 async function invoke(req, args) {
   const gateway = require('/app/admin-tools/role-gateway.cjs');
   gateway.audit(req, 'LLM_SURGERY', 'tool_call', { tool: NAME });
   try {
     const query = args.query;
     let schema = args.schema;
-    const records = args.records;
+    let records = args.records;
+    const fileId = args.file_id || args.fileId || args.projectFileId;
+    if ((!Array.isArray(records) || !records.length) && fileId) {
+      const projectId = await resolveProjectId(req);
+      if (!projectId) throw new Error('project scope required to read file_id');
+      const projectFiles = require('/app/project-files-feature/project-files.cjs').service();
+      const s = { user: String(req.user.id || req.user._id), tenant: String(req.user.tenantId || ''), projectId };
+      const { buffer } = await projectFiles.read(s, fileId);
+      let data;
+      try { data = JSON.parse(buffer.toString('utf8')); } catch (e) { throw new Error('file_id is not valid JSON: ' + e.message); }
+      if (Array.isArray(data)) records = data;
+      else if (data && typeof data === 'object') {
+        const k = Object.keys(data).find(k => Array.isArray(data[k]));
+        if (!k) throw new Error('file_id JSON has no array of records');
+        records = data[k];
+      } else throw new Error('file_id JSON has no records');
+    }
     if (typeof query !== 'string' || !query.trim()) throw new Error('query required (non-empty string)');
     if (typeof schema === 'string') {
       try { schema = JSON.parse(schema); } catch (e) { throw new Error('schema string is not valid JSON: ' + e.message); }
@@ -33,7 +57,7 @@ function makeTool(req) {
   return new DynamicStructuredTool({
     name: NAME,
     description: def.description,
-    schema: z.object({ plan: z.any().optional(), query: z.string(), schema: z.union([z.record(z.any()), z.string()]), records: z.array(z.any()) }).strip(),
+    schema: z.object({ plan: z.any().optional(), query: z.string(), schema: z.union([z.record(z.any()), z.string()]), records: z.array(z.any()).optional(), file_id: z.string().optional(), fileId: z.string().optional(), projectFileId: z.string().optional() }).strip(),
     func: (a) => invoke(req, a),
   });
 }

@@ -1,10 +1,9 @@
 "use strict";
-const FINAL_STEP = 3;
-async function runStep({ step, filePath }) {
+const { FINAL_STEP } = require("./steps.cjs");
+async function runStep({ step, filePath, expectedRecordIds }) {
+  if (Number(step) === 4) return step4({ filePath, expectedRecordIds });
   if (Number(step) === 3) return step3({ filePath });
-  if (Number(step) === 4) return step4({ filePath });
   if (Number(step) === 2) return step2({ filePath });
-  if (Number(step) === 3) return step3({ filePath });
   if (Number(step) !== 1) throw new Error(`step ${step} not implemented yet (FINAL_STEP=${FINAL_STEP})`);
   const fs = require("node:fs");
   const raw = fs.readFileSync(filePath, "utf8");
@@ -27,7 +26,8 @@ async function runStep({ step, filePath }) {
     if (r && typeof r === "object") { const o = {}; for (const k of Object.keys(r)) o[k] = trunc(r[k], 400); return o; }
     return r;
   });
-  return { output: { status: "LOADED", json_type: jsonType, top_keys: topKeys, array_key: arrayKey, n_elements: nElements, sample_keys: sampleKeys, sample_records: sampleRecords, bytes: Buffer.byteLength(raw, "utf8") } };
+  const recordIds = (Array.isArray(records) ? records : []).map((_, i) => String(i));
+  return { output: { status: "LOADED", json_type: jsonType, top_keys: topKeys, array_key: arrayKey, n_elements: nElements, record_ids: recordIds, sample_keys: sampleKeys, sample_records: sampleRecords, bytes: Buffer.byteLength(raw, "utf8") } };
 }
 async function step2({ filePath }) {
   const fs = require("node:fs");
@@ -104,7 +104,7 @@ async function step3({ filePath }) {
   return { output: Object.assign({}, payload, { status: "FAMILIARIZATION_COMPLETE" }) };
 }
 
-async function step4({ filePath }) {
+async function step4({ filePath, expectedRecordIds }) {
   const fs = require("node:fs");
   const raw = fs.readFileSync(filePath, "utf8");
   let payload;
@@ -135,6 +135,20 @@ async function step4({ filePath }) {
       cm.push({ record_id: row.record_id, coder_id: r.coder_id, codes: row.codes.slice() });
       if (!byRecord.has(row.record_id)) byRecord.set(row.record_id, {});
       byRecord.get(row.record_id)[r.coder_id] = row.codes.slice();
+    }
+  }
+  const expected = Array.isArray(expectedRecordIds) ? expectedRecordIds.map(String) : [];
+  if (expected.length) {
+    const expectedSet = new Set(expected);
+    const perCoder = new Map();
+    for (const row of cm) {
+      if (!expectedSet.has(String(row.record_id))) throw new Error("Step 4: coder " + row.coder_id + " coded unknown record_id " + row.record_id);
+      if (!perCoder.has(row.coder_id)) perCoder.set(row.coder_id, new Set());
+      perCoder.get(row.coder_id).add(String(row.record_id));
+    }
+    for (const [coder, set] of perCoder) {
+      if (set.size !== expectedSet.size) throw new Error("Step 4: coder " + coder + " covers " + set.size + " of " + expectedSet.size + " expected records");
+      for (const id of expectedSet) if (!set.has(id)) throw new Error("Step 4: coder " + coder + " is missing record_id " + id);
     }
   }
   const disagreements = [];

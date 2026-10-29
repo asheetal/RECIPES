@@ -30,11 +30,13 @@ type Settings = {
   models: Model[];
   assignments: Record<string, Assignment>;
   panelMembers: Assignment[];
+  maxBatchRecords?: number;
 };
 type SaveResponse = {
   assignments: Record<string, Assignment>;
   panelMembers: Assignment[];
   workflow: Workflow;
+  maxBatchRecords?: number;
   panelTest?: { slots: SlotTest[] } | null;
 };
 const PANEL_MAX = 10;
@@ -65,6 +67,7 @@ export default function LLMRoleSettings({ section = 'models' }: { section?: 'mod
   const [draft, setDraft] = useState<Record<string, Assignment>>({});
   const [panelMembers, setPanelMembers] = useState<Assignment[]>([]);
   const [workflow, setWorkflow] = useState<Workflow>({ uninterruptedIterations: 20, maxDirectorIterations: 5 });
+  const [maxBatchRecords, setMaxBatchRecords] = useState(200);
   const [panelTest, setPanelTest] = useState<SlotTest[] | null>(null);
   const [panelTestFailed, setPanelTestFailed] = useState(false);
   const [notice, setNotice] = useState('');
@@ -79,6 +82,7 @@ export default function LLMRoleSettings({ section = 'models' }: { section?: 'mod
         setDraft(result.assignments);
         setWorkflow(result.workflow);
         setPanelMembers(result.panelMembers ?? []);
+        setMaxBatchRecords(result.maxBatchRecords ?? 200);
       } else {
         setDraft(previous => Object.fromEntries(result.roles.map(role => {
           const current = previous[role];
@@ -101,10 +105,11 @@ export default function LLMRoleSettings({ section = 'models' }: { section?: 'mod
     setPanelTest(null);
     setPanelTestFailed(false);
     try {
-      const result = await request.post<SaveResponse>(url(), { assignments: draft, workflow, panelMembers });
+      const result = await request.post<SaveResponse>(url(), { assignments: draft, workflow, panelMembers, maxBatchRecords });
       setDraft(result.assignments);
       setWorkflow(result.workflow);
       setPanelMembers(result.panelMembers ?? []);
+      setMaxBatchRecords(result.maxBatchRecords ?? 200);
       const slots = slotsFrom(result);
       if (slots) { setPanelTest(slots); setPanelTestFailed(false); }
       setNotice('Saved.');
@@ -207,6 +212,16 @@ export default function LLMRoleSettings({ section = 'models' }: { section?: 'mod
               </select>
             </div>
           ))}
+          <label className="flex items-center justify-between gap-3 text-sm" htmlFor="max-batch-records">
+            Max records per batch step
+            <input id="max-batch-records" type="number" min={1} max={10000} disabled={busy}
+              className="w-24 rounded-lg border border-border-medium bg-surface-primary px-2 py-2 text-text-primary"
+              value={maxBatchRecords}
+              onChange={e => { setMaxBatchRecords(Math.max(1, Math.min(10000, Number(e.target.value) || 1))); setNotice(''); }} />
+          </label>
+          <p className="text-xs text-text-secondary">
+            Cap on records coded by one batch tool call (default 200). A larger corpus is coded on its first N records only; steps 1&ndash;3 still see the full corpus. Takes effect on the next run.
+          </p>
           {panelTest && panelTest.length > 0 && (
             <div
               role={panelTestFailed ? 'alert' : 'status'}

@@ -153,7 +153,7 @@ function makeTally(db, runId, projectId) {
         for (let s = 0; s < n; s++) {
           const pc = per && per[s];
           if (!responses[s].coder_id && pc && pc.coder_id) responses[s].coder_id = pc.coder_id;
-          responses[s].rows.push({ record_id: String(id), codes: (pc && pc.codes) || ['NA'] });
+          responses[s].rows.push({ record_id: String(id), codes: (pc && pc.codes) || ['NA'], quote: (pc && pc.quote) || '' });
         }
       }
       return { panel: 'LLM_ASSISTANT_PANEL_BATCH', n, responses: responses.map((r, s) => ({ coder_id: r.coder_id || ('panel-slot-' + s), rows: r.rows })) };

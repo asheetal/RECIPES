@@ -129,10 +129,17 @@ async function step4({ filePath, expectedRecordIds }) {
       if (typeof row.record_id !== "string" || !row.record_id.trim()) throw new Error(ra + ".record_id required");
       if (!Array.isArray(row.codes) || row.codes.length === 0) throw new Error(ra + ".codes must be a non-empty array");
       if (row.codes.some(c => typeof c !== "string" || !c.trim())) throw new Error(ra + ".codes must contain non-empty strings");
+      for (const c of row.codes) {
+        if (c.length > 40) throw new Error(ra + ".codes has an over-long code (" + c.length + " chars, likely echoed text): " + c.slice(0, 80));
+        if (c !== c.toLowerCase()) throw new Error(ra + ".codes must be lowercase: " + c);
+        if (c.trim().split(/\s+/).length > 6) throw new Error(ra + ".codes code is a sentence, not a code: " + c.slice(0, 100));
+        if (/\.$/.test(c.trim())) throw new Error(ra + ".codes code ends with a period: " + c);
+      }
+      if (typeof row.quote !== "string" || !row.quote.trim()) throw new Error(ra + ".quote required (verbatim span from the record justifying the codes)");
       const key = row.record_id + "|" + r.coder_id;
       if (seen.has(key)) throw new Error("Step 4: duplicate record_id/coder_id pair " + key);
       seen.add(key);
-      cm.push({ record_id: row.record_id, coder_id: r.coder_id, codes: row.codes.slice() });
+      cm.push({ record_id: row.record_id, coder_id: r.coder_id, codes: row.codes.slice(), quote: row.quote });
       if (!byRecord.has(row.record_id)) byRecord.set(row.record_id, {});
       byRecord.get(row.record_id)[r.coder_id] = row.codes.slice();
     }

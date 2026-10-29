@@ -260,6 +260,7 @@ export default function LLMRoleSettings({ section = 'models' }: { section?: 'mod
                       renderCriterion('No chattiness', slot.criteria.no_chattiness),
                       renderCriterion('JSON schema conformance', slot.criteria.json_schema),
                       renderCriterion('JSON object fallback', slot.criteria.json_object),
+                      renderCriterion('Record coding', (slot.criteria as any).record_coding),
                     ].filter(Boolean).map((row, k) => {
                       const r = row!;
                       const cls = !r.ok

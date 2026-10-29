@@ -76,11 +76,12 @@ async function batch({ query, schema, records, onProgress, skipIds, concurrency 
       for (let s = 0; s < N; s++) {
         const j = got[s];
         const cs = j ? codesOf(j) : null;
-        rowsForRecord.push({ coder_id: (j && typeof j.coder_id === 'string' && j.coder_id) ? j.coder_id : null, codes: cs || ['NA'] });
+        const quote = (j && typeof j.quote === 'string') ? j.quote : '';
+        rowsForRecord.push({ coder_id: (j && typeof j.coder_id === 'string' && j.coder_id) ? j.coder_id : null, codes: cs || ['NA'], quote });
       }
       perRecord[i] = rowsForRecord;
       if (typeof onProgress === 'function') {
-        const perCoder = rowsForRecord.map((r, s) => ({ coder_id: r.coder_id || ('panel-slot-' + s), codes: r.codes }));
+        const perCoder = rowsForRecord.map((r, s) => ({ coder_id: r.coder_id || ('panel-slot-' + s), codes: r.codes, quote: r.quote }));
         try { await onProgress({ event: 'done', i, record_id: id, total: M, perCoder }); } catch (e) {}
       }
     } catch (e) {
@@ -108,9 +109,9 @@ async function batch({ query, schema, records, onProgress, skipIds, concurrency 
   for (let i = 0; i < M; i++) {
     const rowsForRecord = perRecord[i];
     for (let s = 0; s < N; s++) {
-      const row = (rowsForRecord && rowsForRecord[s]) || { coder_id: null, codes: ['NA'] };
+      const row = (rowsForRecord && rowsForRecord[s]) || { coder_id: null, codes: ['NA'], quote: '' };
       if (!slots[s].coder_id && row.coder_id) slots[s].coder_id = row.coder_id;
-      slots[s].rows.push({ record_id: recordId(records[i], i), codes: row.codes });
+      slots[s].rows.push({ record_id: recordId(records[i], i), codes: row.codes, quote: row.quote || '' });
     }
   }
 

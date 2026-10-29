@@ -42,9 +42,10 @@ const CODING_SCHEMA=Object.freeze({
         type:'object',
         properties:{
           record_id:{type:'string'},
-          codes:{type:'array',items:{type:'string'}}
+          codes:{type:'array',items:{type:'string'}},
+          quote:{type:'string'}
         },
-        required:['record_id','codes'],
+        required:['record_id','codes','quote'],
         additionalProperties:false
       }
     }
@@ -52,7 +53,9 @@ const CODING_SCHEMA=Object.freeze({
   required:['coder_id','rows'],
   additionalProperties:false
 });
-const CODING_MAX_CODE_LEN=80;
+const CODING_MAX_CODE_LEN=40;
+const CODING_MAX_CODE_WORDS=6;
+const SENTENCE_MARKERS=[' about ',' spanning ','claims','claim ','describe','describes','prediction','normative vs','descriptive claim','ambiguity ','ambiguous '];
 const CODING_RECORDS=Object.freeze([
   {record_id:'0',text:PROBE_TEXT},
   {record_id:'1',text:'One of the primary concerns that is still on the rise is that marginalized populations have not seen anywhere near the benefits of highly educated people. These trends will be exacerbated by AI unless there are efforts to regulate it. I am worried that we will lose jobs, create greater toxicity in our communications and politics and further disadvantage marginalized populations. Yet, we are likely to also find that AI is tremendously useful for individualized teaching, for taking care of the elderly, in providing personal assistance to individuals at work and at home, for precision medicine, for discovery using vast amounts of text and information, for optimizing traffic in cities, for designing houses in conjunction with 3-D printing, and so forth. My bottom-line belief is that regulation will be too late and too little because politicians are ill-equipped to do anything, and they will always be behind given the complexity of the issues involved and the difficulties of overcoming partisan polarization.'},
@@ -71,7 +74,13 @@ function validateCodingSet(p,expected){
       if(typeof c!=='string'||!c.trim()) return 'row.codes contains an empty string for record '+row.record_id;
       if(c.trim().toUpperCase()==='NA') return 'row.codes contains NA for record '+row.record_id;
       if(c.length>CODING_MAX_CODE_LEN) return 'row.codes has an over-long code for record '+row.record_id+' ('+c.length+' chars, likely echoed record text)';
+      if(c!==c.toLowerCase()) return 'row.codes must be lowercase for record '+row.record_id+' (got: '+c+')';
+      if(c.trim().split(/\s+/).length>CODING_MAX_CODE_WORDS) return 'row.codes code is a sentence, not a code, for record '+row.record_id+' ('+c+')';
+      if(/\.$/.test(c.trim())) return 'row.codes code ends with a period for record '+row.record_id+' ('+c+')';
+      const lc=' '+c.toLowerCase()+' ';
+      for(const m of SENTENCE_MARKERS) if(lc.includes(m)) return 'row.codes code is a sentence marker for record '+row.record_id+' ('+c+')';
     }
+    if(typeof row.quote!=='string'||!row.quote.trim()) return 'row.quote missing for record '+row.record_id;
     if(seen.has(row.record_id)) return 'duplicate record_id '+row.record_id;
     seen.add(row.record_id);
   }
@@ -80,7 +89,7 @@ function validateCodingSet(p,expected){
   return null;
 }
 const CODING_SYSTEM='You are a panel member. Return ONLY a JSON object matching this schema exactly: '+JSON.stringify(CODING_SCHEMA)+'. No prose, no markdown fences.';
-const CODING_USER='You are an independent qualitative coder. Return one set that codes every record below. Set coder_id to a short stable label for yourself. rows must contain exactly one entry per record, each with that record\'s record_id and 1 to 4 short lowercase theme codes, every code under '+CODING_MAX_CODE_LEN+' characters. Do not copy record text into codes; do not return NA.\n\nRECORDS:\n'+CODING_RECORDS.map(r=>r.record_id+': '+r.text).join('\n\n');
+const CODING_USER='You are an independent qualitative coder. Return one set that codes every record below. Set coder_id to a short stable label for yourself. rows must contain exactly one entry per record, each with that record\'s record_id, 1 to 4 short lowercase theme codes (each <=40 chars, <=6 words, no sentence, no period), and a verbatim quote of <=25 words copied from the record that justifies the codes. Do not copy record text into codes; do not return NA.\n\nRECORDS:\n'+CODING_RECORDS.map(r=>r.record_id+': '+r.text).join('\n\n');
 
 const SILENCEABLE_TIMEOUT_MS=10000;
 const REALISTIC_TIMEOUT_MS=30000;

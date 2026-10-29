@@ -1805,9 +1805,6 @@ module.exports.loadToolsForExecution = aspTool.wrapExecution(module.exports.load
 module.exports.loadAgentTools = aqrpTool.wrapLoad(module.exports.loadAgentTools);
 module.exports.loadToolsForExecution = aqrpTool.wrapExecution(module.exports.loadToolsForExecution);
 
-const panelTool = require("/app/aqrp-feature/panel-tool.cjs");
-module.exports.loadAgentTools = panelTool.wrapLoad(module.exports.loadAgentTools);
-module.exports.loadToolsForExecution = panelTool.wrapExecution(module.exports.loadToolsForExecution);
 
 const panelBatchTool = require("/app/aqrp-feature/panel-batch-tool.cjs");
 module.exports.loadAgentTools = panelBatchTool.wrapLoad(module.exports.loadAgentTools);

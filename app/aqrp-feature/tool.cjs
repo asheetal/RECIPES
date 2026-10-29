@@ -43,9 +43,14 @@ async function invoke(req, args) {
       return JSON.stringify({ status: 'step_complete', step, output: result.output });
     }
     if (step === 4) {
-      const payload = args.payload;
-      if (!payload) throw new Error('payload required for step 4');
-      const p4 = typeof payload === 'string' ? JSON.parse(payload) : payload;
+      let payload = args.payload;
+      let p4 = payload ? (typeof payload === 'string' ? JSON.parse(payload) : payload) : null;
+      const pr = p4 && p4.panel_result;
+      if (!pr || !Array.isArray(pr.responses) || pr.responses.length === 0) {
+        const env = await stateSvc.assembleStep4Envelope(s);
+        if (env) p4 = { panel_result: env };
+        else if (!pr) throw new Error('payload required for step 4 (no panel_result and no complete tally for this corpus)');
+      }
       const os4 = require('node:os'); const path4 = require('node:path'); const fs4 = require('node:fs');
       const tmp4 = path4.join(os4.tmpdir(), 'aqrp-step4-' + Date.now() + '.json');
       fs4.writeFileSync(tmp4, JSON.stringify(p4));

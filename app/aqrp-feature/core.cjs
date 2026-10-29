@@ -94,6 +94,41 @@ function makeService(repo, deps) {
     } catch (e) {}
     return 4;
   }
-  return { scope, getState, startRun, completeStep, failRun, killRun, deleteRun, getOutput, getExtra, getMaxBatchRecords, getBatchConcurrency };
+  async function assembleStep4Envelope(s) {
+    const mongoose = require('mongoose');
+    const db = mongoose.connection.db;
+    const r = await repo.getRun(s);
+    if (!r) return null;
+    const siblings = await db.collection('aqrpruns').find({ projectId: s.projectId, fileId: r.fileId, sha256: r.sha256 }).toArray();
+    let pick = null;
+    for (const c of siblings) {
+      const prog = await db.collection('aqrp_progress').findOne({ runId: c.runId, step: 4 });
+      if (prog && Number.isInteger(prog.done) && Number.isInteger(prog.total) && prog.total > 0 && prog.done === prog.total && Number.isInteger(prog.n)) {
+        pick = { runId: c.runId, n: prog.n };
+        break;
+      }
+    }
+    if (!pick) return null;
+    const all = await db.collection('aqrp_rows').find({ runId: pick.runId, step: 4 }).toArray();
+    if (!all.length) return null;
+    const step1 = r.steps && r.steps['1'] && r.steps['1'].output;
+    let expected = (step1 && Array.isArray(step1.record_ids)) ? step1.record_ids.map(String) : null;
+    if (!expected) expected = all.map(x => String(x.record_id)).sort((a,b)=>Number(a)-Number(b));
+    const byId = new Map(all.map(x => [String(x.record_id), x.perCoder || []]));
+    const n = pick.n;
+    const slots = [];
+    for (let i = 0; i < n; i++) slots.push({ coder_id: null, rows: [] });
+    for (const id of expected) {
+      const per = byId.get(String(id));
+      if (!per) return null;
+      for (let i = 0; i < n; i++) {
+        const pc = per[i];
+        if (!slots[i].coder_id && pc && pc.coder_id) slots[i].coder_id = pc.coder_id;
+        slots[i].rows.push({ record_id: String(id), codes: (pc && pc.codes) || ['NA'], quote: (pc && pc.quote) || '' });
+      }
+    }
+    return { panel: 'LLM_ASSISTANT_PANEL_BATCH', n, responses: slots.map((x, i) => ({ coder_id: x.coder_id || ('panel-slot-' + i), rows: x.rows })) };
+  }
+  return { scope, getState, startRun, completeStep, failRun, killRun, deleteRun, getOutput, getExtra, getMaxBatchRecords, getBatchConcurrency, assembleStep4Envelope };
 }
 module.exports = { makeService, sha256, FINAL_STEP };

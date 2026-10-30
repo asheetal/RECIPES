@@ -252,7 +252,23 @@ async function step32({ filePath, pools, allRdfs, runId }) {
 
   const esc = (s) => String(s == null ? '' : s).replace(/[&%$#_{}]/g, c => '\\' + c);
 
-  // ---- 1. Body extraction from surgeon narrative ----
+  // ---- Pool DOI index (for citation matching + support elaboration) ----
+  const poolOrder = ['P01','P02','P03','P04','P05','P06','P07','P08','P09','P10','P11','P12','P13','P00'];
+  const doiToRec = {};
+  const poolDOIs = [];
+  const poolByID = {};
+  for (const k of poolOrder) {
+    const pool = pools && pools[k];
+    if (!pool) continue;
+    const recs = (pool.top_k || []).filter(r => r && r.doi);
+    poolByID[k] = recs;
+    for (const rec of recs) {
+      const d = String(rec.doi);
+      if (!doiToRec[d]) { doiToRec[d] = rec; poolDOIs.push(d); }
+    }
+  }
+
+  // ---- Extract body from surgeon narrative ----
   let paper = p.submission_paper_tex || '';
   const beginDoc = paper.indexOf('\\begin{document}');
   const endDoc = paper.lastIndexOf('\\end{document}');
@@ -260,11 +276,9 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     ? paper.slice(beginDoc + '\\begin{document}'.length, endDoc)
     : paper;
 
-  // Title (surgeon's own)
   const titleMatch = paper.match(/\\title\{([\s\S]*?)\}/);
   const surgeonTitle = titleMatch ? titleMatch[1].trim() : 'Qualitative Analysis of AI Futures';
 
-  // Abstract (surgeon's own)
   const abstractMatch = body.match(/\\begin\{abstract\}([\s\S]*?)\\end\{abstract\}/);
   const abstractText = abstractMatch ? abstractMatch[1].trim() : '';
   body = body.replace(/\\begin\{abstract\}[\s\S]*?\\end\{abstract\}/g, '');
@@ -277,46 +291,60 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   body = body.replace(/\\begin\{thebibliography\}[\s\S]*?\\end\{thebibliography\}/g, '');
   body = body.replace(/\\bibliographystyle\{[^}]*\}/g, '');
   body = body.replace(/\\bibliography\{[^}]*\}/g, '');
+  // Strip surgeon's own Keywords line (we generate our own)
+  body = body.replace(/^[ \t]*\bKeywords?\s*:\s*[^\n]+\n?/gim, '');
   body = body.trim();
 
-  // ---- 2. DOI universe (pool order for determinism) ----
-  const poolOrder = ['P01','P02','P03','P04','P05','P06','P07','P08','P09','P10','P11','P12','P13'];
-  const doiToRec = {};
-  const poolDOIs = [];
-  for (const k of poolOrder) {
-    const pool = pools && pools[k];
-    for (const rec of ((pool && pool.top_k) || [])) {
-      if (rec && rec.doi && !doiToRec[String(rec.doi)]) {
-        doiToRec[String(rec.doi)] = rec;
-        poolDOIs.push(String(rec.doi));
-      }
+  // ---- 1. Replace LITERAL (?) / (??) / (???) with best-matching pool citation ----
+  function pickCitationByContext(context) {
+    const words = String(context || '').toLowerCase().split(/[^a-z0-9]+/i).filter(w => w.length > 4);
+    if (!words.length) return poolDOIs[0] || null;
+    let best = null, bestScore = 0;
+    for (const d of poolDOIs) {
+      const rec = doiToRec[d];
+      if (!rec) continue;
+      const title = String(rec.title || '').toLowerCase();
+      const journal = String(rec.journal || '').toLowerCase();
+      const auth = (Array.isArray(rec.authors) ? rec.authors.join(' ') : String(rec.authors || '')).toLowerCase();
+      const hay = title + ' ' + journal + ' ' + auth;
+      let score = 0;
+      for (const w of words) if (hay.includes(w)) score++;
+      if (score > bestScore) { bestScore = score; best = d; }
     }
+    return best || poolDOIs[0] || null;
   }
-
-  // ---- 3. Replace dangling \citep{?} with real DOIs (sequential) ----
-  let citeIdx = 0;
+  // Replace literal (?) marks; iterate carefully because replacements shift offsets
+  body = body.replace(/\(\s*\?{1,3}\s*\)/g, (match, offset, full) => {
+    const ctx = full.slice(Math.max(0, offset - 250), Math.min(full.length, offset + 250));
+    const d = pickCitationByContext(ctx);
+    return d ? `\\citep{${d}}` : '';
+  });
+  // Also catch remaining \citep{?} patterns
   body = body.replace(/\\cite[pt]?\{\s*\?+\s*\}/g, () => {
-    const d = poolDOIs[citeIdx] || poolDOIs[0] || '';
-    citeIdx++;
-    return d ? `\\cite{${d}}` : '';
+    const d = poolDOIs[0];
+    return d ? `\\citep{${d}}` : '';
   });
 
-  // ---- 4. References — union of RDF citations and pool DOIs ----
+  // ---- 2. References — union of RDF citations and pool DOIs ----
   const rdfDOIs = new Set();
   for (const r of all) for (const d of (r.citations_used || [])) rdfDOIs.add(String(d));
   const refDOIs = [...new Set([...rdfDOIs, ...poolDOIs])].sort();
 
-  function citeLabel(rec) {
+  function lastAuthor(rec) {
     const authors = Array.isArray(rec.authors) ? rec.authors
       : (rec.authors ? [String(rec.authors)] : ['Anon']);
-    const last = (name) => {
-      const parts = String(name).trim().split(/[\s,]+/).filter(Boolean);
-      return parts[parts.length - 1] || 'Anon';
-    };
+    const parts = String(authors[0]).trim().split(/[\s,]+/).filter(Boolean);
+    return parts[parts.length - 1] || 'Anon';
+  }
+  function citeLabel(rec) {
+    const authors = Array.isArray(rec.authors) ? rec.authors : [String(rec.authors || 'Anon')];
     const y = rec.year || 'n.d.';
-    if (authors.length === 1) return `${last(authors[0])}(${y})`;
-    if (authors.length === 2) return `${last(authors[0])} \\& ${last(authors[1])}(${y})`;
-    return `${last(authors[0])} et~al.(${y})`;
+    if (authors.length === 1) return `${lastAuthor(rec)}(${y})`;
+    if (authors.length === 2) {
+      const p2 = String(authors[1]).trim().split(/[\s,]+/).filter(Boolean);
+      return `${lastAuthor(rec)} \\& ${p2[p2.length-1] || 'Anon'}(${y})`;
+    }
+    return `${lastAuthor(rec)} et~al.(${y})`;
   }
 
   const bibitems = refDOIs.map(d => {
@@ -327,8 +355,9 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     const label = citeLabel(rec);
     return `\\bibitem[${label}]{${d}} ${esc(authors)} (${y}). ${esc(rec.title || '')}. \\textit{${esc(rec.journal || '')}}. \\href{https://doi.org/${d}}{${d}}`;
   });
+  // NOTE: no \section*{References} — thebibliography self-titles
   const refs = bibitems.length ? [
-    '\\section*{References}',
+    '\\clearpage',
     '\\begin{singlespacing}',
     '\\begin{thebibliography}{99}',
     ...bibitems,
@@ -337,23 +366,80 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     ''
   ].join('\n') : '';
 
-  // ---- 5. Table 1: Codes → Themes → Dimensions (Gioia-lite) ----
+  // ---- 3. Diagram from step 28 (or step 26 fallback) ----
+  const s26 = (steps['26'] && steps['26'].output) || {};
+  const s28 = (steps['28'] && steps['28'].output) || {};
+  const modelDraft = s26.model_draft || {};
+  const dparams = s28.diagram_script_params || {};
+
+  const sanitize = (s) => String(s || '').replace(/[^a-zA-Z0-9]/g, '') || 'x';
+  let nodeList = [];
+  let edgeList = [];
+
+  if (Array.isArray(dparams.nodes) && dparams.nodes.length) {
+    const labels = Array.isArray(dparams.labels) ? dparams.labels : [];
+    nodeList = dparams.nodes.map((id, i) => ({ id: sanitize(id), label: String(labels[i] || id) }));
+    const idToSanitized = {};
+    dparams.nodes.forEach((id, i) => { idToSanitized[String(id)] = sanitize(id); });
+    if (Array.isArray(dparams.paths)) {
+      for (const pth of dparams.paths) {
+        const mm = String(pth).match(/^(.+?)\s*(?:->|→)\s*(.+?)$/);
+        if (mm) {
+          const f = idToSanitized[mm[1].trim()] || sanitize(mm[1]);
+          const t = idToSanitized[mm[2].trim()] || sanitize(mm[2]);
+          edgeList.push({ from: f, to: t });
+        }
+      }
+    }
+  } else if (Array.isArray(modelDraft.phases) && modelDraft.phases.length) {
+    nodeList = modelDraft.phases.map((ph, i) => ({ id: 'n' + i, label: String(ph) }));
+    for (let i = 1; i < nodeList.length; i++) edgeList.push({ from: nodeList[i-1].id, to: nodeList[i].id });
+    if (nodeList.length >= 3) edgeList.push({ from: nodeList[nodeList.length-1].id, to: nodeList[0].id }); // feedback loop
+  }
+
+  let diagram = '';
+  if (nodeList.length >= 2) {
+    const W = 3.3;
+    const tikzNodes = nodeList.map((n, i) => {
+      const x = i * W;
+      let lbl = n.label;
+      if (lbl.length > 28) {
+        const parts = lbl.split(/\s+/);
+        const mid = Math.ceil(parts.length / 2);
+        lbl = parts.slice(0, mid).join(' ') + '\\\\' + parts.slice(mid).join(' ');
+      }
+      return `  \\node[box] (${n.id}) at (${(x/3.3).toFixed(2) * 3.3}, 0) {${esc(lbl).replace(/\\\\/g, '\\\\')}};`;
+    }).join('\n');
+    const tikzEdges = edgeList.map(e => {
+      if (e.from === e.to) return '';
+      return `  \\draw[arr] (${e.from}) -- (${e.to});`;
+    }).filter(Boolean).join('\n');
+    const tensionNote = modelDraft.tension ? `\\noindent\\textit{Note.} ${esc(String(modelDraft.tension))}\\par\n` : '';
+    diagram = [
+      '\\clearpage',
+      '\\begin{center}\\textbf{Figure 1}\\\\[2pt]',
+      '\\textit{Process Model}\\end{center}',
+      '\\vspace{0.3em}',
+      '\\begin{center}',
+      '\\begin{tikzpicture}[',
+      '  box/.style={draw, rounded corners=2pt, minimum width=2.8cm, minimum height=1.2cm, align=center, font=\\footnotesize, inner sep=3pt},',
+      '  arr/.style={->, >=stealth, thick}',
+      ']',
+      tikzNodes,
+      tikzEdges,
+      '\\end{tikzpicture}',
+      '\\end{center}',
+      '\\vspace{0.2em}',
+      tensionNote
+    ].join('\n');
+  }
+
+  // ---- 4. Table 1 (Codes → Themes → Dimensions) ----
   const s15 = (steps['15'] && steps['15'].output) || {};
   const s24 = (steps['24'] && steps['24'].output) || {};
   const s4 = (steps['4'] && steps['4'].output) || {};
   const codebook = ((s15.codebook && s15.codebook.codes) || []);
   const dims = (s24.dimensions || []);
-
-  const firstOrderCodes = (() => {
-    const set = new Set();
-    for (const row of (s4.code_matrix || [])) {
-      for (const c of (row.codes || [])) {
-        const t = String(c).toLowerCase().trim();
-        if (t && t !== 'na' && t !== '') set.add(t);
-      }
-    }
-    return [...set].sort();
-  })();
 
   let table1 = '';
   if (dims.length && codebook.length) {
@@ -371,11 +457,12 @@ async function step32({ filePath, pools, allRdfs, runId }) {
       return `\\textbf{${dimName}} & ${themes} & \\textit{${dimMech}} \\\\`;
     }).join('\n');
     table1 = [
+      '\\clearpage',
       '\\begin{singlespacing}',
       '\\begin{center}\\textbf{Table 1}\\\\[2pt]',
       '\\textit{Codes, Themes, and Dimensions}\\end{center}',
       '\\begin{footnotesize}\\setlength{\\tabcolsep}{4pt}',
-      '\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.22\\textwidth} >{\\raggedright\\arraybackslash}p{0.33\\textwidth} >{\\raggedright\\arraybackslash}X@{}}',
+      '\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.20\\textwidth} >{\\raggedright\\arraybackslash}p{0.32\\textwidth} >{\\raggedright\\arraybackslash}X@{}}',
       '\\toprule',
       '\\textbf{Aggregate dimension} & \\textbf{Second-order themes} & \\textbf{Mechanism} \\\\',
       '\\midrule',
@@ -388,7 +475,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     ].join('\n');
   }
 
-  // ---- 6. Table 2: Representative Quotations ----
+  // ---- 5. Table 2 (Representative Quotations) ----
   const s16 = (steps['16'] && steps['16'].output) || {};
   const quotePool = [];
   for (const r of ((s16.panel_result && s16.panel_result.responses) || [])) {
@@ -409,7 +496,6 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     uniqQ.push(item);
     if (uniqQ.length >= 10) break;
   }
-
   let table2 = '';
   if (uniqQ.length) {
     const qRows = uniqQ.map(item =>
@@ -433,45 +519,58 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     ].join('\n');
   }
 
-  // ---- 7. Appendix: RDF ledger with stable column widths ----
+  // ---- 6. Appendix: RDF ledger with wider Step/RDF cols + pool elaboration ----
+  function poolSummary(poolId) {
+    const recs = poolByID[poolId] || [];
+    const refs = recs.slice(0, 3).map(r => {
+      const y = r.year || 'n.d.';
+      return `${lastAuthor(r)} ${y}`;
+    });
+    return refs.join('; ') + (recs.length > 3 ? '; …' : '');
+  }
   const ledgerRows = all.map(r => {
+    // Use number from rdf_id, not stage field
+    const numMatch = String(r.rdf_id || '').match(/\d+/);
+    const stepNum = numMatch ? numMatch[0] : String(r.stage || '');
     const forks = Array.isArray(r.options) ? r.options.filter(o => o !== r.chosen).map(esc).join('; ') : '';
-    const support = (r.citation_status || '') + (r.pool_id ? ' [' + r.pool_id + ']' : '');
-    return `${esc(String(r.stage || ''))} & ${esc(r.rdf_id)} & ${esc(r.chosen || '')} & ${forks} & ${esc(r.rationale || '')} & ${esc(support)} \\\\`;
+    const poolId = r.pool_id || '';
+    const summary = poolId ? poolSummary(poolId) : '';
+    const support = (r.citation_status || '') + (poolId ? ` [${poolId}] ${esc(summary)}` : '');
+    return `${esc(stepNum)} & ${esc(r.rdf_id)} & ${esc(r.chosen || '')} & ${forks} & ${esc(r.rationale || '')} & ${support} \\\\`;
   }).join('\n');
   const ledger = [
     '\\clearpage',
     '\\section*{Appendix A: Researcher Degrees of Freedom Ledger}',
-    '\\noindent\\textit{Every analytical choice made by the pipeline, with the counterfactual fork not taken, the rationale, and the citation pool that grounds it.}\\par\\vspace{1em}',
+    '\\noindent\\textit{Every analytical choice made by the pipeline, with the counterfactual fork not taken, the rationale, and the citation pool that grounds it. Pool IDs (P00--P13) name the literature search performed at that step; each pool\\textquotesingle s top papers appear inline in the Support column and fully in References.}\\par\\vspace{0.8em}',
     '\\begin{singlespacing}',
-    '\\begin{footnotesize}\\setlength{\\tabcolsep}{2pt}',
-    '\\begin{longtable}{@{}p{0.03\\linewidth} p{0.05\\linewidth} p{0.18\\linewidth} p{0.20\\linewidth} p{0.36\\linewidth} p{0.08\\linewidth}@{}}',
+    '\\begin{tiny}\\setlength{\\tabcolsep}{1.5pt}',
+    '\\begin{longtable}{@{}>{\\raggedright\\arraybackslash}p{0.04\\linewidth} >{\\raggedright\\arraybackslash}p{0.055\\linewidth} >{\\raggedright\\arraybackslash}p{0.16\\linewidth} >{\\raggedright\\arraybackslash}p{0.17\\linewidth} >{\\raggedright\\arraybackslash}p{0.33\\linewidth} >{\\raggedright\\arraybackslash}p{0.135\\linewidth}@{}}',
     '\\toprule',
-    '\\textbf{Step} & \\textbf{RDF} & \\textbf{Choice Made} & \\textbf{Counterfactual Forks} & \\textbf{Epistemic Rationale} & \\textbf{Support} \\\\',
+    '\\textbf{Step} & \\textbf{RDF} & \\textbf{Choice} & \\textbf{Forks} & \\textbf{Rationale} & \\textbf{Support} \\\\',
     '\\midrule',
     '\\endfirsthead',
     '\\toprule',
-    '\\textbf{Step} & \\textbf{RDF} & \\textbf{Choice Made} & \\textbf{Counterfactual Forks} & \\textbf{Epistemic Rationale} & \\textbf{Support} \\\\',
+    '\\textbf{Step} & \\textbf{RDF} & \\textbf{Choice} & \\textbf{Forks} & \\textbf{Rationale} & \\textbf{Support} \\\\',
     '\\midrule',
     '\\endhead',
     '\\bottomrule',
     '\\endfoot',
     ledgerRows,
     '\\end{longtable}',
-    '\\end{footnotesize}',
+    '\\end{tiny}',
     '\\end{singlespacing}'
   ].join('\n');
 
-  // ---- 8. Keywords from dimension names / codebook ----
-  const keywords = [];
-  for (const d of dims) if (d.name) keywords.push(String(d.name).toLowerCase());
+  // ---- 7. Keywords from dimensions ----
+  const kw = [];
+  for (const d of dims) if (d.name) kw.push(String(d.name).toLowerCase());
   for (const cb of codebook) {
     const k = String(cb.name || cb.label || '').toLowerCase().replace(/_/g,' ');
-    if (k && !keywords.includes(k)) keywords.push(k);
+    if (k && !kw.includes(k)) kw.push(k);
   }
-  const kw = keywords.slice(0, 6);
+  const kwList = kw.slice(0, 6);
 
-  // ---- 9. Assemble ----
+  // ---- 8. Assemble ----
   const preamble = [
     '\\documentclass[12pt]{article}',
     '\\usepackage[margin=1in]{geometry}',
@@ -484,6 +583,8 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     '\\usepackage{hyperref}',
     '\\usepackage{ragged2e}',
     '\\usepackage{natbib}',
+    '\\usepackage{tikz}',
+    '\\usetikzlibrary{arrows.meta, positioning, shapes.geometric}',
     '\\doublespacing',
     '\\pagestyle{plain}',
     '\\begin{document}'
@@ -503,8 +604,8 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     ? '\\section*{Abstract}\n' + abstractText + '\n'
     : '';
 
-  const kwBlock = kw.length
-    ? '\\vspace{0.5em}\n\\noindent\\textit{Keywords:} ' + esc(kw.join(', ')) + '\n'
+  const kwBlock = kwList.length
+    ? '\\vspace{0.5em}\n\\noindent\\textit{Keywords:} ' + esc(kwList.join(', ')) + '\n'
     : '';
 
   const full = [
@@ -514,6 +615,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     kwBlock,
     body,
     '',
+    diagram,
     table1,
     table2,
     refs,
@@ -521,15 +623,12 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     '\\end{document}'
   ].join('\n');
 
-  const aqrp_report_tex = full;
-  const aqrp_report_audit = {
-    version: '1',
-    runId: runId || null,
-    assembled_at: new Date().toISOString(),
-    rdf_count: all.length,
-    records: all
-  };
-  return { output: { status: 'PACKAGED', aqrp_report_tex, aqrp_report_audit, rdf_records: [r32] } };
+  return { output: {
+    status: 'PACKAGED',
+    aqrp_report_tex: full,
+    aqrp_report_audit: { version: '1', runId: runId || null, assembled_at: new Date().toISOString(), rdf_count: all.length, records: all },
+    rdf_records: [r32]
+  }};
 }
 
 async function runStep({ step, filePath, expectedRecordIds, pools, allRdfs, runId }) {

@@ -41,8 +41,13 @@ async function invoke(req, args) {
       try { schema = JSON.parse(schema); } catch (e) { throw new Error('schema string is not valid JSON: ' + e.message); }
     }
     if (!schema || typeof schema !== 'object' || Array.isArray(schema)) throw new Error('schema required (JSON Schema object or JSON string)');
+    // Aligned with mod.batch()'s strict check — the boundary must reject exactly what mod.batch would reject.
+    // Previously: added type='object' if properties existed (lenient). Now: require BOTH type='object' AND properties object.
     if (!schema.type && schema.properties && typeof schema.properties === 'object') {
       schema = { ...schema, type: 'object' };
+    }
+    if (schema.type !== 'object' || !schema.properties || typeof schema.properties !== 'object') {
+      throw new Error('schema must be a JSON Schema object with type=object and properties');
     }
     if (typeof records === 'string') {
       try { records = JSON.parse(records); } catch (e) { throw new Error('records string is not valid JSON: ' + e.message); }

@@ -191,7 +191,7 @@ function registerRoutes(router, projectFilesService) {
                 pdf_b64 = await new Promise((resolve, reject) => {
                   const payload = JSON.stringify({ tex: out.aqrp_report_tex, run_id: st.runId || '' });
                   const req = http.request({
-                    hostname: 'aqrp-runner', port: 8091, path: '/compile-tex', method: 'POST',
+                    hostname: 'asp-runner', port: 8091, path: '/compile-tex', method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) },
                     timeout: 90000
                   }, res => {
@@ -218,13 +218,13 @@ function registerRoutes(router, projectFilesService) {
                       { _id: runDoc._id },
                       { $set: {
                           'steps.32.output.aqrp_report_pdf_b64': pdf_b64,
-                          'steps.32.output.aqrp_report_pdf_source': 'aqrp-runner-' + new Date().toISOString()
+                          'steps.32.output.aqrp_report_pdf_source': 'asp-runner-' + new Date().toISOString()
                       }}
                     );
                   }
                 } catch (_) {}
               } catch (e) {
-                console.error('[bundle] aqrp-runner compile failed: ' + (e && e.message ? e.message : e));
+                console.error('[bundle] asp-runner compile failed: ' + (e && e.message ? e.message : e));
               }
             }
             if (pdf_b64) {
@@ -232,7 +232,7 @@ function registerRoutes(router, projectFilesService) {
               if (out.aqrp_report_audit) zip.file('aqrp_report_audit.json', JSON.stringify(out.aqrp_report_audit, null, 2));
             } else if (out.aqrp_report_tex) {
               zip.file('aqrp_report.tex', out.aqrp_report_tex);
-              zip.file('_compile_failed.txt', 'aqrp-runner compile failed for run ' + (st.runId || '') + '; check docker logs aqrp-runner');
+              zip.file('_compile_failed.txt', 'asp-runner compile failed for run ' + (st.runId || '') + '; check docker logs asp-runner');
               if (out.aqrp_report_audit) zip.file('aqrp_report_audit.json', JSON.stringify(out.aqrp_report_audit, null, 2));
             } else if (out.submission_paper_tex) {
               zip.file('submission_paper.tex', out.submission_paper_tex);

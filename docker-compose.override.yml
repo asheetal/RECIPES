@@ -1,10 +1,4 @@
 services:
-  aqrp-runner:
-    image: aqrp-runner:1
-    container_name: aqrp-runner
-    restart: always
-    networks:
-      - default
   api:
     environment:
       TAVILY_API_KEY: ${TAVILY_API_KEY}

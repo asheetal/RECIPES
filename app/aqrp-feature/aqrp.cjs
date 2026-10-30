@@ -171,7 +171,69 @@ function registerRoutes(router, projectFilesService) {
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
-  router.get('/:projectId/aqrp/bundle', async (req, res, next) => {
+  // ── Shared PDF compile helper ──
+// Used by both GET /pdf and GET /bundle. Compiles via asp-runner if not
+// already cached in step-32 output. Caches b64 back to Mongo on success.
+async function _ensureReportPdf(db, runDoc) {
+  if (!runDoc || !runDoc.steps || !runDoc.steps['32']) return null;
+  const s32 = runDoc.steps['32'].output || {};
+  if (typeof s32.aqrp_report_pdf_b64 === 'string' && s32.aqrp_report_pdf_b64.length > 0) {
+    return { b64: s32.aqrp_report_pdf_b64, source: 'cached' };
+  }
+  if (typeof s32.aqrp_report_tex !== 'string' || s32.aqrp_report_tex.length === 0) return null;
+  const http = require('http');
+  const payload = JSON.stringify({ tex: s32.aqrp_report_tex, run_id: runDoc.runId || '' });
+  try {
+    const compiled = await new Promise((resolve, reject) => {
+      const req = http.request({
+        hostname: 'asp-runner', port: 8091, path: '/compile-tex', method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) },
+        timeout: 120000
+      }, res => {
+        let b = '';
+        res.on('data', c => b += c);
+        res.on('end', () => { try { resolve(JSON.parse(b)); } catch (e) { reject(new Error('bad json')); } });
+      });
+      req.on('error', reject);
+      req.on('timeout', () => { req.destroy(new Error('compile timeout')); });
+      req.write(payload); req.end();
+    });
+    if (!compiled || !compiled.ok || !compiled.pdf_b64) {
+      console.error('[pdf] compile failed: ' + (compiled && compiled.error ? compiled.error : 'unknown'));
+      return null;
+    }
+    await db.collection('aqrpruns').updateOne(
+      { _id: runDoc._id },
+      { $set: {
+          'steps.32.output.aqrp_report_pdf_b64': compiled.pdf_b64,
+          'steps.32.output.aqrp_report_pdf_source': 'lazy-compile-' + new Date().toISOString()
+      } }
+    );
+    return { b64: compiled.pdf_b64, source: 'compiled', bytes: compiled.bytes };
+  } catch (e) {
+    console.error('[pdf] compile threw: ' + (e && e.message ? e.message : e));
+    return null;
+  }
+}
+
+router.get('/:projectId/aqrp/pdf', async (req, res, next) => {
+  try {
+    const s = await svc.scope(req, req.params.projectId);
+    const st = await svc.getState(s);
+    const mongoose = require('mongoose');
+    const db = mongoose.connection.db;
+    const runDoc = await db.collection('aqrpruns').findOne({ runId: st.runId });
+    if (!runDoc) return res.status(404).json({ error: 'no run' });
+    const result = await _ensureReportPdf(db, runDoc);
+    if (!result || !result.b64) return res.status(404).json({ error: 'no step 32 output or pdf compile failed' });
+    const buf = Buffer.from(result.b64, 'base64');
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', 'attachment; filename="aqrp_report.pdf"');
+    return res.send(buf);
+  } catch (e) { next(e); }
+});
+
+router.get('/:projectId/aqrp/bundle', async (req, res, next) => {
     try {
       const s = await svc.scope(req, req.params.projectId);
       const st = await svc.getState(s);
@@ -179,12 +241,23 @@ function registerRoutes(router, projectFilesService) {
       const zip = new JSZip();
       let count = 0;
       const stepNums = Object.keys(st.steps || {}).map(Number).filter(n => Number.isInteger(n) && n >= 1).sort((a, b) => a - b);
+      // Pre-fetch PDF for step 32 via shared helper (uses cache or compiles)
+      let __pdf_b64 = null;
+      try {
+        const mongoose2 = require('mongoose');
+        const db2 = mongoose2.connection.db;
+        const runDoc2 = await db2.collection('aqrpruns').findOne({ runId: st.runId });
+        if (runDoc2) {
+          const r = await _ensureReportPdf(db2, runDoc2);
+          if (r && r.b64) __pdf_b64 = r.b64;
+        }
+      } catch (e) { console.error('[bundle] pdf prefetch: ' + (e && e.message ? e.message : e)); }
       for (const n of stepNums) {
         const out = await svc.getOutput(s, n);
         if (out) {
           zip.file(`__aqrp_step${n}_out.json`, JSON.stringify(out, null, 2));
           if (n === 32) {
-            let pdf_b64 = out.aqrp_report_pdf_b64 || null;
+            let pdf_b64 = __pdf_b64 || out.aqrp_report_pdf_b64 || null;
             if (!pdf_b64 && out.aqrp_report_tex) {
               try {
                 const http = require('http');

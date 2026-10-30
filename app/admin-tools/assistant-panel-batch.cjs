@@ -26,19 +26,65 @@ function recordId(r, i) {
 }
 
 function codesOf(json) {
-  if (!json || typeof json !== 'object') return null;
+  if (!json) return null;
+
+  // If top-level is an array, treat as rows
+  if (Array.isArray(json) && json.length > 0) {
+    return _extractCodesFromRow(json[0]);
+  }
+
+  if (typeof json !== 'object') return null;
+
+  // Direct {codes: [...]}
   if (Array.isArray(json.codes) && json.codes.length) return json.codes.map(String);
-  if (Array.isArray(json.rows) && json.rows.length) {
-    const r0 = json.rows[0];
-    if (r0 && Array.isArray(r0.codes) && r0.codes.length) return r0.codes.map(String);
-    if (r0 && Array.isArray(r0.quotes) && r0.quotes.length) {
-      const q0 = r0.quotes[0];
-      if (q0 && Array.isArray(q0.codes) && q0.codes.length) return q0.codes.map(String);
-    }
-    for (const r of json.rows) {
-      if (r && Array.isArray(r.codes) && r.codes.length) return r.codes.map(String);
+
+  // Wrapped array — try all common names
+  for (const key of ['rows', 'records', 'items', 'results', 'outputs', 'entries', 'data', 'codes_list']) {
+    const v = json[key];
+    if (Array.isArray(v) && v.length > 0) {
+      const ex = _extractCodesFromRow(v[0]);
+      if (ex) return ex;
+      // If first row doesn't yield, try next few
+      for (let i = 1; i < Math.min(5, v.length); i++) {
+        const e = _extractCodesFromRow(v[i]);
+        if (e) return e;
+      }
     }
   }
+
+  // Maybe the object itself is one row
+  return _extractCodesFromRow(json);
+}
+
+function _extractCodesFromRow(row) {
+  if (!row || typeof row !== 'object') return null;
+
+  // Direct codes array (string[])
+  if (Array.isArray(row.codes) && row.codes.length) return row.codes.map(String);
+
+  // Nested quotes[0].codes
+  if (Array.isArray(row.quotes) && row.quotes.length > 0) {
+    const q0 = row.quotes[0];
+    if (q0 && Array.isArray(q0.codes) && q0.codes.length) return q0.codes.map(String);
+  }
+
+  // Fallback: extract all short string-valued fields as codes
+  // Skip known metadata fields
+  const META = new Set(['record_id', 'id', 'quote', 'quotes', 'memo', 'rationale',
+                        'explanation', 'reasoning', 'confidence', 'notes', 'coder_id']);
+  const codes = [];
+  for (const [k, v] of Object.entries(row)) {
+    if (META.has(k)) continue;
+    if (typeof v === 'string' && v && v.length <= 80 && !/[\n\r]/.test(v)) {
+      codes.push(v);
+    } else if (typeof v === 'number' && Number.isFinite(v)) {
+      codes.push(String(v));
+    } else if (Array.isArray(v) && v.length > 0 && v.every(x => typeof x === 'string' && x.length <= 80)) {
+      codes.push(...v);
+    }
+  }
+  if (codes.length > 0 && codes.length <= 8) return codes;
+
   return null;
 }
 
@@ -90,6 +136,9 @@ async function batch({ query, schema, records, onProgress, skipIds, concurrency 
         if (out && Array.isArray(out.raw)) {
           for (const r of out.raw) {
             if (r && r.ok && r.json && typeof r.json === 'object' && got[r.idx] === undefined) {
+              if (Object.keys(got).length === 0 && typeof console !== 'undefined') {
+                try { console.log('[batch-debug] first successful response shape: ' + JSON.stringify(r.json).slice(0, 400)); } catch (e) {}
+              }
               if (codesOf(r.json)) got[r.idx] = r.json;
             }
           }

@@ -105,9 +105,23 @@ async function invoke(req, args) {
         }
       } catch (e) {}
     }
-    // ── FATAL retry guard ──
-    // One batch call per (runId, step). If a marker exists (attempt / ok / failed),
-    // or if the step has already closed, the surgeon is retrying — throw FATAL.
+    const tally = progressOk ? makeTally(db, storeRunId, projectId2, __markerStep) : null;
+    if (tally) {
+      skipIds = await tally.ensure(records.length, concurrency);
+      await db.collection('aqrpruns').updateOne({ projectId: projectId2 }, { $set: { records_capped: recordsCapped, corpus_total: corpusTotal, lastProgressAt: new Date() } });
+      if (skipIds.length >= records.length) {
+        const built = await tally.envelope(records, mod.recordId);
+        if (built) {
+          const __rCells = Array.isArray(built.responses) ? built.responses.flatMap(r => Array.isArray(r.rows) ? r.rows : []) : [];
+          const __rAllNA = __rCells.length > 0 && __rCells.every(row => !Array.isArray(row.codes) || row.codes.length === 0 || row.codes.every(c => String(c).toUpperCase() === 'NA'));
+          if (__rAllNA) throw new Error('[llm_assistant_panel_batch] resume envelope is all-NA — refusing to return a fabricated success');
+          gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, status: 'ok', resumed: true, n: built.n, m: records.length });
+          return JSON.stringify(built);
+        }
+      }
+    }
+    // ── FATAL retry guard ── (moved: only fires when a batch was actually ATTEMPTED)
+    // Validation errors do NOT count as attempts — they are handled above.
     if (__markerStep && [4, 16, 17, 22].includes(__markerStep) && storeRunId) {
       let __prior = null;
       try {
@@ -142,21 +156,6 @@ async function invoke(req, args) {
       } catch (e) { if (String(e.message).startsWith('FATAL_')) throw e; }
     }
 
-    const tally = progressOk ? makeTally(db, storeRunId, projectId2, __markerStep) : null;
-    if (tally) {
-      skipIds = await tally.ensure(records.length, concurrency);
-      await db.collection('aqrpruns').updateOne({ projectId: projectId2 }, { $set: { records_capped: recordsCapped, corpus_total: corpusTotal, lastProgressAt: new Date() } });
-      if (skipIds.length >= records.length) {
-        const built = await tally.envelope(records, mod.recordId);
-        if (built) {
-          const __rCells = Array.isArray(built.responses) ? built.responses.flatMap(r => Array.isArray(r.rows) ? r.rows : []) : [];
-          const __rAllNA = __rCells.length > 0 && __rCells.every(row => !Array.isArray(row.codes) || row.codes.length === 0 || row.codes.every(c => String(c).toUpperCase() === 'NA'));
-          if (__rAllNA) throw new Error('[llm_assistant_panel_batch] resume envelope is all-NA — refusing to return a fabricated success');
-          gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, status: 'ok', resumed: true, n: built.n, m: records.length });
-          return JSON.stringify(built);
-        }
-      }
-    }
     const onProgress = tally ? async (ev) => { try { await tally.onEvent(ev); } catch (e) { console.error('[tally] onEvent failed (record=' + (ev && ev.record_id) + '):', e && e.message ? e.message : e); } } : undefined;
     let result = null;
     try {

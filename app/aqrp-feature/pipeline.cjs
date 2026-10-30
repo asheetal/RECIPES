@@ -250,15 +250,19 @@ async function _verifyBatchCall(runId, step) {
     const db = mongoose.connection.db;
     const rec = await db.collection('aqrp_batch_calls').findOne({ runId: String(runId), step: Number(step) });
     if (rec) {
-      const ageMs = Date.now() - new Date(rec.calledAt).getTime();
+      if (rec.status && rec.status !== 'ok') {
+        return { ok: false, reason: 'batch call for step ' + step + ' status=' + rec.status + (rec.error ? ', error: ' + rec.error : '') };
+      }
+      const ageMs = Date.now() - new Date(rec.calledAt || rec.firstAttemptAt).getTime();
       if (ageMs > 15 * 60 * 1000) return { ok: false, reason: 'batch call for step ' + step + ' is ' + Math.round(ageMs/60000) + ' min old (max 15)' };
       return { ok: true, source: 'marker', rec };
     }
-    // Fallback: marker missing, but if aqrp_rows has records for this run+step, batch ran
-    const rowsN = await db.collection('aqrp_rows').countDocuments({ runId: String(runId), step: Number(step) });
-    if (rowsN > 0) {
-      console.log('[verifyBatchCall] marker missing, fallback to rows: runId=' + String(runId).slice(-8) + ' step=' + step + ' rows=' + rowsN);
-      return { ok: true, source: 'rows', rowsN };
+    const rows = await db.collection('aqrp_rows').find({ runId: String(runId), step: Number(step) }).limit(20).toArray();
+    if (rows.length > 0) {
+      const __allNa = rows.every(r => (r.perCoder || []).every(pc => Array.isArray(pc.codes) && pc.codes.every(c => String(c).toUpperCase() === 'NA')));
+      if (__allNa) return { ok: false, reason: 'rows exist but all ' + rows.length + ' are all-NA — batch produced no usable codes' };
+      console.log('[verifyBatchCall] marker missing, rows fallback: runId=' + String(runId).slice(-8) + ' step=' + step + ' rows=' + rows.length);
+      return { ok: true, source: 'rows', rowsN: rows.length };
     }
     return { ok: false, reason: 'no llm_assistant_panel_batch call OR rows recorded for run ' + String(runId).slice(-8) + ' at step ' + step };
   } catch (e) {

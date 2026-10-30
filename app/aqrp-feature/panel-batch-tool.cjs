@@ -105,6 +105,43 @@ async function invoke(req, args) {
         }
       } catch (e) {}
     }
+    // ── FATAL retry guard ──
+    // One batch call per (runId, step). If a marker exists (attempt / ok / failed),
+    // or if the step has already closed, the surgeon is retrying — throw FATAL.
+    if (__markerStep && [4, 16, 17, 22].includes(__markerStep) && storeRunId) {
+      let __prior = null;
+      try {
+        const __upRes = await db.collection('aqrp_batch_calls').updateOne(
+          { runId: storeRunId, step: __markerStep },
+          { $setOnInsert: {
+              runId: storeRunId, step: __markerStep, firstAttemptAt: new Date(),
+              recordCount: records.length, status: 'attempt'
+          } },
+          { upsert: true }
+        );
+        if (__upRes.upsertedCount === 0) {
+          __prior = await db.collection('aqrp_batch_calls').findOne({ runId: storeRunId, step: __markerStep });
+        }
+      } catch (e) {
+        console.error('[batch] retry-guard marker write failed:', e && e.message ? e.message : e);
+      }
+      if (__prior) {
+        const __st = __prior.status || 'unknown';
+        const __errPart = __prior.error ? ' — first call error: ' + String(__prior.error).slice(0, 300) : '';
+        throw new Error('FATAL_BATCH_RETRY: llm_assistant_panel_batch called more than once for step ' + __markerStep +
+          ' in run ' + String(storeRunId).slice(-8) + '. First call status: ' + __st + __errPart +
+          '. Investigate the first call input/output in /app/admin-tools/prompt-dumps/ before retrying. Do NOT call the batch again for this step.');
+      }
+      try {
+        const __runDoc = await db.collection('aqrpruns').findOne({ runId: storeRunId });
+        if (__runDoc && __runDoc.steps && __runDoc.steps[String(__markerStep)]) {
+          throw new Error('FATAL_STEP_ALREADY_CLOSED: step ' + __markerStep +
+            ' has already closed in run ' + String(storeRunId).slice(-8) +
+            '. Do not call llm_assistant_panel_batch again for a completed step.');
+        }
+      } catch (e) { if (String(e.message).startsWith('FATAL_')) throw e; }
+    }
+
     const tally = progressOk ? makeTally(db, storeRunId, projectId2, __markerStep) : null;
     if (tally) {
       skipIds = await tally.ensure(records.length, concurrency);
@@ -124,6 +161,16 @@ async function invoke(req, args) {
     let result = null;
     try {
       result = await mod.batch({ query, schema, records, onProgress, skipIds, concurrency });
+    } catch (__err) {
+      if (__markerStep && [4, 16, 17, 22].includes(__markerStep) && storeRunId) {
+        try {
+          await db.collection('aqrp_batch_calls').updateOne(
+            { runId: storeRunId, step: __markerStep },
+            { $set: { status: 'failed', error: String(__err && __err.message ? __err.message : __err).slice(0, 500), failedAt: new Date() } }
+          );
+        } catch (e) { console.error('[batch] failed-marker write failed:', e && e.message ? e.message : e); }
+      }
+      throw __err;
     } finally {
       if (tally) { try { const built = await tally.envelope(records, mod.recordId); if (built) result = built; } catch (e) {} }
     }

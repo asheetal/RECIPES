@@ -237,7 +237,14 @@ async function panelStepGeneric(N, { filePath, matrixField, disField, status, ru
 }
 
 async function _verifyBatchCall(runId, step) {
-  if (!runId) return { ok: false, reason: 'no runId in step context' };
+  if (!runId) {
+    try {
+      const mongoose = require('mongoose');
+      const latest = await mongoose.connection.db.collection('aqrpruns').find({}).sort({_id: -1}).limit(1).next();
+      if (latest && latest.runId) runId = latest.runId;
+    } catch (e) { /* fallback failed, will fail below */ }
+  }
+  if (!runId) return { ok: false, reason: 'no runId in step context and no run could be found' };
   try {
     const mongoose = require('mongoose');
     const rec = await mongoose.connection.db.collection('aqrp_batch_calls').findOne({ runId: String(runId), step: Number(step) });

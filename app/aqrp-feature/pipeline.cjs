@@ -481,8 +481,22 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     nodeList = dparams.nodes.map((id, i) => ({ id: sanitize(id), label: String(labels[i] || id) }));
     const idMap = {}; dparams.nodes.forEach((id, i) => { idMap[String(id)] = sanitize(id); });
     if (Array.isArray(dparams.paths)) for (const pth of dparams.paths) {
-      const mm = String(pth).match(/^(.+?)\s*(?:->|→)\s*(.+?)$/);
-      if (mm) edgeList.push({ from: idMap[mm[1].trim()] || sanitize(mm[1]), to: idMap[mm[2].trim()] || sanitize(mm[2]) });
+      const mm = String(pth).match(/^(.+?)\s*(?:->|→|:)\s*(.+?)$/);
+      if (!mm) continue;
+      const findNodeByLabel = (raw) => {
+        const lower = String(raw).toLowerCase();
+        let best = null, bestLen = 0;
+        for (const n of nodeList) {
+          const lblLower = String(n.label).toLowerCase();
+          if (lower.includes(lblLower) && lblLower.length > bestLen) { best = n; bestLen = lblLower.length; }
+        }
+        return best;
+      };
+      const fromNode = findNodeByLabel(mm[1]);
+      const toNode = findNodeByLabel(mm[2]);
+      if (fromNode && toNode && fromNode.id !== toNode.id) {
+        edgeList.push({ from: fromNode.id, to: toNode.id });
+      }
     }
   } else if (Array.isArray(modelDraft.phases) && modelDraft.phases.length) {
     nodeList = modelDraft.phases.map((ph, i) => ({ id: 'n' + i, label: String(ph) }));
@@ -498,7 +512,11 @@ async function step32({ filePath, pools, allRdfs, runId }) {
       const __offset = (nodeList.length - 1) * __spacing / 2;
       return `  \\node[box] (${n.id}) at (${(i * 5 - (nodeList.length - 1) * 5 / 2).toFixed(2)}, 0) {${lbl}};`;
     }).join('\n');
-    const tikzEdges = edgeList.map(e => e.from === e.to ? '' : `  \\draw[arr] (${e.from}) -- (${e.to});`).filter(Boolean).join('\n');
+    const nodeIdSet = new Set(nodeList.map(n => n.id));
+    const tikzEdges = edgeList
+      .filter(e => e && e.from && e.to && e.from !== e.to && nodeIdSet.has(e.from) && nodeIdSet.has(e.to))
+      .map(e => `  \\draw[arr] (${e.from}) -- (${e.to});`)
+      .join('\n');
     const tensionNote = modelDraft.tension ? `\\noindent\\textit{Note.} ${esc(String(modelDraft.tension))}\\par\n` : '';
     diagram = ['\\clearpage',
       '\\begin{center}\\textbf{Figure 1}\\\\[2pt]','\\textit{Process Model}\\end{center}','\\vspace{0.3em}',

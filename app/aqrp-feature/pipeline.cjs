@@ -522,7 +522,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   // ---- 6. Appendix: RDF ledger with wider Step/RDF cols + pool elaboration ----
   function poolSummary(poolId) {
     const recs = poolByID[poolId] || [];
-    const refs = recs.slice(0, 3).map(r => {
+    const refs = recs.slice(0, 2).map(r => {
       const y = r.year || 'n.d.';
       return `${lastAuthor(r)} ${y}`;
     });
@@ -535,7 +535,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     const forks = Array.isArray(r.options) ? r.options.filter(o => o !== r.chosen).map(esc).join('; ') : '';
     const poolId = r.pool_id || '';
     const summary = poolId ? poolSummary(poolId) : '';
-    const support = (r.citation_status || '') + (poolId ? ` [${poolId}] ${esc(summary)}` : '');
+    const support = esc(r.citation_status || '') + (poolId ? ` [${poolId}] ${esc(summary)}` : '');
     return `${esc(stepNum)} & ${esc(r.rdf_id)} & ${esc(r.chosen || '')} & ${forks} & ${esc(r.rationale || '')} & ${support} \\\\`;
   }).join('\n');
   const ledger = [

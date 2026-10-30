@@ -53,17 +53,15 @@ class H(BaseHTTPRequestHandler):
             os.makedirs(workdir, exist_ok=True)
             pathlib.Path(os.path.join(workdir, 'report.tex')).write_text(tex, encoding='utf-8')
             try:
-                r1 = subprocess.run(['pdflatex', '-interaction=nonstopmode', '-halt-on-error', 'report.tex'],
-                                    cwd=workdir, capture_output=True, text=True, timeout=60)
-                if r1.returncode != 0:
-                    r2 = subprocess.run(['pdflatex', '-interaction=nonstopmode', 'report.tex'],
-                                        cwd=workdir, capture_output=True, text=True, timeout=60)
-                    if r2.returncode != 0:
-                        log_tail = ((r2.stdout or '')[-1500:] + (r2.stderr or '')[-400:]).strip()
-                        return self._json({'ok': False, 'stage': 'pdflatex', 'returncode': r2.returncode, 'log_tail': log_tail})
+                # Up to 3 passes; success = PDF exists with plausible size.
+                r_last = None
+                for _ in range(3):
+                    r_last = subprocess.run(['pdflatex', '-interaction=nonstopmode', 'report.tex'],
+                                            cwd=workdir, capture_output=True, text=True, timeout=90)
                 pdf_path = os.path.join(workdir, 'report.pdf')
-                if not os.path.isfile(pdf_path):
-                    return self._json({'ok': False, 'error': 'no pdf produced'})
+                if not os.path.isfile(pdf_path) or os.path.getsize(pdf_path) < 1024:
+                    log_tail = ((r_last.stdout or '')[-1500:] + (r_last.stderr or '')[-400:]).strip() if r_last else 'no run'
+                    return self._json({'ok': False, 'stage': 'pdflatex', 'log_tail': log_tail})
                 pdf_b64 = base64.b64encode(pathlib.Path(pdf_path).read_bytes()).decode('ascii')
                 return self._json({'ok': True, 'pdf_b64': pdf_b64, 'bytes': len(pdf_b64) * 3 // 4})
             finally:

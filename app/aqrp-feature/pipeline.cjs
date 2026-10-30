@@ -155,7 +155,9 @@ async function step3({ filePath, pools }) {
   return { output: { ...p, status: 'FAMILIARIZATION_COMPLETE' } };
 }
 
-async function step4({ filePath, expectedRecordIds }) {
+async function step4({ filePath, expectedRecordIds, runId }) {
+  const __v4 = await _verifyBatchCall(runId, 4);
+  if (!__v4.ok) throw new Error('Step 4: ' + __v4.reason);
   const p = readJson(filePath);
   const pr = p.panel_result;
   if (!pr) throw new Error('Step 4: panel_result required');
@@ -224,12 +226,26 @@ async function surgeonStep(N, { filePath, requiredFields, rdfIds, allowedPools, 
   if (extra.length) throw new Error(`Step ${N}: unexpected RDF(s) ${extra.map(r=>r.rdf_id).join(',')}`);
   return { output: { ...p, status } };
 }
-async function panelStepGeneric(N, { filePath, matrixField, disField, status }) {
+async function panelStepGeneric(N, { filePath, matrixField, disField, status, runId }) {
+  const __vPG = await _verifyBatchCall(runId, N);
+  if (!__vPG.ok) throw new Error('Step ' + N + ': ' + __vPG.reason);
   const p = readJson(filePath);
   const pr = p.panel_result;
   if (!pr) throw new Error(`Step ${N}: panel_result required`);
   const folded = foldPanelEnvelope(pr, { matrixField, disField });
   return { output: { ...p, status, ...folded } };
+}
+
+async function _verifyBatchCall(runId, step) {
+  if (!runId) return { ok: false, reason: 'no runId in step context' };
+  try {
+    const mongoose = require('mongoose');
+    const rec = await mongoose.connection.db.collection('aqrp_batch_calls').findOne({ runId: String(runId), step: Number(step) });
+    if (!rec) return { ok: false, reason: 'no llm_assistant_panel_batch call recorded for run ' + String(runId).slice(-8) + ' at step ' + step };
+    const ageMs = Date.now() - new Date(rec.calledAt).getTime();
+    if (ageMs > 15 * 60 * 1000) return { ok: false, reason: 'batch call for step ' + step + ' is ' + Math.round(ageMs/60000) + ' min old (max 15)' };
+    return { ok: true, rec };
+  } catch (e) { return { ok: false, reason: 'verifyBatchCall failed: ' + (e && e.message ? e.message : e) }; }
 }
 
 async function _fetchRunSteps(runId) {
@@ -695,7 +711,7 @@ async function runStep({ step, filePath, expectedRecordIds, pools, allRdfs, runI
   if (step === 1) return step1({ filePath });
   if (step === 2) return step2({ filePath });
   if (step === 3) return step3({ filePath, pools });
-  if (step === 4) return step4({ filePath, expectedRecordIds });
+  if (step === 4) return step4({ filePath, expectedRecordIds, runId });
   if (step === 5) return searchStep(5, { filePath, poolId: 'P02', status: 'MEMO_SEARCH_COMPLETE' });
   if (step === 6) return surgeonStep(6, { filePath, requiredFields: ['salience_ranking','memos'], rdfIds: ['R6'], allowedPools: ['P02'], pools, status: 'MEMO_COMPLETE' });
   if (step === 7) return searchStep(7, { filePath, poolId: 'P03', status: 'RQ_SEARCH_COMPLETE' });
@@ -707,13 +723,13 @@ async function runStep({ step, filePath, expectedRecordIds, pools, allRdfs, runI
   if (step === 13) return step13({ filePath });
   if (step === 14) return searchStep(14, { filePath, poolId: 'P06', status: 'CODEBOOK_SEARCH_COMPLETE' });
   if (step === 15) return surgeonStep(15, { filePath, requiredFields: ['codebook'], rdfIds: ['R15'], allowedPools: ['P06'], pools, status: 'CODEBOOK_COMPLETE' });
-  if (step === 16) return panelStepGeneric(16, { filePath, matrixField: 'within_case_matrix', disField: 'within_case_disagreements', status: 'WITHIN_CASE_COMPLETE' });
-  if (step === 17) return panelStepGeneric(17, { filePath, matrixField: 'cross_case_matrix', disField: 'cross_case_disagreements', status: 'ACROSS_CASE_COMPLETE' });
+  if (step === 16) return panelStepGeneric(16, { filePath, matrixField: 'within_case_matrix', disField: 'within_case_disagreements', status: 'WITHIN_CASE_COMPLETE', runId });
+  if (step === 17) return panelStepGeneric(17, { filePath, matrixField: 'cross_case_matrix', disField: 'cross_case_disagreements', status: 'ACROSS_CASE_COMPLETE', runId });
   if (step === 18) return searchStep(18, { filePath, poolId: 'P07', status: 'THEME_SEARCH_COMPLETE' });
   if (step === 19) return surgeonStep(19, { filePath, requiredFields: ['themes_k'], rdfIds: ['R19'], allowedPools: ['P07'], pools, status: 'THEMES_COMPLETE' });
   if (step === 20) return searchStep(20, { filePath, poolId: 'P08', status: 'NOVELTY_SEARCH_COMPLETE' });
   if (step === 21) return surgeonStep(21, { filePath, requiredFields: ['novelty_map'], rdfIds: ['R21'], allowedPools: ['P08'], pools, status: 'NOVELTY_COMPLETE' });
-  if (step === 22) return panelStepGeneric(22, { filePath, matrixField: 'negative_case_matrix', disField: 'negative_case_disagreements', status: 'NEGATIVE_CASES_COMPLETE' });
+  if (step === 22) return panelStepGeneric(22, { filePath, matrixField: 'negative_case_matrix', disField: 'negative_case_disagreements', status: 'NEGATIVE_CASES_COMPLETE', runId });
   if (step === 23) return searchStep(23, { filePath, poolId: 'P09', status: 'AGGREGATION_SEARCH_COMPLETE' });
   if (step === 24) return surgeonStep(24, { filePath, requiredFields: ['dimensions'], rdfIds: ['R24'], allowedPools: ['P09'], pools, status: 'DIMENSIONS_COMPLETE' });
   if (step === 25) return searchStep(25, { filePath, poolId: 'P10', status: 'MODEL_SEARCH_COMPLETE' });

@@ -52,7 +52,7 @@ async function invoke(req, args) {
     const mongoose = require('mongoose');
     const db = mongoose.connection.db;
     const projectId2 = await resolveProjectId(req);
-    let runId = null; let progressOk = false; let concurrency = 4; let skipIds = [];
+    let runId = null; let progressOk = false; let concurrency = 4; let skipIds = []; let currentStepForBatch = null;
     if (projectId2) {
       try {
         const svc = require('/app/aqrp-feature/aqrp.cjs').service();
@@ -60,6 +60,7 @@ async function invoke(req, args) {
         const st = await svc.getState(scope);
         if (st && st.runId) {
           runId = st.runId;
+          if (typeof st.lastStepOk === 'number') currentStepForBatch = st.lastStepOk + 1;
           if (typeof svc.getBatchConcurrency === 'function') concurrency = await svc.getBatchConcurrency();
           progressOk = true;
         }
@@ -98,7 +99,13 @@ async function invoke(req, args) {
       await db.collection('aqrpruns').updateOne({ projectId: projectId2 }, { $set: { records_capped: recordsCapped, corpus_total: corpusTotal, lastProgressAt: new Date() } });
       if (skipIds.length >= records.length) {
         const built = await tally.envelope(records, mod.recordId);
-        if (built) { gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, status: 'ok', resumed: true, n: built.n, m: records.length }); return JSON.stringify(built); }
+        if (built) {
+          const __rCells = Array.isArray(built.responses) ? built.responses.flatMap(r => Array.isArray(r.rows) ? r.rows : []) : [];
+          const __rAllNA = __rCells.length > 0 && __rCells.every(row => !Array.isArray(row.codes) || row.codes.length === 0 || row.codes.every(c => String(c).toUpperCase() === 'NA'));
+          if (__rAllNA) throw new Error('[llm_assistant_panel_batch] resume envelope is all-NA — refusing to return a fabricated success');
+          gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, status: 'ok', resumed: true, n: built.n, m: records.length });
+          return JSON.stringify(built);
+        }
       }
     }
     const onProgress = tally ? async (ev) => { try { await tally.onEvent(ev); } catch (e) { console.error('[tally] onEvent failed (record=' + (ev && ev.record_id) + '):', e && e.message ? e.message : e); } } : undefined;
@@ -107,6 +114,22 @@ async function invoke(req, args) {
       result = await mod.batch({ query, schema, records, onProgress, skipIds, concurrency });
     } finally {
       if (tally) { try { const built = await tally.envelope(records, mod.recordId); if (built) result = built; } catch (e) {} }
+    }
+    const __isEmptyOrNA = (codes) => !Array.isArray(codes) || codes.length === 0 || codes.every(c => String(c).toUpperCase() === 'NA');
+    if (result && Array.isArray(result.responses)) {
+      const __allCells = result.responses.flatMap(r => Array.isArray(r.rows) ? r.rows : []);
+      if (__allCells.length > 0 && __allCells.every(row => __isEmptyOrNA(row.codes))) {
+        throw new Error('[llm_assistant_panel_batch] all ' + __allCells.length + ' cells returned NA or empty — panel is not producing usable codes; the batch cannot succeed');
+      }
+    }
+    if (currentStepForBatch && [4,16,17,22].includes(currentStepForBatch) && storeRunId) {
+      try {
+        await db.collection('aqrp_batch_calls').updateOne(
+          { runId: storeRunId, step: currentStepForBatch },
+          { $set: { runId: storeRunId, step: currentStepForBatch, calledAt: new Date(), recordCount: records.length, n: result && result.n, status: 'ok' } },
+          { upsert: true }
+        );
+      } catch (e) { console.error('[batch] marker write failed:', e && e.message ? e.message : e); }
     }
     gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, status: 'ok', n: result && result.n, m: records.length, corpus_total: corpusTotal, records_capped: recordsCapped });
     return JSON.stringify(result);

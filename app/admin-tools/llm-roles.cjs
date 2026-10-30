@@ -1,6 +1,7 @@
 'use strict';
 const fs=require('node:fs');
 const app=require('node:module').createRequire('/app/package.json');
+const vault=require('./panel-roster-vault.cjs');
 const ROLES=Object.freeze([
  'LLM_TRIAGE','LLM_SURGERY','LLM_OPD','LLM_BILLING','LLM_ERP','LLM_DIRECTOR'
 ]);
@@ -24,10 +25,6 @@ async function readAqrpBatchConcurrency(){
  const saved=await collection().findOne({_id:'assignments'});
  const v=Number(saved?.aqrpBatchConcurrency);
  return Number.isInteger(v)&&v>=1&&v<=AQRP_CONCURRENCY_LIMIT?v:AQRP_CONCURRENCY_DEFAULT;
-}
-async function readPanelMembers(){
- const saved=await collection().findOne({_id:'assignments'});
- return Array.isArray(saved?.panelMembers)?saved.panelMembers:[];
 }
 const WORKFLOW_DEFAULTS=Object.freeze({
  uninterruptedIterations:20,maxDirectorIterations:5
@@ -58,7 +55,7 @@ async function get(req,res){
  try{
   res.set('Cache-Control','no-store').json({
    roles:ROLES,models:await catalog(),assignments:await read(),
-   panelMembers:await readPanelMembers(),
+   panelMembers:await vault.getRosterForAdmin(req.user, req.ip),
    maxBatchRecords:await readMaxBatchRecords(),
    aqrpBatchConcurrency:await readAqrpBatchConcurrency(),
    workflow:await readWorkflow()
@@ -117,7 +114,8 @@ async function save(req,res){
     }
    }
   }else{
-   panelMembers=Array.isArray(existingDoc?.panelMembers)?existingDoc.panelMembers:[];
+   const existingRoster = await vault.getRosterForAdmin(req.user, req.ip);
+   panelMembers = existingRoster.map(r=>({endpoint:r.endpoint,model:r.model}));
   }
   let maxBatchRecords;
   if(req.body?.maxBatchRecords!=null){
@@ -151,13 +149,19 @@ async function save(req,res){
    }
    assignments[role]={endpoint:value.endpoint,model:value.model};
   }
-  await collection().updateOne({_id:'assignments'},{$set:{
-   assignments,panelMembers,workflow,maxBatchRecords,aqrpBatchConcurrency,updatedAt:new Date(),updatedBy:String(req.user.id||req.user._id)
-  }},{upsert:true});
+  // Persist roster to the vault; plaintext never touches lab_llm_role_settings again.
+  for(let i=0;i<panelMembers.length;i++){
+   await vault.putSlotForAdmin(i, panelMembers[i], req.user);
+  }
+  await vault.clearSlotsForAdmin(panelMembers.length, req.user);
+  await collection().updateOne({_id:'assignments'},{
+   $set:{assignments,workflow,maxBatchRecords,aqrpBatchConcurrency,updatedAt:new Date(),updatedBy:String(req.user.id||req.user._id)},
+   $unset:{panelMembers:''}
+  },{upsert:true});
   res.json({assignments,panelMembers,workflow,maxBatchRecords,aqrpBatchConcurrency,panelTest});
  }catch(e){
   console.error('[LLMRoleSettings] Save failed',e);
   res.status(500).json({message:'Unable to save LLM assignments'});
  }
 }
-module.exports={ROLES,PANEL_MAX,MAX_BATCH_RECORDS_DEFAULT,MAX_BATCH_RECORDS_LIMIT,AQRP_CONCURRENCY_DEFAULT,AQRP_CONCURRENCY_LIMIT,read,readPanelMembers,readMaxBatchRecords,readAqrpBatchConcurrency,readWorkflow,resolve,get,save};
+module.exports={ROLES,PANEL_MAX,MAX_BATCH_RECORDS_DEFAULT,MAX_BATCH_RECORDS_LIMIT,AQRP_CONCURRENCY_DEFAULT,AQRP_CONCURRENCY_LIMIT,read,readMaxBatchRecords,readAqrpBatchConcurrency,readWorkflow,resolve,get,save};

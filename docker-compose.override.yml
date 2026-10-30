@@ -1,4 +1,10 @@
 services:
+  aqrp-runner:
+    image: aqrp-runner:1
+    container_name: aqrp-runner
+    restart: always
+    networks:
+      - default
   api:
     environment:
       TAVILY_API_KEY: ${TAVILY_API_KEY}
@@ -26,6 +32,8 @@ services:
       EMAIL_FROM: ${EMAIL_FROM}
       EMAIL_FROM_NAME: Abhishek
       ALLOW_PASSWORD_RESET: 'true'
+      PANEL_VAULT_KEY: ${PANEL_VAULT_KEY}
+      PANEL_VAULT_ADMIN_IDS: ${PANEL_VAULT_ADMIN_IDS}
       DOMAIN_CLIENT: ${DOMAIN_CLIENT}
       DOMAIN_SERVER: ${DOMAIN_SERVER}
       APP_TITLE: ${APP_TITLE}

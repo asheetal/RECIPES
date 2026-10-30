@@ -102,7 +102,58 @@ async function invoke(req, args) {
     const pools = await collectPools(s, stateSvc);
     const allRdfs = step === 32 ? await collectAllRdfs(s, stateSvc) : null;
     let result;
-    try { result = await pipeline.runStep({ step, filePath: tmp, pools, allRdfs, runId: currentState.runId }); }
+    try {
+      result = await pipeline.runStep({ step, filePath: tmp, pools, allRdfs, runId: currentState.runId });
+      if (result && result.output && [4, 16, 17, 22, 32].includes(step)) {
+        try {
+          const prev = await stateSvc.getAllStepOutputs(s);
+          const norm = (x) => String(x).toLowerCase().replace(/[_\-\s]+/g, "").trim();
+          const isMatch = (c, list) => {
+            const x = norm(c);
+            return list.some(y => { const ny = norm(y); return ny && (x === ny || x.includes(ny) || ny.includes(x)); });
+          };
+          const w = [];
+          if (step === 4) {
+            const brief = (prev["3"] && prev["3"].coding_brief) || {};
+            const bc = (brief.code_for || []).map(x => String(x));
+            const fc = (brief.flag || []).map(x => String(x));
+            const byRec = {};
+            for (const row of (result.output.code_matrix || [])) {
+              if (!byRec[row.record_id]) byRec[row.record_id] = [];
+              byRec[row.record_id].push(row);
+            }
+            for (const rid of Object.keys(byRec)) {
+              const rows = byRec[rid];
+              const na = rows.filter(r => r.codes && r.codes.length === 1 && String(r.codes[0]).toUpperCase() === "NA").length;
+              if (na === rows.length) w.push({ step: 4, kind: "ALL_MEMBERS_NA", blame: "admin roster", record_id: rid, total: rows.length });
+              else if (na > 0) w.push({ step: 4, kind: "SOME_MEMBERS_NA", blame: "admin roster", record_id: rid, na_cells: na, total: rows.length });
+            }
+            for (const row of (result.output.code_matrix || [])) {
+              for (const c of (row.codes || [])) {
+                const lc = String(c).toLowerCase().trim();
+                if (lc === "na" || lc === "") continue;
+                if (fc.length && isMatch(lc, fc)) w.push({ step: 4, kind: "FLAG_ITEM_CODED", blame: "step-3 surgeon", coder_id: row.coder_id, record_id: row.record_id, code: String(c) });
+                else if (bc.length && !isMatch(lc, bc)) w.push({ step: 4, kind: "CODE_NOT_IN_BRIEF", blame: "step-3 surgeon", coder_id: row.coder_id, record_id: row.record_id, code: String(c) });
+              }
+            }
+          }
+          if ([16, 17, 22].includes(step)) {
+            const pr = result.output.panel_result || {};
+            for (const r of (pr.responses || [])) {
+              const rows = r.rows || [];
+              const na = rows.filter(x => x.codes && x.codes.length === 1 && String(x.codes[0]).toUpperCase() === "NA").length;
+              if (na > 0) w.push({ step, kind: "PANEL_MEMBER_NA", blame: "admin roster", coder_id: r.coder_id, na_cells: na, total: rows.length });
+            }
+          }
+          if (step === 32) {
+            if (typeof result.output.submission_paper_tex !== "string") w.push({ step: 32, kind: "MISSING_ARTIFACT", blame: "step-32 surgeon", name: "submission_paper_tex" });
+            if (typeof result.output.supplementary_rdf_tex !== "string") w.push({ step: 32, kind: "MISSING_ARTIFACT", blame: "step-32 surgeon", name: "supplementary_rdf_tex" });
+            if (!result.output.aqrp_report) w.push({ step: 32, kind: "MISSING_ARTIFACT", blame: "step-32 surgeon", name: "aqrp_report" });
+          }
+          if (w.length) result.output.warnings = w;
+        } catch (e) { /* best-effort; warnings never block */ }
+      }
+    }
     finally { try { fs.unlinkSync(tmp); } catch (_) {} }
     await stateSvc.completeStep(s, step, result.output, null);
     gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, step, status: 'ok' });

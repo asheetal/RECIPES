@@ -3,6 +3,14 @@
 // envelope ({panel, n, responses}). Loops M records; per record fans out to
 // all N members in parallel; per record up to 5 trials with exponential
 // backoff; a slot still failing after trial 5 is a row codes:["NA"].
+//
+// Shape discipline (body_01 item 15): a member that returns valid evidence in
+// a shape the caller did not anticipate is not a defective member — the
+// extractor is too narrow. codesOf/quoteOf accept the four observed shapes:
+//   { codes: [...] }
+//   { rows: [{ codes: [...], quote: "..." }] }
+//   { rows: [{ quotes: [{ codes: [...], quote: "..." }] }] }
+//   { rows: [ {..}, {codes:[...]} , ... ] }
 const panel = require('/app/admin-tools/assistant-panel.cjs');
 const TRIALS = 5;
 const WAIT = [1000, 2000, 4000, 8000];
@@ -18,12 +26,34 @@ function recordId(r, i) {
 }
 
 function codesOf(json) {
-  if (json && Array.isArray(json.rows) && json.rows.length) {
+  if (!json || typeof json !== 'object') return null;
+  if (Array.isArray(json.codes) && json.codes.length) return json.codes.map(String);
+  if (Array.isArray(json.rows) && json.rows.length) {
     const r0 = json.rows[0];
     if (r0 && Array.isArray(r0.codes) && r0.codes.length) return r0.codes.map(String);
+    if (r0 && Array.isArray(r0.quotes) && r0.quotes.length) {
+      const q0 = r0.quotes[0];
+      if (q0 && Array.isArray(q0.codes) && q0.codes.length) return q0.codes.map(String);
+    }
+    for (const r of json.rows) {
+      if (r && Array.isArray(r.codes) && r.codes.length) return r.codes.map(String);
+    }
   }
-  if (json && Array.isArray(json.codes) && json.codes.length) return json.codes.map(String);
   return null;
+}
+
+function quoteOf(json) {
+  if (!json || typeof json !== 'object') return '';
+  if (typeof json.quote === 'string') return json.quote;
+  if (Array.isArray(json.rows) && json.rows.length) {
+    const r0 = json.rows[0];
+    if (r0 && typeof r0.quote === 'string') return r0.quote;
+    if (r0 && Array.isArray(r0.quotes) && r0.quotes.length) {
+      const q0 = r0.quotes[0];
+      if (q0 && typeof q0.quote === 'string') return q0.quote;
+    }
+  }
+  return '';
 }
 
 async function batch({ query, schema, records, onProgress, skipIds, concurrency }) {
@@ -76,7 +106,7 @@ async function batch({ query, schema, records, onProgress, skipIds, concurrency 
       for (let s = 0; s < N; s++) {
         const j = got[s];
         const cs = j ? codesOf(j) : null;
-        const quote = (j && typeof j.quote === 'string') ? j.quote : '';
+        const quote = quoteOf(j);
         rowsForRecord.push({ coder_id: (j && typeof j.coder_id === 'string' && j.coder_id) ? j.coder_id : null, codes: cs || ['NA'], quote });
       }
       perRecord[i] = rowsForRecord;
@@ -123,4 +153,4 @@ async function batch({ query, schema, records, onProgress, skipIds, concurrency 
   return { panel: 'LLM_ASSISTANT_PANEL_BATCH', n: N, responses };
 }
 
-module.exports = { batch, recordId };
+module.exports = { batch, recordId, codesOf, quoteOf };

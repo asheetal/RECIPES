@@ -1,6 +1,8 @@
 'use strict';
 const roles=require('./llm-roles.cjs');
 const access=require('./model-access.cjs');
+const vault=require('./panel-roster-vault.cjs');
+const VAULT_TOKEN=vault.registerInternalConsumer();
 
 async function callMember(binding, idx, query, schema){
   const conn=await access.connection(binding);
@@ -26,11 +28,25 @@ function collect(results){
   return results.filter(r=>r.ok&&r.json&&typeof r.json==='object').map(r=>r.json);
 }
 
+async function _members(){
+  const members=[];
+  for(let i=0;i<roles.PANEL_MAX;i++){
+    try{
+      const m=await vault.getSlotForExecution(i,{token:VAULT_TOKEN});
+      members.push(m);
+    }catch(e){
+      if(/not configured/.test(e.message)) break;
+      throw e;
+    }
+  }
+  return members;
+}
+
 async function _run(query, schema){
   if(typeof query!=='string'||!query.trim()) throw Error('query is required');
   if(!schema||typeof schema!=='object'||schema.type!=='object'||typeof schema.properties!=='object')
     throw Error('schema must be a JSON Schema object with type=object and properties');
-  const members=await roles.readPanelMembers();
+  const members=await _members();
   if(!members.length) throw Error('LLM_ASSISTANT_PANEL is not configured');
   if(members.length>roles.PANEL_MAX) throw Error('LLM_ASSISTANT_PANEL exceeds '+roles.PANEL_MAX+' agents');
   const raw=await Promise.all(members.map((m,i)=>callMember(m,i,query,schema).catch(e=>({idx:i,ok:false,error:String(e.message||e)}))));

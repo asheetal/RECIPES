@@ -240,11 +240,48 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   if (!r32) throw new Error('Step 32: missing R32');
   validateRdfRecord(r32, 'Step 32.R32', ['P13'], pools);
   const all = [...(allRdfs || []), r32];
-  const esc = (s) => String(s == null ? '' : s).replace(/[\\&%$#_{}]/g, c => '\\' + c);
-  const lines = all.map(r => `\\item \\textbf{${esc(r.rdf_id)}} (${esc(r.stage)}, pool ${esc(r.pool_id)}): ${esc(r.chosen)} --- ${esc(r.rationale)}`).join('\n');
-  const supplementary_rdf_tex = `\\documentclass{article}\n\\begin{document}\n\\section*{Researcher Degrees of Freedom}\n\\begin{itemize}\n${lines}\n\\end{itemize}\n\\end{document}\n`;
-  const aqrp_report = { version: '1', runId: runId || null, assembled_at: new Date().toISOString(), rdf_count: all.length, records: all };
-  return { output: { status: 'PACKAGED', submission_paper_tex: p.submission_paper_tex, supplementary_rdf_tex, aqrp_report, rdf_records: [r32] } };
+    const esc = (s) => String(s == null ? '' : s).replace(/[\\&%$#_{}]/g, c => '\\' + c);
+  let paper = p.submission_paper_tex;
+  const beginMark = '\\begin{document}';
+  const bidx = paper.indexOf(beginMark);
+  if (bidx < 0) throw new Error('Step 32: submission_paper_tex missing \\begin{document}');
+  const preamble = paper.slice(0, bidx);
+  const need = ['longtable','array','booktabs','ragged2e']
+    .filter(n => !preamble.includes('usepackage{' + n + '}'))
+    .map(n => '\\usepackage{' + n + '}')
+    .join('\n');
+  if (need) paper = preamble + need + '\n' + paper.slice(bidx);
+  const ledgerRows = all.map(r => {
+    const forks = Array.isArray(r.options) ? r.options.filter(o => o !== r.chosen).map(esc).join('; ') : '';
+    const support = (r.citation_status || '') + (r.pool_id ? ' [' + r.pool_id + ']' : '');
+    const rationale = esc(r.rationale || '');
+    return `${esc(String(r.stage || ''))} & ${esc(r.rdf_id)} & ${esc(r.chosen || '')} & ${forks} & ${rationale} & ${esc(support)} \\\\`;
+  }).join('\n\\addlinespace\n');
+  const ledger = [
+    '\\clearpage',
+    '\\section*{Audit Trail}',
+    '\\subsection*{Researcher Degrees of Freedom Ledger}',
+    '\\begin{footnotesize}\\setlength{\\tabcolsep}{3pt}',
+    '\\begin{longtable}{@{}p{0.05\\linewidth} p{0.06\\linewidth} p{0.22\\linewidth} p{0.22\\linewidth} p{0.35\\linewidth} p{0.10\\linewidth}@{}}',
+    '\\toprule',
+    '\\textbf{Step} & \\textbf{RDF} & \\textbf{Choice Made} & \\textbf{Counterfactual Forks} & \\textbf{Epistemic Rationale} & \\textbf{Support} \\\\',
+    '\\midrule',
+    '\\endhead',
+    ledgerRows,
+    '\\bottomrule',
+    '\\end{longtable}',
+    '\\end{footnotesize}'
+  ].join('\n');
+  let insertIdx = -1;
+  for (const m of ['\\begin{thebibliography}', '\\bibliography{']) {
+    const i = paper.lastIndexOf(m);
+    if (i > 0) { insertIdx = i; break; }
+  }
+  if (insertIdx < 0) insertIdx = paper.lastIndexOf('\\end{document}');
+  if (insertIdx < 0) throw new Error('Step 32: cannot find insertion point');
+  const aqrp_report_tex = paper.slice(0, insertIdx) + ledger + '\n' + paper.slice(insertIdx);
+  const aqrp_report_audit = { version: '1', runId: runId || null, assembled_at: new Date().toISOString(), rdf_count: all.length, records: all };
+  return { output: { status: 'PACKAGED', aqrp_report_tex, aqrp_report_audit, rdf_records: [r32] } };
 }
 
 async function runStep({ step, filePath, expectedRecordIds, pools, allRdfs, runId }) {

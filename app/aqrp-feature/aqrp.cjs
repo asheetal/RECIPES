@@ -183,10 +183,62 @@ function registerRoutes(router, projectFilesService) {
         const out = await svc.getOutput(s, n);
         if (out) {
           zip.file(`__aqrp_step${n}_out.json`, JSON.stringify(out, null, 2));
-          if (n === 32 && out.submission_paper_tex) {
-            zip.file('submission_paper.tex', out.submission_paper_tex);
-            if (out.supplementary_rdf_tex) zip.file('supplementary_rdf.tex', out.supplementary_rdf_tex);
-            if (out.aqrp_report) zip.file('aqrp_report.rdf', JSON.stringify(out.aqrp_report, null, 2));
+          if (n === 32) {
+            let pdf_b64 = out.aqrp_report_pdf_b64 || null;
+            if (!pdf_b64 && out.aqrp_report_tex) {
+              try {
+                const http = require('http');
+                pdf_b64 = await new Promise((resolve, reject) => {
+                  const payload = JSON.stringify({ tex: out.aqrp_report_tex, run_id: st.runId || '' });
+                  const req = http.request({
+                    hostname: 'aqrp-runner', port: 8091, path: '/compile-tex', method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) },
+                    timeout: 90000
+                  }, res => {
+                    let body = '';
+                    res.on('data', c => body += c);
+                    res.on('end', () => {
+                      try {
+                        const j = JSON.parse(body);
+                        if (j.ok && j.pdf_b64) resolve(j.pdf_b64);
+                        else reject(new Error('runner: ' + JSON.stringify(j).slice(0, 300)));
+                      } catch (e) { reject(new Error('runner bad json: ' + body.slice(0, 200))); }
+                    });
+                  });
+                  req.on('error', reject);
+                  req.on('timeout', () => { req.destroy(new Error('compile timeout')); });
+                  req.write(payload); req.end();
+                });
+                try {
+                  const mongoose = require('mongoose');
+                  const db = mongoose.connection.db;
+                  const runDoc = await db.collection('aqrpruns').findOne({ runId: st.runId });
+                  if (runDoc) {
+                    await db.collection('aqrpruns').updateOne(
+                      { _id: runDoc._id },
+                      { $set: {
+                          'steps.32.output.aqrp_report_pdf_b64': pdf_b64,
+                          'steps.32.output.aqrp_report_pdf_source': 'aqrp-runner-' + new Date().toISOString()
+                      }}
+                    );
+                  }
+                } catch (_) {}
+              } catch (e) {
+                console.error('[bundle] aqrp-runner compile failed: ' + (e && e.message ? e.message : e));
+              }
+            }
+            if (pdf_b64) {
+              zip.file('aqrp_report.pdf', Buffer.from(pdf_b64, 'base64'));
+              if (out.aqrp_report_audit) zip.file('aqrp_report_audit.json', JSON.stringify(out.aqrp_report_audit, null, 2));
+            } else if (out.aqrp_report_tex) {
+              zip.file('aqrp_report.tex', out.aqrp_report_tex);
+              zip.file('_compile_failed.txt', 'aqrp-runner compile failed for run ' + (st.runId || '') + '; check docker logs aqrp-runner');
+              if (out.aqrp_report_audit) zip.file('aqrp_report_audit.json', JSON.stringify(out.aqrp_report_audit, null, 2));
+            } else if (out.submission_paper_tex) {
+              zip.file('submission_paper.tex', out.submission_paper_tex);
+              if (out.supplementary_rdf_tex) zip.file('supplementary_rdf.tex', out.supplementary_rdf_tex);
+              if (out.aqrp_report) zip.file('aqrp_report.rdf', JSON.stringify(out.aqrp_report, null, 2));
+            }
           }
           count++;
         }
@@ -214,6 +266,31 @@ function registerRoutes(router, projectFilesService) {
         }
       }
       if (!count) return res.status(404).json({ error: 'no step outputs to bundle' });
+      // Aggregate warnings from every closed step, whatever its number.
+      const __warnings = [];
+      for (const __k of Object.keys(st.steps || {})) {
+        const __n = Number(__k);
+        if (!Number.isInteger(__n) || __n < 1) continue;
+        const __out = (st.steps[__k] || {}).output || {};
+        if (Array.isArray(__out.warnings)) {
+          for (const __w of __out.warnings) __warnings.push(Object.assign({ step: __n }, __w));
+        }
+      }
+      const __byBlame = {}, __byKind = {};
+      for (const __w of __warnings) {
+        const __b = __w.blame || 'unknown';
+        const __kk = __w.kind || 'unknown';
+        __byBlame[__b] = (__byBlame[__b] || 0) + 1;
+        __byKind[__kk] = (__byKind[__kk] || 0) + 1;
+      }
+      zip.file('_errors.json', JSON.stringify({
+        runId: st.runId || null,
+        generated_at: new Date().toISOString(),
+        total: __warnings.length,
+        by_blame: __byBlame,
+        by_kind: __byKind,
+        warnings: __warnings
+      }, null, 2));
       const buf = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
       res.set('Content-Type', 'application/zip');
       res.set('Content-Disposition', `attachment; filename="aqrp_${st.runId || 'run'}_steps.zip"`);

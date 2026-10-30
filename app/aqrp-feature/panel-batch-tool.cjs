@@ -101,7 +101,7 @@ async function invoke(req, args) {
         if (built) { gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, status: 'ok', resumed: true, n: built.n, m: records.length }); return JSON.stringify(built); }
       }
     }
-    const onProgress = tally ? async (ev) => { try { await tally.onEvent(ev); } catch (e) {} } : undefined;
+    const onProgress = tally ? async (ev) => { try { await tally.onEvent(ev); } catch (e) { console.error('[tally] onEvent failed (record=' + (ev && ev.record_id) + '):', e && e.message ? e.message : e); } } : undefined;
     let result = null;
     try {
       result = await mod.batch({ query, schema, records, onProgress, skipIds, concurrency });
@@ -131,7 +131,7 @@ function makeTally(db, runId, projectId) {
       const skipIds = done.map(r => String(r.record_id));
       await col.updateOne(
         { runId, step: 4 },
-        { $set: { total, done: skipIds.length, inFlight: 0, concurrency, updatedAt: new Date() }, $setOnInsert: { startedAt: new Date(), etaSeconds: null, n: null } },
+        { $max: { total }, $set: { done: skipIds.length, inFlight: 0, concurrency, updatedAt: new Date() }, $setOnInsert: { startedAt: new Date(), etaSeconds: null, n: null } },
         { upsert: true }
       );
       await sync();
@@ -166,6 +166,7 @@ function makeTally(db, runId, projectId) {
       const doc = await col.findOne({ runId, step: 4 });
       const n = doc && Number.isInteger(doc.n) ? doc.n : 0;
       if (!n) return null;
+      if (doc.done < doc.total) return null;
       const all = await rows.find({ runId, step: 4 }).toArray();
       const byId = new Map(all.map(r => [String(r.record_id), r.perCoder]));
       const responses = [];

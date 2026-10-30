@@ -475,8 +475,11 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   // Metrics table rows
   const metricsRows = [];
   metricsRows.push(`\\textit{Corpus} & ${N_REC} records; ${M_CODERS} coders & — \\\\`);
-  metricsRows.push(`\\textit{Total code applications} & ${__totalCodeApps} & (sum across ${N_REC}×${M_CODERS}=${N_REC*M_CODERS} cells) \\\\`);
-  metricsRows.push(`\\textit{Distinct codes used} & ${Object.keys(codeFreq).length} & first-order, from coder output \\\\`);
+  const __appsText = (__totalCodeApps > 0) ? String(__totalCodeApps) : (cm.length > 0 ? "\\textemdash{}" : "0");
+  const __appsNote = (__totalCodeApps > 0) ? `sum across ${N_REC}\\times{}${M_CODERS}=${N_REC*M_CODERS} cells` : `code-level metrics not computable on this run (see logs)`;
+  metricsRows.push(`\\textit{Total code applications} & ${__appsText} & ${__appsNote} \\\\`);
+  const __distinctText = (Object.keys(codeFreq).length > 0) ? String(Object.keys(codeFreq).length) : (cm.length > 0 ? "\\textemdash{}" : "0");
+  metricsRows.push(`\\textit{Distinct codes used} & ${__distinctText} & first-order, from coder output \\\\`);
   for (const [code, count] of codesSorted.slice(0, 12)) {
     const agreement = coderAgreement(code);
     const pct = N_REC > 0 ? Math.round((agreement / N_REC) * 100) : 0;

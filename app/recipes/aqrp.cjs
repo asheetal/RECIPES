@@ -39,19 +39,19 @@ STEP 19 (surgeon): From cross_case, codebook, P07 cluster into themes at k=5/7/9
 STEP 20 (surgeon->tool): From themes_k search the literature for novelty assessment. aqrp_step_run({step:20, payload:{P08}}).
 STEP 21 (surgeon): From themes_k, P08 evaluate novelty per theme (retain / reframe / drop) as novelty_map. Emit RDF R21 (pool P08). aqrp_step_run({step:21, payload:{novelty_map, rdf_records:[R21]}}).
 
-STEP 22 (surgeon->coder): Call llm_assistant_panel_batch with themes_k and novelty_map to log negative cases (negative_case_log). aqrp_step_run({step:22, payload:{panel_result}}).
+STEP 22 (surgeon->coder): Call llm_assistant_panel_batch with themes_k and novelty_map to log negative cases (negative_case_log). After the panel returns, also produce negative_case_resolution: for each negative case, {record_id, changes_dimension:'yes'|'no'|'downgrade', why}. aqrp_step_run({step:22, payload:{panel_result, negative_case_resolution}}).
 
 STEP 23 (surgeon->tool): From themes_k and negative_case_log search the literature for aggregation. aqrp_step_run({step:23, payload:{P09}}).
-STEP 24 (surgeon): From themes_k, negative_case_log, P09 aggregate into 2-4 dimensions (each a mechanism/tension). Emit RDF R24 (pool P09). aqrp_step_run({step:24, payload:{dimensions, rdf_records:[R24]}}).
+STEP 24 (surgeon): From themes_k, negative_case_log, P09 aggregate into 2-4 dimensions. Each dimension MUST have: name, mechanism, tension, conditions_for (array of at least 2 strings describing when the mechanism holds), conditions_against (array of at least 1 string describing when it fails or reverses), relationships (array of {from:dimension_name, to:dimension_name, nature:string}), supporting_record_ids (array), opposing_record_ids (array). Emit RDF R24 (pool P09). aqrp_step_run({step:24, payload:{dimensions, rdf_records:[R24]}}).
 
 STEP 25 (surgeon->tool): From dimensions search the literature for theoretical models. aqrp_step_run({step:25, payload:{P10}}).
-STEP 26 (surgeon): From dimensions and P10 draft a grounded model (arrows, phases, tension) as model_draft. Emit RDF R26 (pool P10). aqrp_step_run({step:26, payload:{model_draft, rdf_records:[R26]}}).
+STEP 26 (surgeon): From dimensions and P10 draft a grounded model as model_draft. model_draft MUST have: arrows (array of strings), phases (array of strings), tension (string), evidence (array of {arrow:string, supporting_record_ids:array, quotes:array}), alternative_readings (array of {reading:string, why_rejected:string}). Emit RDF R26 (pool P10). aqrp_step_run({step:26, payload:{model_draft, rdf_records:[R26]}}).
 
 STEP 27 (surgeon->tool): From model_draft and dimensions search the literature for diagram conventions. aqrp_step_run({step:27, payload:{P11}}).
 STEP 28 (surgeon): From model_draft, dimensions, P11 produce diagram_script_params (nodes, paths, labels, layout). Emit RDF R28 (pool P11). aqrp_step_run({step:28, payload:{diagram_script_params, rdf_records:[R28]}}).
 
 STEP 29 (surgeon->tool): From rdf_log and code_matrix search the literature for sufficiency criteria. aqrp_step_run({step:29, payload:{P12}}).
-STEP 30 (surgeon): From rdf_log and P12 decide sufficiency (stop / continue) with rationale. Emit RDF R30 (pool P12). aqrp_step_run({step:30, payload:{sufficiency, rdf_records:[R30]}}).
+STEP 30 (surgeon): From rdf_log and P12 decide sufficiency (stop / continue) with rationale. sufficiency MUST have: decision ('stop'|'continue'), rationale (string), saturation_estimate ({record_index_at_which_novel_codes_stopped:integer, evidence:string}). Emit RDF R30 (pool P12). aqrp_step_run({step:30, payload:{sufficiency, rdf_records:[R30]}}).
 
 STEP 31 (surgeon->tool): From model_draft and novelty_map search the literature for reporting conventions. aqrp_step_run({step:31, payload:{P13}}).
 

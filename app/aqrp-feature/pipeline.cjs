@@ -252,11 +252,9 @@ async function step32({ filePath, pools, allRdfs, runId }) {
 
   const esc = (s) => String(s == null ? '' : s).replace(/[&%$#_{}]/g, c => '\\' + c);
 
-  // ---- Pool DOI index (for citation matching + support elaboration) ----
+  // Pool DOI index
   const poolOrder = ['P01','P02','P03','P04','P05','P06','P07','P08','P09','P10','P11','P12','P13','P00'];
-  const doiToRec = {};
-  const poolDOIs = [];
-  const poolByID = {};
+  const doiToRec = {}, poolDOIs = [], poolByID = {};
   for (const k of poolOrder) {
     const pool = pools && pools[k];
     if (!pool) continue;
@@ -268,7 +266,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     }
   }
 
-  // ---- Extract body from surgeon narrative ----
+  // Body extraction
   let paper = p.submission_paper_tex || '';
   const beginDoc = paper.indexOf('\\begin{document}');
   const endDoc = paper.lastIndexOf('\\end{document}');
@@ -278,61 +276,62 @@ async function step32({ filePath, pools, allRdfs, runId }) {
 
   const titleMatch = paper.match(/\\title\{([\s\S]*?)\}/);
   const surgeonTitle = titleMatch ? titleMatch[1].trim() : 'Qualitative Analysis of AI Futures';
-
   const abstractMatch = body.match(/\\begin\{abstract\}([\s\S]*?)\\end\{abstract\}/);
   const abstractText = abstractMatch ? abstractMatch[1].trim() : '';
   body = body.replace(/\\begin\{abstract\}[\s\S]*?\\end\{abstract\}/g, '');
-
-  // Strip preamble artifacts
-  body = body.replace(/\\title\{[\s\S]*?\}/g, '');
-  body = body.replace(/\\author\{[\s\S]*?\}/g, '');
-  body = body.replace(/\\date\{[\s\S]*?\}/g, '');
-  body = body.replace(/\\maketitle/g, '');
+  body = body.replace(/\\title\{[\s\S]*?\}/g, '').replace(/\\author\{[\s\S]*?\}/g, '')
+             .replace(/\\date\{[\s\S]*?\}/g, '').replace(/\\maketitle/g, '');
   body = body.replace(/\\begin\{thebibliography\}[\s\S]*?\\end\{thebibliography\}/g, '');
-  body = body.replace(/\\bibliographystyle\{[^}]*\}/g, '');
-  body = body.replace(/\\bibliography\{[^}]*\}/g, '');
-  // Strip surgeon's own Keywords line (we generate our own)
+  body = body.replace(/\\bibliographystyle\{[^}]*\}/g, '').replace(/\\bibliography\{[^}]*\}/g, '');
   body = body.replace(/^[ \t]*\bKeywords?\s*:\s*[^\n]+\n?/gim, '');
   body = body.trim();
 
-  // ---- 1. Replace LITERAL (?) / (??) / (???) with best-matching pool citation ----
-  function pickCitationByContext(context) {
-    const words = String(context || '').toLowerCase().split(/[^a-z0-9]+/i).filter(w => w.length > 4);
-    if (!words.length) return poolDOIs[0] || null;
-    let best = null, bestScore = 0;
-    for (const d of poolDOIs) {
-      const rec = doiToRec[d];
-      if (!rec) continue;
-      const title = String(rec.title || '').toLowerCase();
-      const journal = String(rec.journal || '').toLowerCase();
-      const auth = (Array.isArray(rec.authors) ? rec.authors.join(' ') : String(rec.authors || '')).toLowerCase();
-      const hay = title + ' ' + journal + ' ' + auth;
-      let score = 0;
-      for (const w of words) if (hay.includes(w)) score++;
-      if (score > bestScore) { bestScore = score; best = d; }
-    }
-    return best || poolDOIs[0] || null;
-  }
-  // Replace literal (?) marks; iterate carefully because replacements shift offsets
-  body = body.replace(/\(\s*\?{1,3}\s*\)/g, (match, offset, full) => {
-    const ctx = full.slice(Math.max(0, offset - 250), Math.min(full.length, offset + 250));
-    const d = pickCitationByContext(ctx);
-    return d ? `\\citep{${d}}` : '';
-  });
-  // Also catch remaining \citep{?} patterns
-  body = body.replace(/\\cite[pt]?\{\s*\?+\s*\}/g, () => {
-    const d = poolDOIs[0];
-    return d ? `\\citep{${d}}` : '';
-  });
-
-  // ---- 2. References — union of RDF citations and pool DOIs ----
+  // References universe
   const rdfDOIs = new Set();
   for (const r of all) for (const d of (r.citations_used || [])) rdfDOIs.add(String(d));
   const refDOIs = [...new Set([...rdfDOIs, ...poolDOIs])].sort();
 
+  // --- [?] fix: replace literal (?) then sanitize \citep{nonDOI} keys ---
+  function pickDOIByContext(context) {
+    const words = String(context || '').toLowerCase().split(/[^a-z0-9]+/i).filter(w => w.length > 4);
+    if (!words.length) return poolDOIs[0] || null;
+    let best = null, bestScore = 0;
+    for (const d of poolDOIs) {
+      const rec = doiToRec[d]; if (!rec) continue;
+      const hay = (String(rec.title||'') + ' ' + String(rec.journal||'') + ' ' +
+                   (Array.isArray(rec.authors) ? rec.authors.join(' ') : String(rec.authors||''))).toLowerCase();
+      let s = 0; for (const w of words) if (hay.includes(w)) s++;
+      if (s > bestScore) { bestScore = s; best = d; }
+    }
+    return best || poolDOIs[0] || null;
+  }
+  body = body.replace(/\(\s*\?{1,3}\s*\)/g, (mm, off, full) => {
+    const ctx = full.slice(Math.max(0, off - 250), Math.min(full.length, off + 250));
+    const d = pickDOIByContext(ctx);
+    return d ? `\\citep{${d}}` : '';
+  });
+  // Every \citep{X} where X isn't a DOI → replace with a context-matched DOI or drop
+  const droppedCites = [];
+  body = body.replace(/\\cite([pt]?)\{([^}]*)\}/g, (mm, mode, key) => {
+    const k = String(key).trim();
+    if (refDOIs.includes(k)) return `\\cite${mode}{${k}}`;
+    if (/^\s*\?+\s*$/.test(k) || k === '') return '';
+    // Fuzzy: find DOI whose citation label includes this key as surname+year
+    const m2 = k.match(/^([A-Za-z]+?)(\d{4})/);
+    if (m2) {
+      const surname = m2[1].toLowerCase(), year = m2[2];
+      for (const d of refDOIs) {
+        const rec = doiToRec[d]; if (!rec) continue;
+        const authors = Array.isArray(rec.authors) ? rec.authors.join(' ') : String(rec.authors||'');
+        if (authors.toLowerCase().includes(surname) && String(rec.year) === year) return `\\citep{${d}}`;
+      }
+    }
+    droppedCites.push(k);
+    return '';
+  });
+
   function lastAuthor(rec) {
-    const authors = Array.isArray(rec.authors) ? rec.authors
-      : (rec.authors ? [String(rec.authors)] : ['Anon']);
+    const authors = Array.isArray(rec.authors) ? rec.authors : (rec.authors ? [String(rec.authors)] : ['Anon']);
     const parts = String(authors[0]).trim().split(/[\s,]+/).filter(Boolean);
     return parts[parts.length - 1] || 'Anon';
   }
@@ -342,105 +341,229 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     if (authors.length === 1) return `${lastAuthor(rec)}(${y})`;
     if (authors.length === 2) {
       const p2 = String(authors[1]).trim().split(/[\s,]+/).filter(Boolean);
-      return `${lastAuthor(rec)} \\& ${p2[p2.length-1] || 'Anon'}(${y})`;
+      return `${lastAuthor(rec)} \\& ${p2[p2.length-1]||'Anon'}(${y})`;
     }
     return `${lastAuthor(rec)} et~al.(${y})`;
   }
-
   const bibitems = refDOIs.map(d => {
     const rec = doiToRec[d];
     if (!rec) return `\\bibitem[DOI:${d.slice(0,15)}]\\{${d}} \\href{https://doi.org/${d}}{doi:${d}}`;
     const authors = Array.isArray(rec.authors) ? rec.authors.join(', ') : String(rec.authors || '');
     const y = rec.year || 'n.d.';
-    const label = citeLabel(rec);
-    return `\\bibitem[${label}]{${d}} ${esc(authors)} (${y}). ${esc(rec.title || '')}. \\textit{${esc(rec.journal || '')}}. \\href{https://doi.org/${d}}{${d}}`;
+    return `\\bibitem[${citeLabel(rec)}]{${d}} ${esc(authors)} (${y}). ${esc(rec.title || '')}. \\textit{${esc(rec.journal || '')}}. \\href{https://doi.org/${d}}{${d}}`;
   });
-  // NOTE: no \section*{References} — thebibliography self-titles
   const refs = bibitems.length ? [
-    '\\clearpage',
-    '\\begin{singlespacing}',
-    '\\begin{thebibliography}{99}',
-    ...bibitems,
-    '\\end{thebibliography}',
-    '\\end{singlespacing}',
-    ''
+    '\\clearpage', '\\begin{singlespacing}', '\\begin{thebibliography}{99}',
+    ...bibitems, '\\end{thebibliography}', '\\end{singlespacing}', ''
   ].join('\n') : '';
 
-  // ---- 3. Diagram from step 28 (or step 26 fallback) ----
+  // --- Model + diagram ---
   const s26 = (steps['26'] && steps['26'].output) || {};
   const s28 = (steps['28'] && steps['28'].output) || {};
   const modelDraft = s26.model_draft || {};
   const dparams = s28.diagram_script_params || {};
 
   const sanitize = (s) => String(s || '').replace(/[^a-zA-Z0-9]/g, '') || 'x';
-  let nodeList = [];
-  let edgeList = [];
-
+  let nodeList = [], edgeList = [];
   if (Array.isArray(dparams.nodes) && dparams.nodes.length) {
     const labels = Array.isArray(dparams.labels) ? dparams.labels : [];
     nodeList = dparams.nodes.map((id, i) => ({ id: sanitize(id), label: String(labels[i] || id) }));
-    const idToSanitized = {};
-    dparams.nodes.forEach((id, i) => { idToSanitized[String(id)] = sanitize(id); });
-    if (Array.isArray(dparams.paths)) {
-      for (const pth of dparams.paths) {
-        const mm = String(pth).match(/^(.+?)\s*(?:->|→)\s*(.+?)$/);
-        if (mm) {
-          const f = idToSanitized[mm[1].trim()] || sanitize(mm[1]);
-          const t = idToSanitized[mm[2].trim()] || sanitize(mm[2]);
-          edgeList.push({ from: f, to: t });
-        }
-      }
+    const idMap = {}; dparams.nodes.forEach((id, i) => { idMap[String(id)] = sanitize(id); });
+    if (Array.isArray(dparams.paths)) for (const pth of dparams.paths) {
+      const mm = String(pth).match(/^(.+?)\s*(?:->|→)\s*(.+?)$/);
+      if (mm) edgeList.push({ from: idMap[mm[1].trim()] || sanitize(mm[1]), to: idMap[mm[2].trim()] || sanitize(mm[2]) });
     }
   } else if (Array.isArray(modelDraft.phases) && modelDraft.phases.length) {
     nodeList = modelDraft.phases.map((ph, i) => ({ id: 'n' + i, label: String(ph) }));
     for (let i = 1; i < nodeList.length; i++) edgeList.push({ from: nodeList[i-1].id, to: nodeList[i].id });
-    if (nodeList.length >= 3) edgeList.push({ from: nodeList[nodeList.length-1].id, to: nodeList[0].id }); // feedback loop
+    if (nodeList.length >= 3) edgeList.push({ from: nodeList[nodeList.length-1].id, to: nodeList[0].id });
   }
-
   let diagram = '';
   if (nodeList.length >= 2) {
-    const W = 3.3;
     const tikzNodes = nodeList.map((n, i) => {
-      const x = i * W;
       let lbl = n.label;
-      if (lbl.length > 28) {
-        const parts = lbl.split(/\s+/);
-        const mid = Math.ceil(parts.length / 2);
-        lbl = parts.slice(0, mid).join(' ') + '\\\\' + parts.slice(mid).join(' ');
-      }
-      return `  \\node[box] (${n.id}) at (${(x/3.3).toFixed(2) * 3.3}, 0) {${esc(lbl).replace(/\\\\/g, '\\\\')}};`;
+      if (lbl.length > 28) { const parts = lbl.split(/\s+/); const mid = Math.ceil(parts.length/2); lbl = parts.slice(0,mid).join(' ') + '\\\\' + parts.slice(mid).join(' '); }
+      return `  \\node[box] (${n.id}) at (${(i*3.5).toFixed(1)}, 0) {${lbl}};`;
     }).join('\n');
-    const tikzEdges = edgeList.map(e => {
-      if (e.from === e.to) return '';
-      return `  \\draw[arr] (${e.from}) -- (${e.to});`;
-    }).filter(Boolean).join('\n');
+    const tikzEdges = edgeList.map(e => e.from === e.to ? '' : `  \\draw[arr] (${e.from}) -- (${e.to});`).filter(Boolean).join('\n');
     const tensionNote = modelDraft.tension ? `\\noindent\\textit{Note.} ${esc(String(modelDraft.tension))}\\par\n` : '';
-    diagram = [
-      '\\clearpage',
-      '\\begin{center}\\textbf{Figure 1}\\\\[2pt]',
-      '\\textit{Process Model}\\end{center}',
-      '\\vspace{0.3em}',
+    diagram = ['\\clearpage',
+      '\\begin{center}\\textbf{Figure 1}\\\\[2pt]','\\textit{Process Model}\\end{center}','\\vspace{0.3em}',
       '\\begin{center}',
       '\\begin{tikzpicture}[',
       '  box/.style={draw, rounded corners=2pt, minimum width=2.8cm, minimum height=1.2cm, align=center, font=\\footnotesize, inner sep=3pt},',
       '  arr/.style={->, >=stealth, thick}',
       ']',
-      tikzNodes,
-      tikzEdges,
-      '\\end{tikzpicture}',
-      '\\end{center}',
-      '\\vspace{0.2em}',
-      tensionNote
+      tikzNodes, tikzEdges,
+      '\\end{tikzpicture}', '\\end{center}', '\\vspace{0.2em}', tensionNote
     ].join('\n');
   }
 
-  // ---- 4. Table 1 (Codes → Themes → Dimensions) ----
+  // --- Table 3: Analytical metrics (numbers) ---
+  const s4 = (steps['4'] && steps['4'].output) || {};
+  const s16 = (steps['16'] && steps['16'].output) || {};
   const s15 = (steps['15'] && steps['15'].output) || {};
   const s24 = (steps['24'] && steps['24'].output) || {};
-  const s4 = (steps['4'] && steps['4'].output) || {};
+  const s30 = (steps['30'] && steps['30'].output) || {};
+  const cm = (s4.code_matrix || []);
   const codebook = ((s15.codebook && s15.codebook.codes) || []);
   const dims = (s24.dimensions || []);
+  const suff = s30.sufficiency || {};
 
+  // Code frequencies
+  const codeFreq = {};
+  const codersByCode = {}; // code -> set of coder_ids that used it
+  const recordsByCode = {}; // code -> set of record_ids where it appears
+  for (const row of cm) {
+    const cid = row.coder_id || '?';
+    for (const c of (row.codes || [])) {
+      const t = String(c).toLowerCase().trim();
+      if (!t || t === 'na') continue;
+      codeFreq[t] = (codeFreq[t] || 0) + 1;
+      (codersByCode[t] = codersByCode[t] || new Set()).add(cid);
+      (recordsByCode[t] = recordsByCode[t] || new Set()).add(String(row.record_id));
+    }
+  }
+  const codesSorted = Object.entries(codeFreq).sort((a,b) => b[1] - a[1]);
+  const N_REC = new Set(cm.map(r => String(r.record_id))).size;
+  const codersAll = [...new Set(cm.map(r => r.coder_id))];
+  const M_CODERS = codersAll.length;
+
+  // Coder agreement per code: for each record containing this code, did all M coders use it?
+  function coderAgreement(code) {
+    const byRec = {};
+    for (const row of cm) {
+      const rec = String(row.record_id);
+      if (!byRec[rec]) byRec[rec] = new Set();
+      for (const c of (row.codes || [])) {
+        const t = String(c).toLowerCase().trim();
+        if (t) byRec[rec].add(t);
+      }
+    }
+    const has = Object.keys(byRec).filter(rec => byRec[rec].has(code)).length;
+    return has;
+  }
+
+  // Saturation: at which record did new codes stop appearing
+  let lastNovelRecord = 0;
+  const seenCodes = new Set();
+  const recIdsSorted = [...new Set(cm.map(r => String(r.record_id)))].sort((a,b)=>Number(a)-Number(b));
+  for (const rec of recIdsSorted) {
+    let novel = false;
+    for (const row of cm) {
+      if (String(row.record_id) !== rec) continue;
+      for (const c of (row.codes || [])) {
+        const t = String(c).toLowerCase().trim();
+        if (t && t !== 'na' && !seenCodes.has(t)) { seenCodes.add(t); novel = true; }
+      }
+    }
+    if (novel) lastNovelRecord = Number(rec) + 1;
+  }
+  const saturationFromData = lastNovelRecord;
+  const saturationFromSuff = (suff.saturation_estimate && suff.saturation_estimate.record_index_at_which_novel_codes_stopped) || null;
+
+  // Metrics table rows
+  const metricsRows = [];
+  metricsRows.push(`\\textit{Corpus} & ${N_REC} records; ${M_CODERS} coders & — \\\\`);
+  metricsRows.push(`\\textit{Total code applications} & ${Object.values(codeFreq).reduce((a,b)=>a+b,0)} & (sum across ${N_REC}×${M_CODERS}=${N_REC*M_CODERS} cells) \\\\`);
+  metricsRows.push(`\\textit{Distinct codes used} & ${Object.keys(codeFreq).length} & first-order, from coder output \\\\`);
+  for (const [code, count] of codesSorted.slice(0, 12)) {
+    const agreement = coderAgreement(code);
+    const pct = N_REC > 0 ? Math.round((agreement / N_REC) * 100) : 0;
+    metricsRows.push(`${esc(code)} & ${count} & ${agreement}/${N_REC} records (${pct}\\%) \\\\`);
+  }
+  const saturation = saturationFromSuff != null ? saturationFromSuff : saturationFromData;
+  metricsRows.push(`\\textit{Saturation} & \\multicolumn{2}{l}{novel codes stopped appearing after record ${saturation} of ${N_REC}} \\\\`);
+  const table3 = [
+    '\\begin{singlespacing}',
+    '\\begin{center}\\textbf{Table 3}\\\\[2pt]',
+    '\\textit{Analytical Metrics}\\end{center}',
+    '\\begin{footnotesize}\\setlength{\\tabcolsep}{4pt}',
+    '\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.28\\textwidth} >{\\raggedright\\arraybackslash}p{0.16\\textwidth} >{\\raggedright\\arraybackslash}X@{}}',
+    '\\toprule',
+    '\\textbf{Metric} & \\textbf{Value} & \\textbf{Notes} \\\\',
+    '\\midrule',
+    metricsRows.join('\n'),
+    '\\bottomrule',
+    '\\end{tabularx}',
+    '\\end{footnotesize}',
+    '\\end{singlespacing}', ''
+  ].join('\n');
+
+  // --- Evidence grid (per dimension: quote counts) ---
+  const quotePool = [];
+  for (const r of ((s16.panel_result && s16.panel_result.responses) || [])) {
+    for (const row of (r.rows || [])) {
+      const q = String(row.quote || '').trim();
+      const codes = (row.codes || []).filter(c => String(c).toUpperCase() !== 'NA').map(c => String(c).toLowerCase());
+      if (q.length > 40 && q.length < 350 && codes.length) {
+        quotePool.push({ code: codes[0], codes, quote: q, rec: String(row.record_id || '?') });
+      }
+    }
+  }
+  let evidenceGrid = '';
+  if (dims.length && quotePool.length) {
+    const gridRows = dims.map(d => {
+      const dimName = String(d.name || '').toLowerCase();
+      const hay = (dimName + ' ' + String(d.mechanism || '') + ' ' + String(d.description || '')).toLowerCase();
+      const matchedQuotes = quotePool.filter(q => q.codes.some(c => hay.includes(c)));
+      const supporting = (d.supporting_record_ids || []).length || matchedQuotes.length;
+      const opposing = (d.opposing_record_ids || []).length;
+      const condFor = Array.isArray(d.conditions_for) && d.conditions_for.length ? d.conditions_for.length : null;
+      const condAgainst = Array.isArray(d.conditions_against) && d.conditions_against.length ? d.conditions_against.length : null;
+      return `${esc(String(d.name || ''))} & ${supporting} & ${opposing || '—'} & ${condFor != null ? condFor : '—'} & ${condAgainst != null ? condAgainst : '—'} \\\\`;
+    }).join('\n');
+    evidenceGrid = [
+      '\\begin{singlespacing}',
+      '\\begin{center}\\textbf{Table 4}\\\\[2pt]',
+      '\\textit{Evidence per Dimension}\\end{center}',
+      '\\begin{footnotesize}\\setlength{\\tabcolsep}{4pt}',
+      '\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}X >{\\raggedright\\arraybackslash}p{0.10\\textwidth} >{\\raggedright\\arraybackslash}p{0.10\\textwidth} >{\\raggedright\\arraybackslash}p{0.13\\textwidth} >{\\raggedright\\arraybackslash}p{0.13\\textwidth}@{}}',
+      '\\toprule',
+      '\\textbf{Dimension} & \\textbf{Quotes for} & \\textbf{Quotes against} & \\textbf{Conditions for} & \\textbf{Conditions against} \\\\',
+      '\\midrule',
+      gridRows,
+      '\\bottomrule',
+      '\\end{tabularx}',
+      '\\end{footnotesize}',
+      '\\end{singlespacing}', ''
+    ].join('\n');
+  }
+
+  // --- Dimension conditions/relationships (from new step-24 fields) ---
+  let dimsNarrative = '';
+  if (dims.length) {
+    const parts = ['\\clearpage', '\\section*{Dimension Details}'];
+    for (const d of dims) {
+      parts.push('\\subsection*{' + esc(String(d.name || '')) + '}');
+      if (d.mechanism) parts.push('\\noindent\\textit{Mechanism.} ' + esc(String(d.mechanism)) + '\\par');
+      if (d.tension) parts.push('\\noindent\\textit{Tension.} ' + esc(String(d.tension)) + '\\par');
+      if (Array.isArray(d.conditions_for) && d.conditions_for.length) {
+        parts.push('\\noindent\\textit{Conditions for.}');
+        parts.push('\\begin{itemize}\\setlength{\\itemsep}{0pt}');
+        for (const c of d.conditions_for) parts.push('\\item ' + esc(String(c)));
+        parts.push('\\end{itemize}');
+      }
+      if (Array.isArray(d.conditions_against) && d.conditions_against.length) {
+        parts.push('\\noindent\\textit{Conditions against.}');
+        parts.push('\\begin{itemize}\\setlength{\\itemsep}{0pt}');
+        for (const c of d.conditions_against) parts.push('\\item ' + esc(String(c)));
+        parts.push('\\end{itemize}');
+      }
+      if (Array.isArray(d.relationships) && d.relationships.length) {
+        parts.push('\\noindent\\textit{Relationships.}');
+        parts.push('\\begin{itemize}\\setlength{\\itemsep}{0pt}');
+        for (const r of d.relationships) parts.push('\\item ' + esc(String(r.from||'')) + ' $\\rightarrow$ ' + esc(String(r.to||'')) + ': ' + esc(String(r.nature||'')));
+        parts.push('\\end{itemize}');
+      }
+      const hasNew = Array.isArray(d.conditions_for) || Array.isArray(d.relationships);
+      if (!hasNew) parts.push('\\noindent\\textit{Conditions and relationships not produced by this run. Re-run with updated prompt to populate.}\\par');
+      parts.push('');
+    }
+    dimsNarrative = parts.join('\n');
+  }
+
+  // --- Table 1 (Codes, Themes, Dimensions) ---
   let table1 = '';
   if (dims.length && codebook.length) {
     const rows = dims.map(d => {
@@ -451,117 +574,64 @@ async function step32({ filePath, pools, allRdfs, runId }) {
         const hay = (String(d.name||'') + ' ' + String(d.mechanism||'') + ' ' + String(d.description||'')).toLowerCase();
         return lbl && (hay.includes(lbl) || lbl.split(' ').some(w => w.length > 4 && hay.includes(w)));
       });
-      const themes = matched.length
-        ? matched.map(cb => esc(cb.name || cb.label || '')).join('; ')
-        : codebook.slice(0,2).map(cb => esc(cb.name || cb.label || '')).join('; ');
+      const themes = matched.length ? matched.map(cb => esc(cb.name || cb.label || '')).join('; ')
+                                    : codebook.slice(0,2).map(cb => esc(cb.name || cb.label || '')).join('; ');
       return `\\textbf{${dimName}} & ${themes} & \\textit{${dimMech}} \\\\`;
     }).join('\n');
-    table1 = [
-      '\\clearpage',
-      '\\begin{singlespacing}',
-      '\\begin{center}\\textbf{Table 1}\\\\[2pt]',
-      '\\textit{Codes, Themes, and Dimensions}\\end{center}',
+    table1 = ['\\clearpage','\\begin{singlespacing}',
+      '\\begin{center}\\textbf{Table 1}\\\\[2pt]','\\textit{Codes, Themes, and Dimensions}\\end{center}',
       '\\begin{footnotesize}\\setlength{\\tabcolsep}{4pt}',
       '\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.20\\textwidth} >{\\raggedright\\arraybackslash}p{0.32\\textwidth} >{\\raggedright\\arraybackslash}X@{}}',
-      '\\toprule',
-      '\\textbf{Aggregate dimension} & \\textbf{Second-order themes} & \\textbf{Mechanism} \\\\',
-      '\\midrule',
+      '\\toprule','\\textbf{Aggregate dimension} & \\textbf{Second-order themes} & \\textbf{Mechanism} \\\\','\\midrule',
       rows,
-      '\\bottomrule',
-      '\\end{tabularx}',
-      '\\end{footnotesize}',
-      '\\end{singlespacing}',
-      ''
+      '\\bottomrule','\\end{tabularx}','\\end{footnotesize}','\\end{singlespacing}',''
     ].join('\n');
   }
 
-  // ---- 5. Table 2 (Representative Quotations) ----
-  const s16 = (steps['16'] && steps['16'].output) || {};
-  const quotePool = [];
-  for (const r of ((s16.panel_result && s16.panel_result.responses) || [])) {
-    for (const row of (r.rows || [])) {
-      const q = String(row.quote || '').trim();
-      const codes = (row.codes || []).filter(c => String(c).toUpperCase() !== 'NA');
-      if (q.length > 40 && q.length < 350 && codes.length) {
-        quotePool.push({ code: String(codes[0]), quote: q, rec: String(row.record_id || '?') });
-      }
-    }
-  }
-  const seenQ = new Set();
-  const uniqQ = [];
+  // --- Table 2 (Representative Quotations) ---
+  const seenQ = new Set(); const uniqQ = [];
   for (const item of quotePool) {
-    const key = item.quote.slice(0, 50).toLowerCase();
-    if (seenQ.has(key)) continue;
-    seenQ.add(key);
-    uniqQ.push(item);
+    const k = item.quote.slice(0, 50).toLowerCase();
+    if (seenQ.has(k)) continue;
+    seenQ.add(k); uniqQ.push(item);
     if (uniqQ.length >= 10) break;
   }
   let table2 = '';
   if (uniqQ.length) {
-    const qRows = uniqQ.map(item =>
-      `${esc(item.code)} & ``${esc(item.quote)}''\\textsuperscript{${esc(item.rec)}} \\\\`
-    ).join('\n');
-    table2 = [
-      '\\begin{singlespacing}',
-      '\\begin{center}\\textbf{Table 2}\\\\[2pt]',
-      '\\textit{Representative Quotations}\\end{center}',
+    const qRows = uniqQ.map(item => `${esc(item.code)} & ``${esc(item.quote)}''\\textsuperscript{${esc(item.rec)}} \\\\`).join('\n');
+    table2 = ['\\begin{singlespacing}',
+      '\\begin{center}\\textbf{Table 2}\\\\[2pt]','\\textit{Representative Quotations}\\end{center}',
       '\\begin{footnotesize}\\setlength{\\tabcolsep}{4pt}',
       '\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.24\\textwidth} >{\\raggedright\\arraybackslash}X@{}}',
-      '\\toprule',
-      '\\textbf{Code} & \\textbf{Verbatim excerpt} \\\\',
-      '\\midrule',
+      '\\toprule','\\textbf{Code} & \\textbf{Verbatim excerpt} \\\\','\\midrule',
       qRows,
-      '\\bottomrule',
-      '\\end{tabularx}',
-      '\\end{footnotesize}',
-      '\\end{singlespacing}',
-      ''
+      '\\bottomrule','\\end{tabularx}','\\end{footnotesize}','\\end{singlespacing}',''
     ].join('\n');
   }
 
-  // ---- 6. Appendix: RDF ledger with wider Step/RDF cols + pool elaboration ----
-  function poolSummary(poolId) {
+  // --- Appendix: RDF ledger, no DOI spill ---
+  function poolLabel(poolId) {
     const recs = poolByID[poolId] || [];
-    const refs = recs.slice(0, 2).map(r => {
-      const y = r.year || 'n.d.';
-      return `${lastAuthor(r)} ${y}`;
-    });
-    return refs.join('; ') + (recs.length > 3 ? '; …' : '');
+    return recs.slice(0, 2).map(r => `${lastAuthor(r)} ${r.year || 'n.d.'}`).join('; ');
   }
   const ledgerRows = all.map(r => {
-    // Use number from rdf_id, not stage field
-    const numMatch = String(r.rdf_id || '').match(/\d+/);
-    const stepNum = numMatch ? numMatch[0] : String(r.stage || '');
+    const num = (String(r.rdf_id || '').match(/\d+/) || [String(r.stage || '')])[0];
     const forks = Array.isArray(r.options) ? r.options.filter(o => o !== r.chosen).map(esc).join('; ') : '';
     const poolId = r.pool_id || '';
-    const summary = poolId ? poolSummary(poolId) : '';
-    const support = esc(r.citation_status || '') + (poolId ? ` [${poolId}] ${esc(summary)}` : '');
-    return `${esc(stepNum)} & ${esc(r.rdf_id)} & ${esc(r.chosen || '')} & ${forks} & ${esc(r.rationale || '')} & ${support} \\\\`;
+    const support = esc(r.citation_status || '') + (poolId ? ` [${poolId}] ${esc(poolLabel(poolId))}` : '');
+    return `${esc(num)} & ${esc(r.rdf_id)} & ${esc(r.chosen || '')} & ${forks} & ${esc(r.rationale || '')} & ${support} \\\\`;
   }).join('\n');
-  const ledger = [
-    '\\clearpage',
-    '\\section*{Appendix A: Researcher Degrees of Freedom Ledger}',
-    '\\noindent\\textit{Every analytical choice made by the pipeline, with the counterfactual fork not taken, the rationale, and the citation pool that grounds it. Pool IDs (P00--P13) name the literature search performed at that step; each pool\\textquotesingle s top papers appear inline in the Support column and fully in References.}\\par\\vspace{0.8em}',
-    '\\begin{singlespacing}',
-    '\\begin{tiny}\\setlength{\\tabcolsep}{1.5pt}',
-    '\\begin{longtable}{@{}>{\\raggedright\\arraybackslash}p{0.04\\linewidth} >{\\raggedright\\arraybackslash}p{0.055\\linewidth} >{\\raggedright\\arraybackslash}p{0.16\\linewidth} >{\\raggedright\\arraybackslash}p{0.17\\linewidth} >{\\raggedright\\arraybackslash}p{0.33\\linewidth} >{\\raggedright\\arraybackslash}p{0.135\\linewidth}@{}}',
-    '\\toprule',
-    '\\textbf{Step} & \\textbf{RDF} & \\textbf{Choice} & \\textbf{Forks} & \\textbf{Rationale} & \\textbf{Support} \\\\',
-    '\\midrule',
-    '\\endfirsthead',
-    '\\toprule',
-    '\\textbf{Step} & \\textbf{RDF} & \\textbf{Choice} & \\textbf{Forks} & \\textbf{Rationale} & \\textbf{Support} \\\\',
-    '\\midrule',
-    '\\endhead',
-    '\\bottomrule',
-    '\\endfoot',
+  const ledger = ['\\clearpage','\\section*{Appendix A: Researcher Degrees of Freedom Ledger}',
+    '\\noindent\\textit{Pool IDs (P00--P13) name the literature search performed at that step; the top two cited papers per pool appear inline. Full bibliography in References.}\\par\\vspace{0.6em}',
+    '\\begin{singlespacing}','\\begin{tiny}\\setlength{\\tabcolsep}{1.5pt}',
+    '\\begin{longtable}{@{}>{\\raggedright\\arraybackslash}p{0.035\\linewidth} >{\\raggedright\\arraybackslash}p{0.055\\linewidth} >{\\raggedright\\arraybackslash}p{0.14\\linewidth} >{\\raggedright\\arraybackslash}p{0.16\\linewidth} >{\\raggedright\\arraybackslash}p{0.36\\linewidth} >{\\raggedright\\arraybackslash}p{0.15\\linewidth}@{}}',
+    '\\toprule','\\textbf{Step} & \\textbf{RDF} & \\textbf{Choice} & \\textbf{Forks} & \\textbf{Rationale} & \\textbf{Support} \\\\','\\midrule','\\endfirsthead',
+    '\\toprule','\\textbf{Step} & \\textbf{RDF} & \\textbf{Choice} & \\textbf{Forks} & \\textbf{Rationale} & \\textbf{Support} \\\\','\\midrule','\\endhead',
+    '\\bottomrule','\\endfoot',
     ledgerRows,
-    '\\end{longtable}',
-    '\\end{tiny}',
-    '\\end{singlespacing}'
-  ].join('\n');
+    '\\end{longtable}','\\end{tiny}','\\end{singlespacing}'].join('\n');
 
-  // ---- 7. Keywords from dimensions ----
+  // Keywords
   const kw = [];
   for (const d of dims) if (d.name) kw.push(String(d.name).toLowerCase());
   for (const cb of codebook) {
@@ -570,64 +640,30 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   }
   const kwList = kw.slice(0, 6);
 
-  // ---- 8. Assemble ----
+  // Assemble
   const preamble = [
-    '\\documentclass[12pt]{article}',
-    '\\usepackage[margin=1in]{geometry}',
-    '\\usepackage{times}',
-    '\\usepackage{setspace}',
-    '\\usepackage{longtable}',
-    '\\usepackage{tabularx}',
-    '\\usepackage{array}',
-    '\\usepackage{booktabs}',
-    '\\usepackage{hyperref}',
-    '\\usepackage{ragged2e}',
-    '\\usepackage{natbib}',
-    '\\usepackage{tikz}',
+    '\\documentclass[12pt]{article}','\\usepackage[margin=1in]{geometry}','\\usepackage{times}','\\usepackage{setspace}',
+    '\\usepackage{longtable}','\\usepackage{tabularx}','\\usepackage{array}','\\usepackage{booktabs}',
+    '\\usepackage{hyperref}','\\usepackage{ragged2e}','\\usepackage{natbib}','\\usepackage{tikz}',
     '\\usetikzlibrary{arrows.meta, positioning, shapes.geometric}',
-    '\\doublespacing',
-    '\\pagestyle{plain}',
-    '\\begin{document}'
+    '\\doublespacing','\\pagestyle{plain}','\\begin{document}'
   ].join('\n');
 
-  const titleBlock = [
-    '\\begin{center}',
-    '{\\Large\\bfseries ' + esc(surgeonTitle) + '}',
-    '\\end{center}',
-    '\\begin{center}',
-    '\\today',
-    '\\end{center}',
-    '\\vspace{0.5em}'
-  ].join('\n');
+  const titleBlock = ['\\begin{center}','{\\Large\\bfseries ' + esc(surgeonTitle) + '}','\\end{center}',
+    '\\begin{center}','\\today','\\end{center}','\\vspace{0.5em}'].join('\n');
 
-  const abstractBlock = abstractText
-    ? '\\section*{Abstract}\n' + abstractText + '\n'
-    : '';
+  const abstractBlock = abstractText ? '\\section*{Abstract}\n' + abstractText + '\n' : '';
+  const kwBlock = kwList.length ? '\\vspace{0.5em}\n\\noindent\\textit{Keywords:} ' + esc(kwList.join(', ')) + '\n' : '';
 
-  const kwBlock = kwList.length
-    ? '\\vspace{0.5em}\n\\noindent\\textit{Keywords:} ' + esc(kwList.join(', ')) + '\n'
-    : '';
-
-  const full = [
-    preamble,
-    titleBlock,
-    abstractBlock,
-    kwBlock,
-    body,
-    '',
-    diagram,
-    table1,
-    table2,
-    refs,
-    ledger,
-    '\\end{document}'
-  ].join('\n');
+  const full = [preamble, titleBlock, abstractBlock, kwBlock, body, '',
+    diagram, table1, table2, table3, evidenceGrid, dimsNarrative, refs, ledger, '\\end{document}'].join('\n');
 
   return { output: {
     status: 'PACKAGED',
     aqrp_report_tex: full,
     aqrp_report_audit: { version: '1', runId: runId || null, assembled_at: new Date().toISOString(), rdf_count: all.length, records: all },
-    rdf_records: [r32]
+    rdf_records: [r32],
+    dropped_citations: droppedCites
   }};
 }
 

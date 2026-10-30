@@ -321,6 +321,18 @@ async function step32({ filePath, pools, allRdfs, runId }) {
              .replace(/\\date\{[\s\S]*?\}/g, '').replace(/\\maketitle/g, '');
   body = body.replace(/\\begin\{thebibliography\}[\s\S]*?\\end\{thebibliography\}/g, '');
   body = body.replace(/\\bibliographystyle\{[^}]*\}/g, '').replace(/\\bibliography\{[^}]*\}/g, '');
+  // ── v238/v240 double-wrap recovery ──
+  body = body.replace(/\n?\\begin\{center\}\s*\{\\Large\\bfseries[\s\S]*?\}\s*\\end\{center\}\s*\\begin\{center\}\s*\\today\s*\\end\{center\}\s*\\vspace\{[^}]*\}/g, '');
+  if (!abstractText) {
+    const __v238Abs = body.match(/\\section\*\{Abstract\}[ \t]*\n([\s\S]*?)(?=\n\\vspace|\n\\noindent\\textit\{Keywords:|\n\\section|\n\\clearpage)/);
+    if (__v238Abs) {
+      abstractText = __v238Abs[1].trim();
+      body = body.replace(__v238Abs[0], '');
+    }
+  }
+  body = body.replace(/\n?\\vspace\{[^}]*\}\s*\n\\noindent\\textit\{Keywords:\}[^\n]*\n?/g, '\n');
+  body = body.replace(/\n?\\noindent\\textit\{Keywords:\}[^\n]*\n?/g, '\n');
+
   body = body.replace(/^[ \t]*\bKeywords?\s*:\s*[^\n]+\n?/gim, '');
   body = body.trim();
 
@@ -425,13 +437,13 @@ async function step32({ filePath, pools, allRdfs, runId }) {
 
   const bibitems = refDOIs.map(d => {
     const rec = doiToRec[d];
-    if (!rec) return `\bibitem[DOI]{${d}} \href{https://doi.org/${d}}{https://doi.org/${d}}`;
+    if (!rec) return `\\bibitem[DOI]{${d}} \\href{https://doi.org/${d}}{https://doi.org/${d}}`;
     const authors = __formatAuthors(rec.authors);
     const y = rec.year || 'n.d.';
     const title = esc(rec.title || '').replace(/\.$/, '') + '.';
     const journal = esc(rec.journal || '').replace(/\.$/, '') + '.';
     const doiUrl = `https://doi.org/${d}`;
-    return `\bibitem[${citeLabel(rec)}]{${d}} ${authors} (${y}). ${title} \textit{${journal}} \href{${doiUrl}}{${doiUrl}}`;
+    return `\\bibitem[${citeLabel(rec)}]{${d}} ${authors} (${y}). ${title} \\textit{${journal}} \\href{${doiUrl}}{${doiUrl}}`;
   });
   const refs = bibitems.length ? [
     '\\clearpage', '\\begin{singlespacing}', '\\begin{thebibliography}{99}',

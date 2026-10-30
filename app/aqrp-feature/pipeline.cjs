@@ -315,7 +315,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   const titleMatch = paper.match(/\\title\{([\s\S]*?)\}/);
   const surgeonTitle = titleMatch ? titleMatch[1].trim() : 'Qualitative Analysis of AI Futures';
   const abstractMatch = body.match(/\\begin\{abstract\}([\s\S]*?)\\end\{abstract\}/);
-  const abstractText = abstractMatch ? abstractMatch[1].trim() : '';
+  let abstractText = abstractMatch ? abstractMatch[1].trim() : '';
   body = body.replace(/\\begin\{abstract\}[\s\S]*?\\end\{abstract\}/g, '');
   body = body.replace(/\\title\{[\s\S]*?\}/g, '').replace(/\\author\{[\s\S]*?\}/g, '')
              .replace(/\\date\{[\s\S]*?\}/g, '').replace(/\\maketitle/g, '');

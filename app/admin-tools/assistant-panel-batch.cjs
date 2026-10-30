@@ -12,8 +12,8 @@
 //   { rows: [{ quotes: [{ codes: [...], quote: "..." }] }] }
 //   { rows: [ {..}, {codes:[...]} , ... ] }
 const panel = require('/app/admin-tools/assistant-panel.cjs');
-const TRIALS = 5;
-const WAIT = [1000, 2000, 4000, 8000];
+const TRIALS = 3;
+const WAIT = [1000, 2000];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function recordId(r, i) {
@@ -79,10 +79,11 @@ async function batch({ query, schema, records, onProgress, skipIds, concurrency 
     const got = {};
     if (typeof onProgress === 'function') { try { await onProgress({ event: 'start', i, record_id: id, total: M }); } catch (e) {} }
     try {
+      let slotsToTry = null;
       for (let t = 0; t < TRIALS; t++) {
         let out = null;
         try {
-          out = await panel.askVerbose({ query: q, schema });
+          out = await panel.askVerbose({ query: q, schema, onlySlots: slotsToTry });
         } catch (e) {
           out = null;
         }
@@ -95,11 +96,12 @@ async function batch({ query, schema, records, onProgress, skipIds, concurrency 
         }
         if (N === null && out && out.meta && Number.isInteger(out.meta.n)) N = out.meta.n;
         if (N !== null) {
-          let missing = 0;
-          for (let s = 0; s < N; s++) if (got[s] === undefined) missing++;
-          if (missing === 0) break;
+          const missingSlots = [];
+          for (let s = 0; s < N; s++) if (got[s] === undefined) missingSlots.push(s);
+          if (missingSlots.length === 0) break;
+          slotsToTry = missingSlots;
         }
-        if (t < TRIALS - 1) await sleep(WAIT[t]);
+        if (t < TRIALS - 1) await sleep(WAIT[t] || 1000);
       }
       if (N === null) throw Error('panel batch could not resolve roster size at record ' + id);
       const rowsForRecord = [];

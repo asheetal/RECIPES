@@ -12,7 +12,7 @@ async function callMember(binding, idx, query, schema){
     method:'POST',
     headers:{...(conn.headers||{}),Authorization:'Bearer '+conn.key,'Content-Type':'application/json'},
     body:JSON.stringify({...base,response_format:rf}),
-    signal:AbortSignal.timeout(60000)
+    signal:AbortSignal.timeout(20000)
   });
   let r=await send({type:'json_schema',json_schema:{name:'panel_answer',schema,strict:true}});
   if(!r.ok) r=await send({type:'json_object'});
@@ -42,14 +42,21 @@ async function _members(){
   return members;
 }
 
-async function _run(query, schema){
+async function _run(query, schema, onlySlots){
   if(typeof query!=='string'||!query.trim()) throw Error('query is required');
   if(!schema||typeof schema!=='object'||schema.type!=='object'||typeof schema.properties!=='object')
     throw Error('schema must be a JSON Schema object with type=object and properties');
   const members=await _members();
   if(!members.length) throw Error('LLM_ASSISTANT_PANEL is not configured');
   if(members.length>roles.PANEL_MAX) throw Error('LLM_ASSISTANT_PANEL exceeds '+roles.PANEL_MAX+' agents');
-  const raw=await Promise.all(members.map((m,i)=>callMember(m,i,query,schema).catch(e=>({idx:i,ok:false,error:String(e.message||e)}))));
+  const indices = (onlySlots && Array.isArray(onlySlots) && onlySlots.length > 0)
+    ? onlySlots
+    : members.map((_,i)=>i);
+  const raw=await Promise.all(indices.map(i=>{
+    const m = members[i];
+    if (!m) return Promise.resolve({idx:i, ok:false, error:'slot out of range'});
+    return callMember(m, i, query, schema).catch(e=>({idx:i,ok:false,error:String(e.message||e)}));
+  }));
   const sets=collect(raw);
   return {
     result:{panel:'LLM_ASSISTANT_PANEL', n:sets.length, responses:sets},
@@ -63,8 +70,8 @@ async function ask({query, schema}){
   return result;
 }
 
-async function askVerbose({query, schema}){
-  return _run(query, schema);
+async function askVerbose({query, schema, onlySlots}){
+  return _run(query, schema, onlySlots);
 }
 
 module.exports={ask, askVerbose};

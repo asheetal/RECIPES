@@ -5,6 +5,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { request, apiBaseUrl } from 'librechat-data-provider';
 import { cn } from '~/utils';
 
+const FINAL_STEP = 32; // mirrors app/aqrp-feature/steps.cjs
+
 type FileRow = { id: string; name: string; bytes: number };
 type RunState = {
   status: 'idle' | 'running' | 'done' | 'failed' | 'killed';
@@ -132,10 +134,25 @@ export default function AQRPTile({ projectId }: { projectId: string }) {
 
   const statusLine = () => {
     if (state.status === 'running') {
+      const runningStep = Math.min((state.lastStepOk ?? 0) + 1, FINAL_STEP);
+      const p = state.progress;
+      let tally = '';
+      if (
+        p &&
+        p.step === runningStep &&
+        typeof p.done === 'number' &&
+        typeof p.total === 'number' &&
+        (p.inFlight ?? 0) > 0
+      ) {
+        const parts: string[] = [`${p.done}/${p.total} coded`, `${p.inFlight} in flight`];
+        if (p.etaSeconds != null && p.etaSeconds > 0) {
+          parts.push(`~${Math.max(1, Math.round(p.etaSeconds / 60))}m`);
+        }
+        tally = ` [${parts.join(', ')}]`;
+      }
       return (
         <span className="mt-2 flex flex-wrap items-center gap-2 text-sm text-text-secondary">
-          <Spinner className="h-4 w-4" /> Running step {(state.lastStepOk ?? 0) + 1}
-          {state.progress && typeof state.progress.done === 'number' ? ` (${state.progress.done}/${state.progress.total}${typeof state.progress.inFlight === 'number' && state.progress.inFlight > 0 ? ` · ${state.progress.inFlight} in flight` : ''}${state.progress.etaSeconds != null && state.progress.etaSeconds > 0 ? ` · ~${Math.max(1, Math.round(state.progress.etaSeconds / 60))}m` : ''})` : ''}
+          <Spinner className="h-4 w-4" /> Running step {runningStep}/{FINAL_STEP}{tally}
           {(state.lastStepOk ?? 0) > 0 && (
             <button type="button" onClick={downloadBundle} aria-label="Download completed steps as zip" className="inline-flex items-center gap-1 rounded border border-border-medium px-2 py-1 text-xs font-medium text-text-primary hover:bg-surface-hover">
               <Archive className="h-3 w-3" /> Zip

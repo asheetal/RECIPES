@@ -322,6 +322,32 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   body = body.replace(/\\begin\{thebibliography\}[\s\S]*?\\end\{thebibliography\}/g, '');
   body = body.replace(/\\bibliographystyle\{[^}]*\}/g, '').replace(/\\bibliography\{[^}]*\}/g, '');
   // ── v238/v240 double-wrap recovery ──
+  // ── Idempotent strip: remove any pipeline-added sections from prior re-pkg ──
+  // Any `\clearpage` in the extracted body is pipeline-added (the surgeon's
+  // paper sections don't use \clearpage). Strip from first occurrence.
+  const __firstClear = body.indexOf('\\clearpage');
+  if (__firstClear >= 0) {
+    body = body.slice(0, __firstClear);
+  }
+  // Strip any surviving \section*{Abstract} block (v238 used \section*{Abstract},
+  // not \begin{abstract}). The abstract was already extracted above.
+  const __absIdx = body.indexOf('\\section*{Abstract}');
+  if (__absIdx >= 0) {
+    const __nextSect = body.indexOf('\\section', __absIdx + 22);
+    body = __nextSect > 0 ? (body.slice(0, __absIdx) + body.slice(__nextSect)) : body.slice(0, __absIdx);
+  }
+  // Strip any lingering keywords lines and their preceding \vspace.
+  body = body.replace(/\\vspace\{[^}]*\}\s*\n?\\noindent\\textit\{Keywords:\}[^\n]*\n?/g, '');
+  body = body.replace(/\\noindent\\textit\{Keywords:\}[^\n]*\n?/g, '');
+  // Strip any residual \begin{singlespacing}...\end{singlespacing} blocks (tables).
+  body = body.replace(/\\begin\{singlespacing\}[\s\S]*?\\end\{singlespacing\}/g, '');
+  // Strip any residual tikzpicture blocks (in case \clearpage was missing).
+  body = body.replace(/\\resizebox\{[^}]*\}\{[^}]*\}\{[\s\S]*?\\end\{tikzpicture\}%?\s*\}/g, '');
+  body = body.replace(/\\begin\{tikzpicture\}[\s\S]*?\\end\{tikzpicture\}/g, '');
+  // Strip any residual table-center blocks (fallback if \clearpage was missing).
+  body = body.replace(/\\begin\{center\}\\textbf\{Table \d+\}[\\\s\S]*?\\end\{tabularx\}[\s\S]*?\\end\{singlespacing\}/g, '');
+  body = body.trim();
+
   body = body.replace(/\n?\\begin\{center\}\s*\{\\Large\\bfseries[\s\S]*?\}\s*\\end\{center\}\s*\\begin\{center\}\s*\\today\s*\\end\{center\}\s*\\vspace\{[^}]*\}/g, '');
   if (!abstractText) {
     const __v238Abs = body.match(/\\section\*\{Abstract\}[ \t]*\n([\s\S]*?)(?=\n\\vspace|\n\\noindent\\textit\{Keywords:|\n\\section|\n\\clearpage)/);

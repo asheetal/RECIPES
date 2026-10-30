@@ -98,6 +98,25 @@ export default function AQRPTile({ projectId }: { projectId: string }) {
     e.stopPropagation();
     const step = state.lastStepOk ?? 0;
     try {
+      // Step 32: prefer cached PDF (base64 inside the JSON output)
+      if (step === 32) {
+        try {
+          const payload = (await request.get(`${base}/output/32`)) as any;
+          const b64 = payload && payload.aqrp_report_pdf_b64;
+          if (typeof b64 === 'string' && b64.length > 0) {
+            const bin = atob(b64);
+            const bytes = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+            const pdfBlob = new Blob([bytes], { type: 'application/pdf' });
+            const pdfUrl = URL.createObjectURL(pdfBlob);
+            const a = document.createElement('a');
+            a.href = pdfUrl; a.download = 'aqrp_report.pdf';
+            document.body.appendChild(a); a.click(); a.remove();
+            URL.revokeObjectURL(pdfUrl);
+            return;
+          }
+        } catch { /* fall through to raw JSON */ }
+      }
       const blob = (await request.get(`${base}/output/${step}`, { responseType: 'blob' })) as unknown as Blob;
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -105,7 +124,7 @@ export default function AQRPTile({ projectId }: { projectId: string }) {
       document.body.appendChild(a); a.click(); a.remove();
       URL.revokeObjectURL(url);
     } catch { /* surfaced by tile state */ }
-  }, [base, state.lastStepOk, state.currentStep]);
+  }, [base, state.lastStepOk, state.fileName]);
 
   const remove = useCallback(async (e: React.MouseEvent) => {
     e.stopPropagation();

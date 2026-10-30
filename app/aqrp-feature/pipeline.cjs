@@ -392,12 +392,46 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     }
     return `${lastAuthor(rec)} et~al.(${y})`;
   }
+  
+  // ── APA-7 author formatting ──
+  function __parseName(name) {
+    const s = String(name || '').trim();
+    if (!s) return { surname: '', given: [] };
+    if (s.includes(',')) {
+      const [last, ...rest] = s.split(',');
+      const given = rest.join(' ').trim().split(/\s+/).filter(Boolean);
+      return { surname: last.trim(), given };
+    }
+    const parts = s.split(/\s+/).filter(Boolean);
+    return { surname: parts[parts.length - 1] || '', given: parts.slice(0, -1) };
+  }
+  function __formatAuthor(name) {
+    const { surname, given } = __parseName(name);
+    if (!surname) return '';
+    const initials = given
+      .map(g => { const c = String(g).replace(/\./g, '')[0]; return c ? c.toUpperCase() + '.' : ''; })
+      .filter(Boolean)
+      .join(' ');
+    return initials ? `${esc(surname)}, ${esc(initials)}` : esc(surname);
+  }
+  function __formatAuthors(authorsArr) {
+    const list = (Array.isArray(authorsArr) ? authorsArr : [String(authorsArr || '')]).map(__formatAuthor).filter(Boolean);
+    if (list.length === 0) return '';
+    if (list.length === 1) return list[0];
+    if (list.length === 2) return `${list[0]}, \\& ${list[1]}`;
+    const last = list.pop();
+    return `${list.join(', ')}, \\& ${last}`;
+  }
+
   const bibitems = refDOIs.map(d => {
     const rec = doiToRec[d];
-    if (!rec) return `\\bibitem[DOI:${d.slice(0,15)}]\\{${d}} \\href{https://doi.org/${d}}{doi:${d}}`;
-    const authors = Array.isArray(rec.authors) ? rec.authors.join(', ') : String(rec.authors || '');
+    if (!rec) return `\bibitem[DOI]{${d}} \href{https://doi.org/${d}}{https://doi.org/${d}}`;
+    const authors = __formatAuthors(rec.authors);
     const y = rec.year || 'n.d.';
-    return `\\bibitem[${citeLabel(rec)}]{${d}} ${esc(authors)} (${y}). ${esc(rec.title || '')}. \\textit{${esc(rec.journal || '')}}. \\href{https://doi.org/${d}}{${d}}`;
+    const title = esc(rec.title || '').replace(/\.$/, '') + '.';
+    const journal = esc(rec.journal || '').replace(/\.$/, '') + '.';
+    const doiUrl = `https://doi.org/${d}`;
+    return `\bibitem[${citeLabel(rec)}]{${d}} ${authors} (${y}). ${title} \textit{${journal}} \href{${doiUrl}}{${doiUrl}}`;
   });
   const refs = bibitems.length ? [
     '\\clearpage', '\\begin{singlespacing}', '\\begin{thebibliography}{99}',
@@ -430,19 +464,22 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     const tikzNodes = nodeList.map((n, i) => {
       let lbl = n.label;
       if (lbl.length > 28) { const parts = lbl.split(/\s+/); const mid = Math.ceil(parts.length/2); lbl = parts.slice(0,mid).join(' ') + '\\\\' + parts.slice(mid).join(' '); }
-      return `  \\node[box] (${n.id}) at (${(i*4.2).toFixed(1)}, 0) {${lbl}};`;
+      const __spacing = 3.2;
+      const __offset = (nodeList.length - 1) * __spacing / 2;
+      return `  \\node[box] (${n.id}) at (${(i * __spacing - __offset).toFixed(2)}, 0) {${lbl}};`;
     }).join('\n');
     const tikzEdges = edgeList.map(e => e.from === e.to ? '' : `  \\draw[arr] (${e.from}) -- (${e.to});`).filter(Boolean).join('\n');
     const tensionNote = modelDraft.tension ? `\\noindent\\textit{Note.} ${esc(String(modelDraft.tension))}\\par\n` : '';
     diagram = ['\\clearpage',
       '\\begin{center}\\textbf{Figure 1}\\\\[2pt]','\\textit{Process Model}\\end{center}','\\vspace{0.3em}',
       '\\begin{center}',
+      '\\resizebox{\\textwidth}{!}{%',
       '\\begin{tikzpicture}[',
-      '  box/.style={draw, rounded corners=2pt, minimum width=2.4cm, minimum height=0.9cm, align=center, font=\\scriptsize, inner sep=2pt},',
+      '  box/.style={draw, rounded corners=2pt, minimum width=2.4cm, minimum height=0.9cm, align=center, font=\\small, inner sep=3pt, anchor=center},',
       '  arr/.style={->, >=stealth, thick}',
       ']',
       tikzNodes, tikzEdges,
-      '\\end{tikzpicture}', '\\end{center}', '\\vspace{0.2em}', tensionNote
+      '\\end{tikzpicture}%', '}', '\\end{center}', '\\vspace{0.2em}', tensionNote
     ].join('\n');
   }
 
@@ -705,7 +742,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   const preamble = [
     '\\documentclass[12pt]{article}','\\usepackage[margin=1in]{geometry}','\\usepackage{times}','\\usepackage{setspace}',
     '\\usepackage{longtable}','\\usepackage{tabularx}','\\usepackage{array}','\\usepackage{booktabs}',
-    '\\usepackage{hyperref}','\\usepackage{ragged2e}','\\usepackage{natbib}','\\usepackage{tikz}',
+    '\\usepackage{hyperref}','\\usepackage{ragged2e}','\\usepackage{natbib}','\\usepackage{tikz}','\\usepackage{graphicx}',
     '\\usetikzlibrary{arrows.meta, positioning, shapes.geometric}',
     '\\doublespacing','\\pagestyle{plain}','\\begin{document}'
   ].join('\n');

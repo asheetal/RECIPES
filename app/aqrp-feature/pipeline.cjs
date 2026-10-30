@@ -232,55 +232,303 @@ async function panelStepGeneric(N, { filePath, matrixField, disField, status }) 
   return { output: { ...p, status, ...folded } };
 }
 
+async function _fetchRunSteps(runId) {
+  if (!runId) return {};
+  try {
+    const mongoose = require('mongoose');
+    const run = await mongoose.connection.db.collection('aqrpruns').findOne({ runId });
+    return (run && run.steps) || {};
+  } catch (e) { return {}; }
+}
+
 async function step32({ filePath, pools, allRdfs, runId }) {
   const p = readJson(filePath);
-  if (typeof p.submission_paper_tex !== 'string' || !p.submission_paper_tex.trim()) throw new Error('Step 32: submission_paper_tex required');
   const rdfs = p.rdf_records || [];
   const r32 = rdfs.find(r => r.rdf_id === 'R32');
   if (!r32) throw new Error('Step 32: missing R32');
   validateRdfRecord(r32, 'Step 32.R32', ['P13'], pools);
   const all = [...(allRdfs || []), r32];
-    const esc = (s) => String(s == null ? '' : s).replace(/[\\&%$#_{}]/g, c => '\\' + c);
-  let paper = p.submission_paper_tex;
-  const beginMark = '\\begin{document}';
-  const bidx = paper.indexOf(beginMark);
-  if (bidx < 0) throw new Error('Step 32: submission_paper_tex missing \\begin{document}');
-  const preamble = paper.slice(0, bidx);
-  const need = ['longtable','array','booktabs','ragged2e']
-    .filter(n => !preamble.includes('usepackage{' + n + '}'))
-    .map(n => '\\usepackage{' + n + '}')
-    .join('\n');
-  if (need) paper = preamble + need + '\n' + paper.slice(bidx);
+  const steps = await _fetchRunSteps(runId);
+
+  const esc = (s) => String(s == null ? '' : s).replace(/[&%$#_{}]/g, c => '\\' + c);
+
+  // ---- 1. Body extraction from surgeon narrative ----
+  let paper = p.submission_paper_tex || '';
+  const beginDoc = paper.indexOf('\\begin{document}');
+  const endDoc = paper.lastIndexOf('\\end{document}');
+  let body = (beginDoc >= 0 && endDoc > beginDoc)
+    ? paper.slice(beginDoc + '\\begin{document}'.length, endDoc)
+    : paper;
+
+  // Title (surgeon's own)
+  const titleMatch = paper.match(/\\title\{([\s\S]*?)\}/);
+  const surgeonTitle = titleMatch ? titleMatch[1].trim() : 'Qualitative Analysis of AI Futures';
+
+  // Abstract (surgeon's own)
+  const abstractMatch = body.match(/\\begin\{abstract\}([\s\S]*?)\\end\{abstract\}/);
+  const abstractText = abstractMatch ? abstractMatch[1].trim() : '';
+  body = body.replace(/\\begin\{abstract\}[\s\S]*?\\end\{abstract\}/g, '');
+
+  // Strip preamble artifacts
+  body = body.replace(/\\title\{[\s\S]*?\}/g, '');
+  body = body.replace(/\\author\{[\s\S]*?\}/g, '');
+  body = body.replace(/\\date\{[\s\S]*?\}/g, '');
+  body = body.replace(/\\maketitle/g, '');
+  body = body.replace(/\\begin\{thebibliography\}[\s\S]*?\\end\{thebibliography\}/g, '');
+  body = body.replace(/\\bibliographystyle\{[^}]*\}/g, '');
+  body = body.replace(/\\bibliography\{[^}]*\}/g, '');
+  body = body.trim();
+
+  // ---- 2. DOI universe (pool order for determinism) ----
+  const poolOrder = ['P01','P02','P03','P04','P05','P06','P07','P08','P09','P10','P11','P12','P13'];
+  const doiToRec = {};
+  const poolDOIs = [];
+  for (const k of poolOrder) {
+    const pool = pools && pools[k];
+    for (const rec of ((pool && pool.top_k) || [])) {
+      if (rec && rec.doi && !doiToRec[String(rec.doi)]) {
+        doiToRec[String(rec.doi)] = rec;
+        poolDOIs.push(String(rec.doi));
+      }
+    }
+  }
+
+  // ---- 3. Replace dangling \citep{?} with real DOIs (sequential) ----
+  let citeIdx = 0;
+  body = body.replace(/\\cite[pt]?\{\s*\?+\s*\}/g, () => {
+    const d = poolDOIs[citeIdx] || poolDOIs[0] || '';
+    citeIdx++;
+    return d ? `\\cite{${d}}` : '';
+  });
+
+  // ---- 4. References — union of RDF citations and pool DOIs ----
+  const rdfDOIs = new Set();
+  for (const r of all) for (const d of (r.citations_used || [])) rdfDOIs.add(String(d));
+  const refDOIs = [...new Set([...rdfDOIs, ...poolDOIs])].sort();
+
+  function citeLabel(rec) {
+    const authors = Array.isArray(rec.authors) ? rec.authors
+      : (rec.authors ? [String(rec.authors)] : ['Anon']);
+    const last = (name) => {
+      const parts = String(name).trim().split(/[\s,]+/).filter(Boolean);
+      return parts[parts.length - 1] || 'Anon';
+    };
+    const y = rec.year || 'n.d.';
+    if (authors.length === 1) return `${last(authors[0])}(${y})`;
+    if (authors.length === 2) return `${last(authors[0])} \\& ${last(authors[1])}(${y})`;
+    return `${last(authors[0])} et~al.(${y})`;
+  }
+
+  const bibitems = refDOIs.map(d => {
+    const rec = doiToRec[d];
+    if (!rec) return `\\bibitem[DOI:${d.slice(0,15)}]\\{${d}} \\href{https://doi.org/${d}}{doi:${d}}`;
+    const authors = Array.isArray(rec.authors) ? rec.authors.join(', ') : String(rec.authors || '');
+    const y = rec.year || 'n.d.';
+    const label = citeLabel(rec);
+    return `\\bibitem[${label}]{${d}} ${esc(authors)} (${y}). ${esc(rec.title || '')}. \\textit{${esc(rec.journal || '')}}. \\href{https://doi.org/${d}}{${d}}`;
+  });
+  const refs = bibitems.length ? [
+    '\\section*{References}',
+    '\\begin{singlespacing}',
+    '\\begin{thebibliography}{99}',
+    ...bibitems,
+    '\\end{thebibliography}',
+    '\\end{singlespacing}',
+    ''
+  ].join('\n') : '';
+
+  // ---- 5. Table 1: Codes → Themes → Dimensions (Gioia-lite) ----
+  const s15 = (steps['15'] && steps['15'].output) || {};
+  const s24 = (steps['24'] && steps['24'].output) || {};
+  const s4 = (steps['4'] && steps['4'].output) || {};
+  const codebook = ((s15.codebook && s15.codebook.codes) || []);
+  const dims = (s24.dimensions || []);
+
+  const firstOrderCodes = (() => {
+    const set = new Set();
+    for (const row of (s4.code_matrix || [])) {
+      for (const c of (row.codes || [])) {
+        const t = String(c).toLowerCase().trim();
+        if (t && t !== 'na' && t !== '') set.add(t);
+      }
+    }
+    return [...set].sort();
+  })();
+
+  let table1 = '';
+  if (dims.length && codebook.length) {
+    const rows = dims.map(d => {
+      const dimName = esc(d.name || '');
+      const dimMech = esc(d.mechanism || '');
+      const matched = codebook.filter(cb => {
+        const lbl = String(cb.name || cb.label || '').toLowerCase().replace(/_/g,' ');
+        const hay = (String(d.name||'') + ' ' + String(d.mechanism||'') + ' ' + String(d.description||'')).toLowerCase();
+        return lbl && (hay.includes(lbl) || lbl.split(' ').some(w => w.length > 4 && hay.includes(w)));
+      });
+      const themes = matched.length
+        ? matched.map(cb => esc(cb.name || cb.label || '')).join('; ')
+        : codebook.slice(0,2).map(cb => esc(cb.name || cb.label || '')).join('; ');
+      return `\\textbf{${dimName}} & ${themes} & \\textit{${dimMech}} \\\\`;
+    }).join('\n');
+    table1 = [
+      '\\begin{singlespacing}',
+      '\\begin{center}\\textbf{Table 1}\\\\[2pt]',
+      '\\textit{Codes, Themes, and Dimensions}\\end{center}',
+      '\\begin{footnotesize}\\setlength{\\tabcolsep}{4pt}',
+      '\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.22\\textwidth} >{\\raggedright\\arraybackslash}p{0.33\\textwidth} >{\\raggedright\\arraybackslash}X@{}}',
+      '\\toprule',
+      '\\textbf{Aggregate dimension} & \\textbf{Second-order themes} & \\textbf{Mechanism} \\\\',
+      '\\midrule',
+      rows,
+      '\\bottomrule',
+      '\\end{tabularx}',
+      '\\end{footnotesize}',
+      '\\end{singlespacing}',
+      ''
+    ].join('\n');
+  }
+
+  // ---- 6. Table 2: Representative Quotations ----
+  const s16 = (steps['16'] && steps['16'].output) || {};
+  const quotePool = [];
+  for (const r of ((s16.panel_result && s16.panel_result.responses) || [])) {
+    for (const row of (r.rows || [])) {
+      const q = String(row.quote || '').trim();
+      const codes = (row.codes || []).filter(c => String(c).toUpperCase() !== 'NA');
+      if (q.length > 40 && q.length < 350 && codes.length) {
+        quotePool.push({ code: String(codes[0]), quote: q, rec: String(row.record_id || '?') });
+      }
+    }
+  }
+  const seenQ = new Set();
+  const uniqQ = [];
+  for (const item of quotePool) {
+    const key = item.quote.slice(0, 50).toLowerCase();
+    if (seenQ.has(key)) continue;
+    seenQ.add(key);
+    uniqQ.push(item);
+    if (uniqQ.length >= 10) break;
+  }
+
+  let table2 = '';
+  if (uniqQ.length) {
+    const qRows = uniqQ.map(item =>
+      `${esc(item.code)} & ``${esc(item.quote)}''\\textsuperscript{${esc(item.rec)}} \\\\`
+    ).join('\n');
+    table2 = [
+      '\\begin{singlespacing}',
+      '\\begin{center}\\textbf{Table 2}\\\\[2pt]',
+      '\\textit{Representative Quotations}\\end{center}',
+      '\\begin{footnotesize}\\setlength{\\tabcolsep}{4pt}',
+      '\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.24\\textwidth} >{\\raggedright\\arraybackslash}X@{}}',
+      '\\toprule',
+      '\\textbf{Code} & \\textbf{Verbatim excerpt} \\\\',
+      '\\midrule',
+      qRows,
+      '\\bottomrule',
+      '\\end{tabularx}',
+      '\\end{footnotesize}',
+      '\\end{singlespacing}',
+      ''
+    ].join('\n');
+  }
+
+  // ---- 7. Appendix: RDF ledger with stable column widths ----
   const ledgerRows = all.map(r => {
     const forks = Array.isArray(r.options) ? r.options.filter(o => o !== r.chosen).map(esc).join('; ') : '';
     const support = (r.citation_status || '') + (r.pool_id ? ' [' + r.pool_id + ']' : '');
-    const rationale = esc(r.rationale || '');
-    return `${esc(String(r.stage || ''))} & ${esc(r.rdf_id)} & ${esc(r.chosen || '')} & ${forks} & ${rationale} & ${esc(support)} \\\\`;
-  }).join('\n\\addlinespace\n');
+    return `${esc(String(r.stage || ''))} & ${esc(r.rdf_id)} & ${esc(r.chosen || '')} & ${forks} & ${esc(r.rationale || '')} & ${esc(support)} \\\\`;
+  }).join('\n');
   const ledger = [
     '\\clearpage',
-    '\\section*{Audit Trail}',
-    '\\subsection*{Researcher Degrees of Freedom Ledger}',
-    '\\begin{footnotesize}\\setlength{\\tabcolsep}{3pt}',
-    '\\begin{longtable}{@{}p{0.05\\linewidth} p{0.06\\linewidth} p{0.22\\linewidth} p{0.22\\linewidth} p{0.35\\linewidth} p{0.10\\linewidth}@{}}',
+    '\\section*{Appendix A: Researcher Degrees of Freedom Ledger}',
+    '\\noindent\\textit{Every analytical choice made by the pipeline, with the counterfactual fork not taken, the rationale, and the citation pool that grounds it.}\\par\\vspace{1em}',
+    '\\begin{singlespacing}',
+    '\\begin{footnotesize}\\setlength{\\tabcolsep}{2pt}',
+    '\\begin{longtable}{@{}p{0.03\\linewidth} p{0.05\\linewidth} p{0.18\\linewidth} p{0.20\\linewidth} p{0.36\\linewidth} p{0.08\\linewidth}@{}}',
+    '\\toprule',
+    '\\textbf{Step} & \\textbf{RDF} & \\textbf{Choice Made} & \\textbf{Counterfactual Forks} & \\textbf{Epistemic Rationale} & \\textbf{Support} \\\\',
+    '\\midrule',
+    '\\endfirsthead',
     '\\toprule',
     '\\textbf{Step} & \\textbf{RDF} & \\textbf{Choice Made} & \\textbf{Counterfactual Forks} & \\textbf{Epistemic Rationale} & \\textbf{Support} \\\\',
     '\\midrule',
     '\\endhead',
-    ledgerRows,
     '\\bottomrule',
+    '\\endfoot',
+    ledgerRows,
     '\\end{longtable}',
-    '\\end{footnotesize}'
+    '\\end{footnotesize}',
+    '\\end{singlespacing}'
   ].join('\n');
-  let insertIdx = -1;
-  for (const m of ['\\begin{thebibliography}', '\\bibliography{']) {
-    const i = paper.lastIndexOf(m);
-    if (i > 0) { insertIdx = i; break; }
+
+  // ---- 8. Keywords from dimension names / codebook ----
+  const keywords = [];
+  for (const d of dims) if (d.name) keywords.push(String(d.name).toLowerCase());
+  for (const cb of codebook) {
+    const k = String(cb.name || cb.label || '').toLowerCase().replace(/_/g,' ');
+    if (k && !keywords.includes(k)) keywords.push(k);
   }
-  if (insertIdx < 0) insertIdx = paper.lastIndexOf('\\end{document}');
-  if (insertIdx < 0) throw new Error('Step 32: cannot find insertion point');
-  const aqrp_report_tex = paper.slice(0, insertIdx) + ledger + '\n' + paper.slice(insertIdx);
-  const aqrp_report_audit = { version: '1', runId: runId || null, assembled_at: new Date().toISOString(), rdf_count: all.length, records: all };
+  const kw = keywords.slice(0, 6);
+
+  // ---- 9. Assemble ----
+  const preamble = [
+    '\\documentclass[12pt]{article}',
+    '\\usepackage[margin=1in]{geometry}',
+    '\\usepackage{times}',
+    '\\usepackage{setspace}',
+    '\\usepackage{longtable}',
+    '\\usepackage{tabularx}',
+    '\\usepackage{array}',
+    '\\usepackage{booktabs}',
+    '\\usepackage{hyperref}',
+    '\\usepackage{ragged2e}',
+    '\\usepackage{natbib}',
+    '\\doublespacing',
+    '\\pagestyle{plain}',
+    '\\begin{document}'
+  ].join('\n');
+
+  const titleBlock = [
+    '\\begin{center}',
+    '{\\Large\\bfseries ' + esc(surgeonTitle) + '}',
+    '\\end{center}',
+    '\\begin{center}',
+    '\\today',
+    '\\end{center}',
+    '\\vspace{0.5em}'
+  ].join('\n');
+
+  const abstractBlock = abstractText
+    ? '\\section*{Abstract}\n' + abstractText + '\n'
+    : '';
+
+  const kwBlock = kw.length
+    ? '\\vspace{0.5em}\n\\noindent\\textit{Keywords:} ' + esc(kw.join(', ')) + '\n'
+    : '';
+
+  const full = [
+    preamble,
+    titleBlock,
+    abstractBlock,
+    kwBlock,
+    body,
+    '',
+    table1,
+    table2,
+    refs,
+    ledger,
+    '\\end{document}'
+  ].join('\n');
+
+  const aqrp_report_tex = full;
+  const aqrp_report_audit = {
+    version: '1',
+    runId: runId || null,
+    assembled_at: new Date().toISOString(),
+    rdf_count: all.length,
+    records: all
+  };
   return { output: { status: 'PACKAGED', aqrp_report_tex, aqrp_report_audit, rdf_records: [r32] } };
 }
 

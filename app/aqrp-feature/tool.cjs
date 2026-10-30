@@ -146,9 +146,8 @@ async function invoke(req, args) {
             }
           }
           if (step === 32) {
-            if (typeof result.output.submission_paper_tex !== "string") w.push({ step: 32, kind: "MISSING_ARTIFACT", blame: "step-32 surgeon", name: "submission_paper_tex" });
-            if (typeof result.output.supplementary_rdf_tex !== "string") w.push({ step: 32, kind: "MISSING_ARTIFACT", blame: "step-32 surgeon", name: "supplementary_rdf_tex" });
-            if (!result.output.aqrp_report) w.push({ step: 32, kind: "MISSING_ARTIFACT", blame: "step-32 surgeon", name: "aqrp_report" });
+            if (typeof result.output.aqrp_report_tex !== 'string') w.push({ step: 32, kind: "MISSING_ARTIFACT", blame: "step-32 surgeon", name: "aqrp_report_tex" });
+            if (!result.output.aqrp_report_audit) w.push({ step: 32, kind: "MISSING_ARTIFACT", blame: "step-32 surgeon", name: "aqrp_report_audit" });
           }
           if (w.length) result.output.warnings = w;
         } catch (e) { /* best-effort; warnings never block */ }

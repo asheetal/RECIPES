@@ -289,7 +289,16 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   // References universe
   const rdfDOIs = new Set();
   for (const r of all) for (const d of (r.citations_used || [])) rdfDOIs.add(String(d));
-  const refDOIs = [...new Set([...rdfDOIs, ...poolDOIs])].sort();
+  const __allDOIs = [...new Set([...rdfDOIs, ...poolDOIs])];
+  const refDOIs = __allDOIs.sort((a, b) => {
+    const ra = doiToRec[a], rb = doiToRec[b];
+    const sa = ra ? lastAuthor(ra).toLowerCase() : a.toLowerCase();
+    const sb = rb ? lastAuthor(rb).toLowerCase() : b.toLowerCase();
+    if (sa !== sb) return sa < sb ? -1 : 1;
+    const ya = (ra && ra.year) || 0;
+    const yb = (rb && rb.year) || 0;
+    return ya - yb;
+  });
 
   // --- [?] fix: replace literal (?) then sanitize \citep{nonDOI} keys ---
   function pickDOIByContext(context) {
@@ -383,7 +392,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     const tikzNodes = nodeList.map((n, i) => {
       let lbl = n.label;
       if (lbl.length > 28) { const parts = lbl.split(/\s+/); const mid = Math.ceil(parts.length/2); lbl = parts.slice(0,mid).join(' ') + '\\\\' + parts.slice(mid).join(' '); }
-      return `  \\node[box] (${n.id}) at (${(i*3.5).toFixed(1)}, 0) {${lbl}};`;
+      return `  \\node[box] (${n.id}) at (${(i*4.2).toFixed(1)}, 0) {${lbl}};`;
     }).join('\n');
     const tikzEdges = edgeList.map(e => e.from === e.to ? '' : `  \\draw[arr] (${e.from}) -- (${e.to});`).filter(Boolean).join('\n');
     const tensionNote = modelDraft.tension ? `\\noindent\\textit{Note.} ${esc(String(modelDraft.tension))}\\par\n` : '';
@@ -391,7 +400,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
       '\\begin{center}\\textbf{Figure 1}\\\\[2pt]','\\textit{Process Model}\\end{center}','\\vspace{0.3em}',
       '\\begin{center}',
       '\\begin{tikzpicture}[',
-      '  box/.style={draw, rounded corners=2pt, minimum width=2.8cm, minimum height=1.2cm, align=center, font=\\footnotesize, inner sep=3pt},',
+      '  box/.style={draw, rounded corners=2pt, minimum width=2.4cm, minimum height=0.9cm, align=center, font=\\scriptsize, inner sep=2pt},',
       '  arr/.style={->, >=stealth, thick}',
       ']',
       tikzNodes, tikzEdges,
@@ -411,7 +420,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   const suff = s30.sufficiency || {};
 
   // Code frequencies
-  const codeFreq = {};
+  const codeFreq = {}; let __totalCodeApps = 0;
   const codersByCode = {}; // code -> set of coder_ids that used it
   const recordsByCode = {}; // code -> set of record_ids where it appears
   for (const row of cm) {
@@ -419,12 +428,13 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     for (const c of (row.codes || [])) {
       const t = String(c).toLowerCase().trim();
       if (!t || t === 'na') continue;
-      codeFreq[t] = (codeFreq[t] || 0) + 1;
+      codeFreq[t] = (codeFreq[t] || 0) + 1; __totalCodeApps++;
       (codersByCode[t] = codersByCode[t] || new Set()).add(cid);
       (recordsByCode[t] = recordsByCode[t] || new Set()).add(String(row.record_id));
     }
   }
   const codesSorted = Object.entries(codeFreq).sort((a,b) => b[1] - a[1]);
+  console.log('[v238.3 metrics] cm=' + cm.length + ' totalApps=' + __totalCodeApps + ' distinct=' + Object.keys(codeFreq).length);
   const N_REC = new Set(cm.map(r => String(r.record_id))).size;
   const codersAll = [...new Set(cm.map(r => r.coder_id))];
   const M_CODERS = codersAll.length;
@@ -465,7 +475,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   // Metrics table rows
   const metricsRows = [];
   metricsRows.push(`\\textit{Corpus} & ${N_REC} records; ${M_CODERS} coders & — \\\\`);
-  metricsRows.push(`\\textit{Total code applications} & ${Object.values(codeFreq).reduce((a,b)=>a+b,0)} & (sum across ${N_REC}×${M_CODERS}=${N_REC*M_CODERS} cells) \\\\`);
+  metricsRows.push(`\\textit{Total code applications} & ${__totalCodeApps} & (sum across ${N_REC}×${M_CODERS}=${N_REC*M_CODERS} cells) \\\\`);
   metricsRows.push(`\\textit{Distinct codes used} & ${Object.keys(codeFreq).length} & first-order, from coder output \\\\`);
   for (const [code, count] of codesSorted.slice(0, 12)) {
     const agreement = coderAgreement(code);
@@ -612,7 +622,17 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   // --- Appendix: RDF ledger, no DOI spill ---
   function poolLabel(poolId) {
     const recs = poolByID[poolId] || [];
-    return recs.slice(0, 2).map(r => `${lastAuthor(r)} ${r.year || 'n.d.'}`).join('; ');
+    return recs.slice(0, 2).map(r => {
+      const authors = Array.isArray(r.authors) ? r.authors : [String(r.authors||'')];
+      const y = r.year || 'n.d.';
+      const surname = lastAuthor(r);
+      if (authors.length === 1) return surname + ' (' + y + ')';
+      if (authors.length === 2) {
+        const p2 = String(authors[1]).trim().split(/[\s,]+/).filter(Boolean);
+        return surname + ' \\& ' + (p2[p2.length-1]||'Anon') + ' (' + y + ')';
+      }
+      return surname + ' et~al. (' + y + ')';
+    }).join('; ');
   }
   const ledgerRows = all.map(r => {
     const num = (String(r.rdf_id || '').match(/\d+/) || [String(r.stage || '')])[0];
@@ -622,7 +642,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     return `${esc(num)} & ${esc(r.rdf_id)} & ${esc(r.chosen || '')} & ${forks} & ${esc(r.rationale || '')} & ${support} \\\\`;
   }).join('\n');
   const ledger = ['\\clearpage','\\section*{Appendix A: Researcher Degrees of Freedom Ledger}',
-    '\\noindent\\textit{Pool IDs (P00--P13) name the literature search performed at that step; the top two cited papers per pool appear inline. Full bibliography in References.}\\par\\vspace{0.6em}',
+    '\\noindent\\textit{Note.} Pool IDs (P00--P13) name the literature searches the pipeline performed. P01 = corpus scope; P02--P12 = step-specific searches (memo, RQ, lens, codebook, theme, novelty, aggregation, model, diagram, sufficiency, reporting); P13 = reporting conventions. P00 is reserved for methodology citations (e.g., Braun \\& Clarke 2006) drawn from outside the search pools. The top two papers per pool appear inline in the Support column; full bibliography in References.\\par\\vspace{0.6em}',
     '\\begin{singlespacing}','\\begin{tiny}\\setlength{\\tabcolsep}{1.5pt}',
     '\\begin{longtable}{@{}>{\\raggedright\\arraybackslash}p{0.035\\linewidth} >{\\raggedright\\arraybackslash}p{0.055\\linewidth} >{\\raggedright\\arraybackslash}p{0.14\\linewidth} >{\\raggedright\\arraybackslash}p{0.16\\linewidth} >{\\raggedright\\arraybackslash}p{0.36\\linewidth} >{\\raggedright\\arraybackslash}p{0.15\\linewidth}@{}}',
     '\\toprule','\\textbf{Step} & \\textbf{RDF} & \\textbf{Choice} & \\textbf{Forks} & \\textbf{Rationale} & \\textbf{Support} \\\\','\\midrule','\\endfirsthead',

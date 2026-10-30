@@ -94,7 +94,18 @@ async function invoke(req, args) {
       } catch (e) {}
     }
     console.log('[batch] storeRunId=' + storeRunId + ' currentStepForBatch=' + currentStepForBatch + ' progressOk=' + progressOk + ' records=' + records.length);
-    const tally = progressOk ? makeTally(db, storeRunId, projectId2) : null;
+    // Compute step once — used by both tally and marker write below
+    let __markerStep = currentStepForBatch;
+    if (!__markerStep && storeRunId) {
+      try {
+        const latestRun = await db.collection('aqrpruns').findOne({ runId: storeRunId });
+        if (latestRun) {
+          const closedSteps = Object.keys(latestRun.steps || {}).filter(k => /^\d+$/.test(k)).map(Number);
+          __markerStep = Math.max(0, ...closedSteps) + 1;
+        }
+      } catch (e) {}
+    }
+    const tally = progressOk ? makeTally(db, storeRunId, projectId2, __markerStep) : null;
     if (tally) {
       skipIds = await tally.ensure(records.length, concurrency);
       await db.collection('aqrpruns').updateOne({ projectId: projectId2 }, { $set: { records_capped: recordsCapped, corpus_total: corpusTotal, lastProgressAt: new Date() } });
@@ -123,17 +134,6 @@ async function invoke(req, args) {
         throw new Error('[llm_assistant_panel_batch] all ' + __allCells.length + ' cells returned NA or empty — panel is not producing usable codes; the batch cannot succeed');
       }
     }
-    let __markerStep = currentStepForBatch;
-    if (!__markerStep && storeRunId) {
-      try {
-        const mongoose2 = require('mongoose');
-        const latestRun = await mongoose2.connection.db.collection('aqrpruns').findOne({ runId: storeRunId });
-        if (latestRun) {
-          const steps = Object.keys(latestRun.steps || {}).filter(k => /^\d+$/.test(k)).map(Number);
-          __markerStep = Math.max(0, ...steps) + 1;
-        }
-      } catch (e) {}
-    }
     if (__markerStep && [4,16,17,22].includes(__markerStep) && storeRunId) {
       try {
         await db.collection('aqrp_batch_calls').updateOne(
@@ -153,22 +153,23 @@ async function invoke(req, args) {
     throw e;
   }
 }
-function makeTally(db, runId, projectId) {
+function makeTally(db, runId, projectId, tallyStep) {
+  const step = Number(tallyStep) || 4;
   const col = db.collection('aqrp_progress');
   const rows = db.collection('aqrp_rows');
   const runs = db.collection('aqrpruns');
   async function sync() {
-    const doc = await col.findOne({ runId, step: 4 });
+    const doc = await col.findOne({ runId, step });
     if (!doc) return;
     const now = new Date();
-    await runs.updateOne({ projectId }, { $set: { progress: { step: 4, done: doc.done || 0, total: doc.total || 0, inFlight: Math.max(0, doc.inFlight || 0), etaSeconds: doc.etaSeconds == null ? null : doc.etaSeconds, updatedAt: now }, lastProgressAt: now } });
+    await runs.updateOne({ projectId }, { $set: { progress: { step, done: doc.done || 0, total: doc.total || 0, inFlight: Math.max(0, doc.inFlight || 0), etaSeconds: doc.etaSeconds == null ? null : doc.etaSeconds, updatedAt: now }, lastProgressAt: now } });
   }
   return {
     async ensure(total, concurrency) {
-      const done = await rows.find({ runId, step: 4 }, { projection: { record_id: 1, _id: 0 } }).toArray();
+      const done = await rows.find({ runId, step }, { projection: { record_id: 1, _id: 0 } }).toArray();
       const skipIds = done.map(r => String(r.record_id));
       await col.updateOne(
-        { runId, step: 4 },
+        { runId, step },
         { $max: { total }, $set: { done: skipIds.length, inFlight: 0, concurrency, updatedAt: new Date() }, $setOnInsert: { startedAt: new Date(), etaSeconds: null, n: null } },
         { upsert: true }
       );
@@ -177,35 +178,35 @@ function makeTally(db, runId, projectId) {
     },
     async onEvent(ev) {
       const now = new Date();
-      if (ev.event === 'start') { await col.updateOne({ runId, step: 4 }, { $inc: { inFlight: 1 }, $set: { updatedAt: now } }); await sync(); return; }
-      if (ev.event === 'error') { await col.updateOne({ runId, step: 4 }, { $inc: { inFlight: -1 }, $set: { updatedAt: now } }); await sync(); return; }
+      if (ev.event === 'start') { await col.updateOne({ runId, step }, { $inc: { inFlight: 1 }, $set: { updatedAt: now } }); await sync(); return; }
+      if (ev.event === 'error') { await col.updateOne({ runId, step }, { $inc: { inFlight: -1 }, $set: { updatedAt: now } }); await sync(); return; }
       if (ev.event !== 'done') return;
       const res = await rows.updateOne(
-        { runId, step: 4, record_id: String(ev.record_id) },
-        { $set: { runId, step: 4, record_id: String(ev.record_id), perCoder: ev.perCoder, updatedAt: now } },
+        { runId, step, record_id: String(ev.record_id) },
+        { $set: { runId, step, record_id: String(ev.record_id), perCoder: ev.perCoder, updatedAt: now } },
         { upsert: true }
       );
       const inc = { inFlight: -1 };
       if (res.upsertedCount) inc.done = 1;
       const set = { updatedAt: now };
       if (Array.isArray(ev.perCoder) && ev.perCoder.length > 0) set.n = ev.perCoder.length;
-      await col.updateOne({ runId, step: 4 }, { $inc: inc, $set: set });
-      const doc = await col.findOne({ runId, step: 4 });
+      await col.updateOne({ runId, step }, { $inc: inc, $set: set });
+      const doc = await col.findOne({ runId, step });
       const done = doc ? doc.done : 0;
       const total = doc ? doc.total : 0;
       const startedAt = doc && doc.startedAt ? new Date(doc.startedAt).getTime() : now.getTime();
       const elapsed = Math.max(1000, now.getTime() - startedAt);
       const rate = done > 0 ? done / (elapsed / 1000) : 0;
       const etaSeconds = rate > 0 ? Math.max(0, Math.round((total - done) / rate)) : null;
-      await col.updateOne({ runId, step: 4 }, { $set: { etaSeconds } });
+      await col.updateOne({ runId, step }, { $set: { etaSeconds } });
       await sync();
     },
     async envelope(records, recordId) {
-      const doc = await col.findOne({ runId, step: 4 });
+      const doc = await col.findOne({ runId, step });
       const n = doc && Number.isInteger(doc.n) ? doc.n : 0;
       if (!n) return null;
       if (doc.done < doc.total) return null;
-      const all = await rows.find({ runId, step: 4 }).toArray();
+      const all = await rows.find({ runId, step }).toArray();
       const byId = new Map(all.map(r => [String(r.record_id), r.perCoder]));
       const responses = [];
       for (let s = 0; s < n; s++) responses.push({ coder_id: null, rows: [] });

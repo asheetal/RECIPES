@@ -435,8 +435,26 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     return `${list.join(', ')}, \\& ${last}`;
   }
 
+
+  // ── Static methodology DOI lookup (P00 pool) ──
+  // R3a cites methodology references under pool_id: P00. That pool is not
+  // fetched by any search step; these DOIs are declared in the recipe's
+  // step-3 clause as the allowed methodology citations. Hardcoded here
+  // so the References section produces proper APA entries, not [DOI] fallbacks.
+  const __METHODOLOGY = {
+    "10.1177/1094428112452151": { authors: ["Gioia, D. A.", "Corley, K. G.", "Hamilton, A. L."], year: 2013, title: "Seeking qualitative rigor in inductive research: Notes on the Gioia methodology", journal: "Organizational Research Methods" },
+    "10.1191/1478088706qp063oa": { authors: ["Braun, V.", "Clarke, V."], year: 2006, title: "Using thematic analysis in psychology", journal: "Qualitative Research in Psychology" },
+    "10.5465/amr.2009.0486": { authors: ["Charmaz, K."], year: 2009, title: "Shifting the grounds: Constructivist grounded theory methods", journal: "Academy of Management Review" },
+    "10.1177/1049732315617444": { authors: ["Malterud, K.", "Siersma, V. D.", "Guassora, A. D."], year: 2016, title: "Sample size in qualitative interview studies: Guided by information power", journal: "Qualitative Health Research" },
+    "10.4135/9781452230153": { authors: ["Strauss, A.", "Corbin, J."], year: 1998, title: "Basics of qualitative research: Techniques and procedures for developing grounded theory", journal: "Sage" }
+  };
+  function __lookupMethodology(doi) {
+    return __METHODOLOGY[String(doi)] || null;
+  }
+
   const bibitems = refDOIs.map(d => {
-    const rec = doiToRec[d];
+    let rec = doiToRec[d];
+    if (!rec) { const m = __lookupMethodology(d); if (m) rec = m; }
     if (!rec) return `\\bibitem[DOI]{${d}} \\href{https://doi.org/${d}}{https://doi.org/${d}}`;
     const authors = __formatAuthors(rec.authors);
     const y = rec.year || 'n.d.';
@@ -478,7 +496,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
       if (lbl.length > 28) { const parts = lbl.split(/\s+/); const mid = Math.ceil(parts.length/2); lbl = parts.slice(0,mid).join(' ') + '\\\\' + parts.slice(mid).join(' '); }
       const __spacing = 3.2;
       const __offset = (nodeList.length - 1) * __spacing / 2;
-      return `  \\node[box] (${n.id}) at (${(i * __spacing - __offset).toFixed(2)}, 0) {${lbl}};`;
+      return `  \\node[box] (${n.id}) at (${(i * 5 - (nodeList.length - 1) * 5 / 2).toFixed(2)}, 0) {${lbl}};`;
     }).join('\n');
     const tikzEdges = edgeList.map(e => e.from === e.to ? '' : `  \\draw[arr] (${e.from}) -- (${e.to});`).filter(Boolean).join('\n');
     const tensionNote = modelDraft.tension ? `\\noindent\\textit{Note.} ${esc(String(modelDraft.tension))}\\par\n` : '';
@@ -487,7 +505,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
       '\\begin{center}',
       '\\resizebox{\\textwidth}{!}{%',
       '\\begin{tikzpicture}[',
-      '  box/.style={draw, rounded corners=2pt, minimum width=2.4cm, minimum height=0.9cm, align=center, font=\\small, inner sep=3pt, anchor=center},',
+      '  box/.style={draw, rounded corners=2pt, text width=4cm, minimum height=0.9cm, align=center, font=\\small, inner sep=4pt, anchor=center},',
       '  arr/.style={->, >=stealth, thick}',
       ']',
       tikzNodes, tikzEdges,

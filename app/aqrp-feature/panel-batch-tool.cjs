@@ -93,6 +93,7 @@ async function invoke(req, args) {
         }
       } catch (e) {}
     }
+    console.log('[batch] storeRunId=' + storeRunId + ' currentStepForBatch=' + currentStepForBatch + ' progressOk=' + progressOk + ' records=' + records.length);
     const tally = progressOk ? makeTally(db, storeRunId, projectId2) : null;
     if (tally) {
       skipIds = await tally.ensure(records.length, concurrency);
@@ -122,14 +123,28 @@ async function invoke(req, args) {
         throw new Error('[llm_assistant_panel_batch] all ' + __allCells.length + ' cells returned NA or empty — panel is not producing usable codes; the batch cannot succeed');
       }
     }
-    if (currentStepForBatch && [4,16,17,22].includes(currentStepForBatch) && storeRunId) {
+    let __markerStep = currentStepForBatch;
+    if (!__markerStep && storeRunId) {
+      try {
+        const mongoose2 = require('mongoose');
+        const latestRun = await mongoose2.connection.db.collection('aqrpruns').findOne({ runId: storeRunId });
+        if (latestRun) {
+          const steps = Object.keys(latestRun.steps || {}).filter(k => /^\d+$/.test(k)).map(Number);
+          __markerStep = Math.max(0, ...steps) + 1;
+        }
+      } catch (e) {}
+    }
+    if (__markerStep && [4,16,17,22].includes(__markerStep) && storeRunId) {
       try {
         await db.collection('aqrp_batch_calls').updateOne(
-          { runId: storeRunId, step: currentStepForBatch },
-          { $set: { runId: storeRunId, step: currentStepForBatch, calledAt: new Date(), recordCount: records.length, n: result && result.n, status: 'ok' } },
+          { runId: storeRunId, step: __markerStep },
+          { $set: { runId: storeRunId, step: __markerStep, calledAt: new Date(), recordCount: records.length, n: result && result.n, status: 'ok' } },
           { upsert: true }
         );
-      } catch (e) { console.error('[batch] marker write failed:', e && e.message ? e.message : e); }
+        console.log('[batch] marker written: runId=' + storeRunId + ' step=' + __markerStep + ' n=' + (result && result.n));
+      } catch (e) { console.error('[batch] marker write FAILED:', e && e.message ? e.message : e); }
+    } else {
+      console.error('[batch] marker SKIPPED: storeRunId=' + storeRunId + ' currentStepForBatch=' + currentStepForBatch);
     }
     gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, status: 'ok', n: result && result.n, m: records.length, corpus_total: corpusTotal, records_capped: recordsCapped });
     return JSON.stringify(result);

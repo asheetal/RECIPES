@@ -247,12 +247,23 @@ async function _verifyBatchCall(runId, step) {
   if (!runId) return { ok: false, reason: 'no runId in step context and no run could be found' };
   try {
     const mongoose = require('mongoose');
-    const rec = await mongoose.connection.db.collection('aqrp_batch_calls').findOne({ runId: String(runId), step: Number(step) });
-    if (!rec) return { ok: false, reason: 'no llm_assistant_panel_batch call recorded for run ' + String(runId).slice(-8) + ' at step ' + step };
-    const ageMs = Date.now() - new Date(rec.calledAt).getTime();
-    if (ageMs > 15 * 60 * 1000) return { ok: false, reason: 'batch call for step ' + step + ' is ' + Math.round(ageMs/60000) + ' min old (max 15)' };
-    return { ok: true, rec };
-  } catch (e) { return { ok: false, reason: 'verifyBatchCall failed: ' + (e && e.message ? e.message : e) }; }
+    const db = mongoose.connection.db;
+    const rec = await db.collection('aqrp_batch_calls').findOne({ runId: String(runId), step: Number(step) });
+    if (rec) {
+      const ageMs = Date.now() - new Date(rec.calledAt).getTime();
+      if (ageMs > 15 * 60 * 1000) return { ok: false, reason: 'batch call for step ' + step + ' is ' + Math.round(ageMs/60000) + ' min old (max 15)' };
+      return { ok: true, source: 'marker', rec };
+    }
+    // Fallback: marker missing, but if aqrp_rows has records for this run+step, batch ran
+    const rowsN = await db.collection('aqrp_rows').countDocuments({ runId: String(runId), step: Number(step) });
+    if (rowsN > 0) {
+      console.log('[verifyBatchCall] marker missing, fallback to rows: runId=' + String(runId).slice(-8) + ' step=' + step + ' rows=' + rowsN);
+      return { ok: true, source: 'rows', rowsN };
+    }
+    return { ok: false, reason: 'no llm_assistant_panel_batch call OR rows recorded for run ' + String(runId).slice(-8) + ' at step ' + step };
+  } catch (e) {
+    return { ok: false, reason: 'verifyBatchCall failed: ' + (e && e.message ? e.message : e) };
+  }
 }
 
 async function _fetchRunSteps(runId) {

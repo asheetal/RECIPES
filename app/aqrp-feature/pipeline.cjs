@@ -362,7 +362,16 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   const s26 = (steps['26'] && steps['26'].output) || {};
   const s30 = (steps['30'] && steps['30'].output) || {};
   const cm = (s4.code_matrix || []);
-  const codebook = ((s15.codebook && s15.codebook.codes) || []);
+  let codebook = [];
+  {
+    const __cb = s15.codebook || {};
+    if (Array.isArray(__cb.codes)) codebook = __cb.codes;
+    else if (Array.isArray(__cb)) codebook = __cb;
+    else if (__cb && typeof __cb === 'object') {
+      const __vals = Object.values(__cb).filter(v => v && typeof v === 'object' && (v.name || v.label || v.definition));
+      if (__vals.length) codebook = __vals;
+    }
+  }
   const themes_k = (s19.themes_k || {});
   const dims = (s24.dimensions || []);
   const modelDraft = s26.model_draft || {};
@@ -394,7 +403,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
       if (!quoteMap[rid]) quoteMap[rid] = { codes: new Set(), quotes: [] };
       const cs = (row.codes || []).filter(c => String(c).toUpperCase() !== 'NA').map(c => String(c).toLowerCase());
       for (const c of cs) quoteMap[rid].codes.add(c);
-      const q = String(row.quote || '').trim();
+      const q = String(row.quote || row.narrative || row.text || row.excerpt || '').trim();
       if (q.length > 20 && q.length < 500) {
         quoteMap[rid].quotes.push({ coder: resp.coder_id || '?', codes: cs, quote: q });
       }
@@ -417,6 +426,9 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     return hits;
   }
   function recordsForDimension(dim, dimCodes) {
+    if (Array.isArray(dim.supporting_record_ids) && dim.supporting_record_ids.length > 0) {
+      return dim.supporting_record_ids.map(String);
+    }
     const dimCodeSet = new Set(dimCodes.map(c => norm(c)));
     const rids = new Set();
     for (const [rid, v] of Object.entries(quoteMap)) {
@@ -597,9 +609,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
       for (const q of v.quotes.slice(0, 2)) {
         const key = rid + '|' + q.quote.slice(0, 40);
         if (consumedQuoteKeys.has(key)) continue;
-        const qcodesNorm = q.codes.map(norm);
-        const matches = dimCodes.some(dc => qcodesNorm.some(qc => qc.includes(norm(dc)) || norm(dc).includes(qc)));
-        if (!matches) continue;
+        // Record is explicitly in this dimension's supporting list — accept its quotes
         consumedQuoteKeys.add(key);
         dimQuotes.push({ rid, coder: q.coder, quote: q.quote, codes: q.codes });
         if (dimQuotes.length >= 6) break;

@@ -289,6 +289,8 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   const steps = await _fetchRunSteps(runId);
 
   const esc = (s) => String(s == null ? '' : s).replace(/[&%$#_{}]/g, c => '\\' + c);
+  const OPEN_Q = '\`\`';
+  const CLOSE_Q = '\u0027\u0027';
 
   // Pool DOI index
   const poolOrder = ['P01','P02','P03','P04','P05','P06','P07','P08','P09','P10','P11','P12','P13','P00'];
@@ -304,7 +306,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     }
   }
 
-  // Body extraction
+  // Extract body, title, abstract from surgeon paper
   let paper = p.submission_paper_tex || '';
   const beginDoc = paper.indexOf('\\begin{document}');
   const endDoc = paper.lastIndexOf('\\end{document}');
@@ -321,195 +323,324 @@ async function step32({ filePath, pools, allRdfs, runId }) {
              .replace(/\\date\{[\s\S]*?\}/g, '').replace(/\\maketitle/g, '');
   body = body.replace(/\\begin\{thebibliography\}[\s\S]*?\\end\{thebibliography\}/g, '');
   body = body.replace(/\\bibliographystyle\{[^}]*\}/g, '').replace(/\\bibliography\{[^}]*\}/g, '');
-  // ── v238/v240 double-wrap recovery ──
-  // ── Idempotent strip: remove any pipeline-added sections from prior re-pkg ──
-  // Any `\clearpage` in the extracted body is pipeline-added (the surgeon's
-  // paper sections don't use \clearpage). Strip from first occurrence.
+  body = body.replace(/^[ \t]*\bKeywords?\s*:\s*[^\n]+\n?/gim, '');
   const __firstClear = body.indexOf('\\clearpage');
-  if (__firstClear >= 0) {
-    body = body.slice(0, __firstClear);
-  }
-  // Strip any surviving \section*{Abstract} block (v238 used \section*{Abstract},
-  // not \begin{abstract}). The abstract was already extracted above.
-  const __absIdx = body.indexOf('\\section*{Abstract}');
-  if (__absIdx >= 0) {
-    const __nextSect = body.indexOf('\\section', __absIdx + 22);
-    body = __nextSect > 0 ? (body.slice(0, __absIdx) + body.slice(__nextSect)) : body.slice(0, __absIdx);
-  }
-  // Strip any lingering keywords lines and their preceding \vspace.
-  body = body.replace(/\\vspace\{[^}]*\}\s*\n?\\noindent\\textit\{Keywords:\}[^\n]*\n?/g, '');
-  body = body.replace(/\\noindent\\textit\{Keywords:\}[^\n]*\n?/g, '');
-  // Strip any residual \begin{singlespacing}...\end{singlespacing} blocks (tables).
+  if (__firstClear >= 0) body = body.slice(0, __firstClear);
   body = body.replace(/\\begin\{singlespacing\}[\s\S]*?\\end\{singlespacing\}/g, '');
-  // Strip any residual tikzpicture blocks (in case \clearpage was missing).
   body = body.replace(/\\resizebox\{[^}]*\}\{[^}]*\}\{[\s\S]*?\\end\{tikzpicture\}%?\s*\}/g, '');
   body = body.replace(/\\begin\{tikzpicture\}[\s\S]*?\\end\{tikzpicture\}/g, '');
-  // Strip any residual table-center blocks (fallback if \clearpage was missing).
-  body = body.replace(/\\begin\{center\}\\textbf\{Table \d+\}[\\\s\S]*?\\end\{tabularx\}[\s\S]*?\\end\{singlespacing\}/g, '');
+  body = body.replace(/\\vspace\{[^}]*\}\s*\n?\\noindent\\textit\{Keywords:\}[^\n]*\n?/g, '');
+  body = body.replace(/\\noindent\\textit\{Keywords:\}[^\n]*\n?/g, '');
   body = body.trim();
 
-  body = body.replace(/\n?\\begin\{center\}\s*\{\\Large\\bfseries[\s\S]*?\}\s*\\end\{center\}\s*\\begin\{center\}\s*\\today\s*\\end\{center\}\s*\\vspace\{[^}]*\}/g, '');
-  if (!abstractText) {
-    const __v238Abs = body.match(/\\section\*\{Abstract\}[ \t]*\n([\s\S]*?)(?=\n\\vspace|\n\\noindent\\textit\{Keywords:|\n\\section|\n\\clearpage)/);
-    if (__v238Abs) {
-      abstractText = __v238Abs[1].trim();
-      body = body.replace(__v238Abs[0], '');
+  function extractSubsections(txt) {
+    const out = [];
+    const re = /\\subsection\*?\{([^}]+)\}([\s\S]*?)(?=\\subsection\*?\{|\\section\*?\{|$)/g;
+    let m;
+    while ((m = re.exec(txt)) !== null) out.push({ title: m[1].trim(), text: m[2].trim() });
+    return out;
+  }
+  const subsections = extractSubsections(body);
+  function extractSections(txt) {
+    const out = [];
+    const re = /\\section\*?\{([^}]+)\}([\s\S]*?)(?=\\section\*?\{|\\subsection\*?\{|$)/g;
+    let m;
+    while ((m = re.exec(txt)) !== null) out.push({ title: m[1].trim(), text: m[2].trim() });
+    return out;
+  }
+  const sections = extractSections(body);
+  const findSection = (pat) => { const s = sections.find(x => new RegExp(pat, 'i').test(x.title)); return s ? s.text : ''; };
+  const findingsSection = findSection('findings|results');
+  const methodsSection = findSection('methods|method');
+  const discussionSection = findSection('discussion|conclusion');
+
+  const s4  = (steps['4']  && steps['4'].output)  || {};
+  const s15 = (steps['15'] && steps['15'].output) || {};
+  const s16 = (steps['16'] && steps['16'].output) || {};
+  const s19 = (steps['19'] && steps['19'].output) || {};
+  const s24 = (steps['24'] && steps['24'].output) || {};
+  const s26 = (steps['26'] && steps['26'].output) || {};
+  const s30 = (steps['30'] && steps['30'].output) || {};
+  const cm = (s4.code_matrix || []);
+  const codebook = ((s15.codebook && s15.codebook.codes) || []);
+  const themes_k = (s19.themes_k || {});
+  const dims = (s24.dimensions || []);
+  const modelDraft = s26.model_draft || {};
+  const suff = s30.sufficiency || {};
+
+  const N_REC = new Set(cm.map(r => String(r.record_id))).size;
+  const codersAll = [...new Set(cm.map(r => r.coder_id))];
+  const M_CODERS = codersAll.length;
+  const s1 = (steps['1'] && steps['1'].output) || {};
+  const corpusName = s1.file_path || s1.fileName || 'corpus';
+  const recordIds = (s1.record_ids || []).map(String);
+
+  const codeFreq = {}; let __totalCodeApps = 0;
+  for (const row of cm) {
+    const c = row.codes; if (!Array.isArray(c)) continue;
+    for (const x of c) {
+      const t = String(x).toLowerCase().trim();
+      if (!t || t === 'na') continue;
+      __totalCodeApps++; codeFreq[t] = (codeFreq[t] || 0) + 1;
     }
   }
-  body = body.replace(/\n?\\vspace\{[^}]*\}\s*\n\\noindent\\textit\{Keywords:\}[^\n]*\n?/g, '\n');
-  body = body.replace(/\n?\\noindent\\textit\{Keywords:\}[^\n]*\n?/g, '\n');
+  const codesSorted = Object.entries(codeFreq).sort((a,b) => b[1] - a[1]);
+  console.log('[analysis-report] cm=' + cm.length + ' apps=' + __totalCodeApps + ' codes=' + Object.keys(codeFreq).length);
 
-  body = body.replace(/^[ \t]*\bKeywords?\s*:\s*[^\n]+\n?/gim, '');
-  body = body.trim();
-
-  // References universe
-  const rdfDOIs = new Set();
-  for (const r of all) for (const d of (r.citations_used || [])) rdfDOIs.add(String(d));
-  const __allDOIs = [...new Set([...rdfDOIs, ...poolDOIs])];
-  const refDOIs = __allDOIs.sort((a, b) => {
-    const ra = doiToRec[a], rb = doiToRec[b];
-    const sa = ra ? lastAuthor(ra).toLowerCase() : a.toLowerCase();
-    const sb = rb ? lastAuthor(rb).toLowerCase() : b.toLowerCase();
-    if (sa !== sb) return sa < sb ? -1 : 1;
-    const ya = (ra && ra.year) || 0;
-    const yb = (rb && rb.year) || 0;
-    return ya - yb;
-  });
-
-  // --- [?] fix: replace literal (?) then sanitize \citep{nonDOI} keys ---
-  function pickDOIByContext(context) {
-    const words = String(context || '').toLowerCase().split(/[^a-z0-9]+/i).filter(w => w.length > 4);
-    if (!words.length) return poolDOIs[0] || null;
-    let best = null, bestScore = 0;
-    for (const d of poolDOIs) {
-      const rec = doiToRec[d]; if (!rec) continue;
-      const hay = (String(rec.title||'') + ' ' + String(rec.journal||'') + ' ' +
-                   (Array.isArray(rec.authors) ? rec.authors.join(' ') : String(rec.authors||''))).toLowerCase();
-      let s = 0; for (const w of words) if (hay.includes(w)) s++;
-      if (s > bestScore) { bestScore = s; best = d; }
-    }
-    return best || poolDOIs[0] || null;
-  }
-  body = body.replace(/\(\s*\?{1,3}\s*\)/g, (mm, off, full) => {
-    const ctx = full.slice(Math.max(0, off - 250), Math.min(full.length, off + 250));
-    const d = pickDOIByContext(ctx);
-    return d ? `\\citep{${d}}` : '';
-  });
-  // Every \citep{X} where X isn't a DOI → replace with a context-matched DOI or drop
-  const droppedCites = [];
-  body = body.replace(/\\cite([pt]?)\{([^}]*)\}/g, (mm, mode, key) => {
-    const k = String(key).trim();
-    if (refDOIs.includes(k)) return `\\cite${mode}{${k}}`;
-    if (/^\s*\?+\s*$/.test(k) || k === '') return '';
-    // Fuzzy: find DOI whose citation label includes this key as surname+year
-    const m2 = k.match(/^([A-Za-z]+?)(\d{4})/);
-    if (m2) {
-      const surname = m2[1].toLowerCase(), year = m2[2];
-      for (const d of refDOIs) {
-        const rec = doiToRec[d]; if (!rec) continue;
-        const authors = Array.isArray(rec.authors) ? rec.authors.join(' ') : String(rec.authors||'');
-        if (authors.toLowerCase().includes(surname) && String(rec.year) === year) return `\\citep{${d}}`;
+  const quoteMap = {};
+  for (const resp of ((s16.panel_result && s16.panel_result.responses) || [])) {
+    for (const row of (resp.rows || [])) {
+      const rid = String(row.record_id);
+      if (!quoteMap[rid]) quoteMap[rid] = { codes: new Set(), quotes: [] };
+      const cs = (row.codes || []).filter(c => String(c).toUpperCase() !== 'NA').map(c => String(c).toLowerCase());
+      for (const c of cs) quoteMap[rid].codes.add(c);
+      const q = String(row.quote || '').trim();
+      if (q.length > 20 && q.length < 500) {
+        quoteMap[rid].quotes.push({ coder: resp.coder_id || '?', codes: cs, quote: q });
       }
     }
-    droppedCites.push(k);
-    return '';
-  });
-
-  function lastAuthor(rec) {
-    const authors = Array.isArray(rec.authors) ? rec.authors : (rec.authors ? [String(rec.authors)] : ['Anon']);
-    const parts = String(authors[0]).trim().split(/[\s,]+/).filter(Boolean);
-    return parts[parts.length - 1] || 'Anon';
   }
-  function citeLabel(rec) {
-    const authors = Array.isArray(rec.authors) ? rec.authors : [String(rec.authors || 'Anon')];
-    const y = rec.year || 'n.d.';
-    if (authors.length === 1) return `${lastAuthor(rec)}(${y})`;
-    if (authors.length === 2) {
-      const p2 = String(authors[1]).trim().split(/[\s,]+/).filter(Boolean);
-      return `${lastAuthor(rec)} \\& ${p2[p2.length-1]||'Anon'}(${y})`;
+
+  const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const normTokens = (s) => new Set(norm(s).split(/\s+/).filter(t => t.length > 3));
+
+  function codesForDimension(dim) {
+    const dt = normTokens(dim.name + ' ' + (dim.mechanism || '') + ' ' + (dim.description || ''));
+    const hits = [];
+    for (const cb of codebook) {
+      const ct = normTokens(cb.name || cb.label || '');
+      if (ct.size === 0) continue;
+      let overlap = 0;
+      for (const t of ct) if (dt.has(t)) overlap++;
+      if (overlap >= 1) hits.push(cb.name || cb.label || '');
     }
-    return `${lastAuthor(rec)} et~al.(${y})`;
+    return hits;
   }
-  
-  // ── APA-7 author formatting ──
-  function __parseName(name) {
-    const s = String(name || '').trim();
-    if (!s) return { surname: '', given: [] };
-    if (s.includes(',')) {
-      const [last, ...rest] = s.split(',');
-      const given = rest.join(' ').trim().split(/\s+/).filter(Boolean);
-      return { surname: last.trim(), given };
+  function recordsForDimension(dim, dimCodes) {
+    const dimCodeSet = new Set(dimCodes.map(c => norm(c)));
+    const rids = new Set();
+    for (const [rid, v] of Object.entries(quoteMap)) {
+      for (const c of v.codes) {
+        for (const dc of dimCodeSet) {
+          if (norm(c).includes(dc) || dc.includes(norm(c))) { rids.add(rid); break; }
+        }
+      }
     }
-    const parts = s.split(/\s+/).filter(Boolean);
-    return { surname: parts[parts.length - 1] || '', given: parts.slice(0, -1) };
+    return [...rids];
   }
-  function __formatAuthor(name) {
-    const { surname, given } = __parseName(name);
-    if (!surname) return '';
-    const initials = given
-      .map(g => { const c = String(g).replace(/\./g, '')[0]; return c ? c.toUpperCase() + '.' : ''; })
-      .filter(Boolean)
-      .join(' ');
-    return initials ? `${esc(surname)}, ${esc(initials)}` : esc(surname);
+  function findingsForDimension(dim) {
+    const dn = norm(dim.name);
+    const hit = subsections.find(ss => {
+      const sn = norm(ss.title);
+      return sn.includes(dn) || dn.includes(sn) ||
+        sn.split(/\s+/).filter(w => w.length > 3).some(w => dn.includes(w)) ||
+        dn.split(/\s+/).filter(w => w.length > 3).some(w => sn.includes(w));
+    });
+    return hit ? hit.text : '';
   }
-  function __formatAuthors(authorsArr) {
-    const list = (Array.isArray(authorsArr) ? authorsArr : [String(authorsArr || '')]).map(__formatAuthor).filter(Boolean);
-    if (list.length === 0) return '';
-    if (list.length === 1) return list[0];
-    if (list.length === 2) return `${list[0]}, \\& ${list[1]}`;
-    const last = list.pop();
-    return `${list.join(', ')}, \\& ${last}`;
-  }
-
-
-  // ── Static methodology DOI lookup (P00 pool) ──
-  // R3a cites methodology references under pool_id: P00. That pool is not
-  // fetched by any search step; these DOIs are declared in the recipe's
-  // step-3 clause as the allowed methodology citations. Hardcoded here
-  // so the References section produces proper APA entries, not [DOI] fallbacks.
-  const __METHODOLOGY = {
-    "10.1177/1094428112452151": { authors: ["Gioia, D. A.", "Corley, K. G.", "Hamilton, A. L."], year: 2013, title: "Seeking qualitative rigor in inductive research: Notes on the Gioia methodology", journal: "Organizational Research Methods" },
-    "10.1191/1478088706qp063oa": { authors: ["Braun, V.", "Clarke, V."], year: 2006, title: "Using thematic analysis in psychology", journal: "Qualitative Research in Psychology" },
-    "10.5465/amr.2009.0486": { authors: ["Charmaz, K."], year: 2009, title: "Shifting the grounds: Constructivist grounded theory methods", journal: "Academy of Management Review" },
-    "10.1177/1049732315617444": { authors: ["Malterud, K.", "Siersma, V. D.", "Guassora, A. D."], year: 2016, title: "Sample size in qualitative interview studies: Guided by information power", journal: "Qualitative Health Research" },
-    "10.4135/9781452230153": { authors: ["Strauss, A.", "Corbin, J."], year: 1998, title: "Basics of qualitative research: Techniques and procedures for developing grounded theory", journal: "Sage" }
-  };
-  function __lookupMethodology(doi) {
-    return __METHODOLOGY[String(doi)] || null;
+  function alternativeForDimension(dim) {
+    const rdfList = all.filter(r => r.rdf_id === 'R24' || r.rdf_id === 'R26');
+    const dTokens = normTokens(dim.name);
+    for (const r of rdfList) {
+      const rTokens = normTokens(r.chosen || '');
+      let overlap = 0;
+      for (const t of dTokens) if (rTokens.has(t)) overlap++;
+      if (overlap >= 1 && Array.isArray(r.options) && r.options.length > 1) {
+        return { chosen: r.chosen, alternatives: r.options.filter(o => o !== r.chosen), rdf_id: r.rdf_id };
+      }
+    }
+    return null;
   }
 
-  const bibitems = refDOIs.map(d => {
-    let rec = doiToRec[d];
-    if (!rec) { const m = __lookupMethodology(d); if (m) rec = m; }
-    if (!rec) return `\\bibitem[DOI]{${d}} \\href{https://doi.org/${d}}{https://doi.org/${d}}`;
-    const authors = __formatAuthors(rec.authors);
-    const y = rec.year || 'n.d.';
-    const title = esc(rec.title || '').replace(/\.$/, '') + '.';
-    const journal = esc(rec.journal || '').replace(/\.$/, '') + '.';
-    const doiUrl = `https://doi.org/${d}`;
-    return `\\bibitem[${citeLabel(rec)}]{${d}} ${authors} (${y}). ${title} \\textit{${journal}} \\href{${doiUrl}}{${doiUrl}}`;
-  });
-  const refs = bibitems.length ? [
-    '\\clearpage', '\\begin{singlespacing}', '\\begin{thebibliography}{99}',
-    ...bibitems, '\\end{thebibliography}', '\\end{singlespacing}', ''
-  ].join('\n') : '';
+  const L = [];
+  L.push('\\documentclass[11pt]{article}');
+  L.push('\\usepackage[margin=1in]{geometry}');
+  L.push('\\usepackage{times}');
+  L.push('\\usepackage{setspace}');
+  L.push('\\usepackage{longtable}');
+  L.push('\\usepackage{tabularx}');
+  L.push('\\usepackage{array}');
+  L.push('\\usepackage{booktabs}');
+  L.push('\\usepackage{hyperref}');
+  L.push('\\usepackage{ragged2e}');
+  L.push('\\usepackage{natbib}');
+  L.push('\\usepackage{tikz}');
+  L.push('\\usepackage{graphicx}');
+  L.push('\\usetikzlibrary{arrows.meta, positioning, shapes.geometric}');
+  L.push('\\setlength{\\parindent}{0pt}');
+  L.push('\\setlength{\\parskip}{0.6em}');
+  L.push('\\begin{document}');
 
-  // --- Model + diagram ---
-  const s26 = (steps['26'] && steps['26'].output) || {};
+  L.push('\\begin{center}{\\Large\\bfseries ' + esc(surgeonTitle) + '}\\end{center}');
+  L.push('\\begin{center}\\today\\end{center}');
+  L.push('\\vspace{0.4em}');
+
+  // §1 Corpus
+  L.push('\\section*{Corpus}');
+  L.push('\\noindent\\textbf{Source:} \\texttt{' + esc(corpusName) + '} \\quad \\textbf{Records:} ' + N_REC + ' \\quad \\textbf{Coders:} ' + M_CODERS + '.');
+  L.push('');
+
+  // §2 Analytical approach
+  L.push('\\section*{Analytical Approach}');
+  const methodPara = methodsSection ? esc(methodsSection).slice(0, 1500) : 'Open coding was performed at the segment level; a codebook was constructed and adjudicated; themes were clustered at k=5, k=7, and k=9; novelty was assessed; negative cases were logged; and dimensions were aggregated.';
+  L.push(methodPara);
+  L.push('');
+  L.push('\\noindent\\textit{All RDFs (choices, counterfactual forks, rationales, and supporting pools) are listed in Appendix A. Every statistic in this report is computed from the step-level state, not from the analyst\\textquotesingle s prose.}');
+  L.push('');
+
+  // §3 Metrics
+  L.push('\\section*{Analytical Metrics}');
+  L.push('\\begin{singlespacing}\\begin{footnotesize}\\setlength{\\tabcolsep}{4pt}');
+  L.push('\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.30\\textwidth} >{\\raggedright\\arraybackslash}p{0.15\\textwidth} >{\\raggedright\\arraybackslash}X@{}}');
+  L.push('\\toprule\\textbf{Metric} & \\textbf{Value} & \\textbf{Notes}\\\\\\midrule');
+  L.push('Corpus & ' + N_REC + ' records; ' + M_CODERS + ' coders & --- \\\\');
+  L.push('Total code applications & ' + __totalCodeApps + ' & sum across ' + N_REC + '$\\times$' + M_CODERS + '=' + (N_REC*M_CODERS) + ' cells \\\\');
+  L.push('Distinct codes used & ' + Object.keys(codeFreq).length + ' & first-order \\\\');
+  for (const [code, cnt] of codesSorted.slice(0, 12)) {
+    const agree = cm.filter(r => (r.codes||[]).map(x=>String(x).toLowerCase()).includes(code)).length;
+    const pct = N_REC > 0 ? Math.round((agree/N_REC)*100) : 0;
+    L.push(esc(code) + ' & ' + cnt + ' & ' + agree + '/' + N_REC + ' records (' + pct + '\\%) \\\\');
+  }
+  const satIdx = (() => {
+    const seen = new Set(); let last = 0;
+    const recs = [...new Set(cm.map(r=>String(r.record_id)))].sort((a,b)=>Number(a)-Number(b));
+    for (const rid of recs) {
+      let novel = false;
+      for (const row of cm) {
+        if (String(row.record_id) !== rid) continue;
+        for (const c of (row.codes||[])) {
+          const t = String(c).toLowerCase().trim();
+          if (t && t !== 'na' && !seen.has(t)) { seen.add(t); novel = true; }
+        }
+      }
+      if (novel) last = Number(rid) + 1;
+    }
+    return last;
+  })();
+  L.push('\\textit{Saturation} & \\multicolumn{2}{l}{novel codes stopped appearing after record ' + satIdx + ' of ' + N_REC + '} \\\\');
+  L.push('\\bottomrule\\end{tabularx}\\end{footnotesize}\\end{singlespacing}');
+  L.push('');
+
+  // §4 Codebook
+  if (codebook.length) {
+    L.push('\\section*{Codebook}');
+    L.push('\\begin{singlespacing}\\begin{footnotesize}\\setlength{\\tabcolsep}{3pt}');
+    L.push('\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.20\\textwidth} >{\\raggedright\\arraybackslash}p{0.28\\textwidth} >{\\raggedright\\arraybackslash}p{0.22\\textwidth} >{\\raggedright\\arraybackslash}X@{}}');
+    L.push('\\toprule\\textbf{Code} & \\textbf{Definition} & \\textbf{Inclusion} & \\textbf{Exclusion}\\\\\\midrule');
+    for (const cb of codebook) {
+      const name = cb.name || cb.label || '?';
+      L.push(esc(name) + ' & ' + esc(cb.definition || '') + ' & ' + esc(cb.inclusion || '') + ' & ' + esc(cb.exclusion || '') + ' \\\\');
+    }
+    L.push('\\bottomrule\\end{tabularx}\\end{footnotesize}\\end{singlespacing}');
+    L.push('');
+  }
+
+  // §5 Themes k=5/7/9
+  if (themes_k.k5 || themes_k.k7 || themes_k.k9) {
+    L.push('\\section*{Themes at Three Granularities}');
+    L.push('\\begin{singlespacing}\\begin{footnotesize}\\setlength{\\tabcolsep}{3pt}');
+    L.push('\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.30\\textwidth} >{\\raggedright\\arraybackslash}p{0.20\\textwidth} >{\\raggedright\\arraybackslash}p{0.20\\textwidth} >{\\raggedright\\arraybackslash}X@{}}');
+    L.push('\\toprule\\textbf{Theme (k=7 primary)} & \\textbf{k=5} & \\textbf{k=9} & \\textbf{Note}\\\\\\midrule');
+    const maxLen = Math.max((themes_k.k5||[]).length, (themes_k.k7||[]).length, (themes_k.k9||[]).length);
+    for (let i = 0; i < maxLen; i++) {
+      const t7 = (themes_k.k7||[])[i] || '';
+      const t5 = (themes_k.k5||[])[i] || '';
+      const t9 = (themes_k.k9||[])[i] || '';
+      L.push(esc(t7) + ' & ' + esc(t5) + ' & ' + esc(t9) + ' & \\\\');
+    }
+    L.push('\\bottomrule\\end{tabularx}\\end{footnotesize}\\end{singlespacing}');
+    L.push('');
+  }
+
+  // §6 Dimensions
+  L.push('\\clearpage');
+  L.push('\\section*{Dimensions}');
+  L.push('\\noindent\\textit{Each dimension below presents its statement, its conditions, its supporting quotations (with record and coder attribution), the records from which it draws, and one alternative reading taken from the step-24/26 RDF options.}');
+  L.push('');
+
+  const consumedQuoteKeys = new Set();
+
+  for (let dIdx = 0; dIdx < dims.length; dIdx++) {
+    const dim = dims[dIdx];
+    const dimCodes = codesForDimension(dim);
+    const recs = recordsForDimension(dim, dimCodes);
+    const findingsText = findingsForDimension(dim);
+    const alt = alternativeForDimension(dim);
+
+    L.push('\\subsection*{' + esc(dim.name || ('Dimension ' + (dIdx+1))) + '}');
+
+    if (findingsText) {
+      L.push('\\noindent\\textbf{Interpretive summary.} ' + esc(findingsText));
+      L.push('');
+    }
+    if (dim.mechanism) L.push('\\noindent\\textbf{Mechanism.} ' + esc(dim.mechanism) + '\\\\');
+    if (dim.tension) L.push('\\noindent\\textbf{Tension.} ' + esc(dim.tension) + '\\\\');
+    L.push('');
+
+    if (Array.isArray(dim.conditions_for) && dim.conditions_for.length) {
+      L.push('\\noindent\\textbf{Conditions for.}');
+      L.push('\\begin{itemize}\\setlength{\\itemsep}{0pt}\\setlength{\\parskip}{0pt}');
+      for (const c of dim.conditions_for) L.push('\\item ' + esc(c));
+      L.push('\\end{itemize}');
+    }
+    if (Array.isArray(dim.conditions_against) && dim.conditions_against.length) {
+      L.push('\\noindent\\textbf{Conditions against.}');
+      L.push('\\begin{itemize}\\setlength{\\itemsep}{0pt}\\setlength{\\parskip}{0pt}');
+      for (const c of dim.conditions_against) L.push('\\item ' + esc(c));
+      L.push('\\end{itemize}');
+    }
+
+    const dimQuotes = [];
+    for (const rid of recs) {
+      const v = quoteMap[rid];
+      if (!v) continue;
+      for (const q of v.quotes.slice(0, 2)) {
+        const key = rid + '|' + q.quote.slice(0, 40);
+        if (consumedQuoteKeys.has(key)) continue;
+        const qcodesNorm = q.codes.map(norm);
+        const matches = dimCodes.some(dc => qcodesNorm.some(qc => qc.includes(norm(dc)) || norm(dc).includes(qc)));
+        if (!matches) continue;
+        consumedQuoteKeys.add(key);
+        dimQuotes.push({ rid, coder: q.coder, quote: q.quote, codes: q.codes });
+        if (dimQuotes.length >= 6) break;
+      }
+      if (dimQuotes.length >= 6) break;
+    }
+    if (dimQuotes.length) {
+      L.push('\\noindent\\textbf{Supporting quotations.}');
+      L.push('\\begin{itemize}\\setlength{\\itemsep}{2pt}');
+      for (const q of dimQuotes) {
+        const qLine = '\\item ' + OPEN_Q + esc(q.quote) + CLOSE_Q + ' \\textit{(record ' + esc(q.rid) + ', coder ' + esc(q.coder) + ', codes: ' + esc(q.codes.join(', ')) + ')}';
+        L.push(qLine);
+      }
+      L.push('\\end{itemize}');
+    }
+
+    if (recs.length) {
+      L.push('\\noindent\\textbf{Records contributing} (' + recs.length + '): ' + esc(recs.sort((a,b)=>Number(a)-Number(b)).join(', ')));
+    }
+
+    if (alt) {
+      const alts = alt.alternatives.map(a => OPEN_Q + esc(a) + CLOSE_Q).join('; ');
+      L.push('\\noindent\\textbf{Alternative reading (from RDF ' + esc(alt.rdf_id) + ').} Chosen: ' + OPEN_Q + esc(alt.chosen) + CLOSE_Q + '. Not chosen: ' + alts + '.');
+    }
+    L.push('');
+  }
+
+  // §7 Model
   const s28 = (steps['28'] && steps['28'].output) || {};
-  const modelDraft = s26.model_draft || {};
   const dparams = s28.diagram_script_params || {};
-
   const sanitize = (s) => String(s || '').replace(/[^a-zA-Z0-9]/g, '') || 'x';
+
   let nodeList = [], edgeList = [];
   if (Array.isArray(dparams.nodes) && dparams.nodes.length) {
     const labels = Array.isArray(dparams.labels) ? dparams.labels : [];
     nodeList = dparams.nodes.map((id, i) => ({ id: sanitize(id), label: String(labels[i] || id) }));
     const idMap = {}; dparams.nodes.forEach((id, i) => { idMap[String(id)] = sanitize(id); });
     if (Array.isArray(dparams.paths)) for (const pth of dparams.paths) {
-      const mm = String(pth).match(/^(.+?)\s*(?:->|→|:)\s*(.+?)$/);
+      const mm = String(pth).match(/^(.+?)\s*(?:->|\u2192|:)\s*(.+?)$/);
       if (!mm) continue;
-      const findNodeByLabel = (raw) => {
+      const findNode = (raw) => {
         const lower = String(raw).toLowerCase();
         let best = null, bestLen = 0;
         for (const n of nodeList) {
@@ -518,324 +649,216 @@ async function step32({ filePath, pools, allRdfs, runId }) {
         }
         return best;
       };
-      const fromNode = findNodeByLabel(mm[1]);
-      const toNode = findNodeByLabel(mm[2]);
-      if (fromNode && toNode && fromNode.id !== toNode.id) {
-        edgeList.push({ from: fromNode.id, to: toNode.id });
-      }
+      const fn = findNode(mm[1]), tn = findNode(mm[2]);
+      if (fn && tn && fn.id !== tn.id) edgeList.push({ from: fn.id, to: tn.id });
     }
   } else if (Array.isArray(modelDraft.phases) && modelDraft.phases.length) {
     nodeList = modelDraft.phases.map((ph, i) => ({ id: 'n' + i, label: String(ph) }));
     for (let i = 1; i < nodeList.length; i++) edgeList.push({ from: nodeList[i-1].id, to: nodeList[i].id });
     if (nodeList.length >= 3) edgeList.push({ from: nodeList[nodeList.length-1].id, to: nodeList[0].id });
   }
-  let diagram = '';
+
   if (nodeList.length >= 2) {
     const tikzNodes = nodeList.map((n, i) => {
       let lbl = n.label;
       if (lbl.length > 28) { const parts = lbl.split(/\s+/); const mid = Math.ceil(parts.length/2); lbl = parts.slice(0,mid).join(' ') + '\\\\' + parts.slice(mid).join(' '); }
-      const __spacing = 3.2;
-      const __offset = (nodeList.length - 1) * __spacing / 2;
-      return `  \\node[box] (${n.id}) at (${(i * 5 - (nodeList.length - 1) * 5 / 2).toFixed(2)}, 0) {${lbl}};`;
+      const spacing = 5;
+      return '  \\node[box] (' + n.id + ') at (' + (i * spacing - (nodeList.length - 1) * spacing / 2).toFixed(2) + ', 0) {' + lbl + '};';
     }).join('\n');
     const nodeIdSet = new Set(nodeList.map(n => n.id));
     const tikzEdges = edgeList
       .filter(e => e && e.from && e.to && e.from !== e.to && nodeIdSet.has(e.from) && nodeIdSet.has(e.to))
-      .map(e => `  \\draw[arr] (${e.from}) -- (${e.to});`)
+      .map(e => '  \\draw[arr] (' + e.from + ') -- (' + e.to + ');')
       .join('\n');
-    const tensionNote = modelDraft.tension ? `\\noindent\\textit{Note.} ${esc(String(modelDraft.tension))}\\par\n` : '';
-    diagram = ['\\clearpage',
-      '\\begin{center}\\textbf{Figure 1}\\\\[2pt]','\\textit{Process Model}\\end{center}','\\vspace{0.3em}',
-      '\\begin{center}',
-      '\\resizebox{\\textwidth}{!}{%',
-      '\\begin{tikzpicture}[',
-      '  box/.style={draw, rounded corners=2pt, text width=4cm, minimum height=0.9cm, align=center, font=\\small, inner sep=4pt, anchor=center},',
-      '  arr/.style={->, >=stealth, thick}',
-      ']',
-      tikzNodes, tikzEdges,
-      '\\end{tikzpicture}%', '}', '\\end{center}', '\\vspace{0.2em}', tensionNote
-    ].join('\n');
+    const tensionNote = modelDraft.tension ? '\\noindent\\textit{Note.} ' + esc(String(modelDraft.tension)) + '\\par\n' : '';
+
+    L.push('\\clearpage');
+    L.push('\\section*{Model}');
+
+    const r26 = all.find(r => r.rdf_id === 'R26');
+    const r26Just = r26 && r26.rationale ? esc(r26.rationale) : '';
+    L.push('\\noindent\\textbf{Justification.} ' + (r26Just || (modelDraft.tension ? esc(String(modelDraft.tension)) : 'The proposed structure is grounded in the aggregated dimensions.')));
+    L.push('');
+    if (Array.isArray(modelDraft.phases) && modelDraft.phases.length) {
+      L.push('\\noindent\\textbf{Phases:} ' + esc(modelDraft.phases.join(' \u2192 ')) + '.');
+    }
+    if (Array.isArray(modelDraft.arrows) && modelDraft.arrows.length) {
+      L.push('\\noindent\\textbf{Paths:}');
+      L.push('\\begin{itemize}\\setlength{\\itemsep}{0pt}');
+      for (const a of modelDraft.arrows) L.push('\\item ' + esc(a));
+      L.push('\\end{itemize}');
+    }
+    L.push('');
+    L.push('\\begin{center}\\textbf{Figure 1}\\\\[2pt]\\textit{Process Model}\\end{center}');
+    L.push('\\begin{center}');
+    L.push('\\resizebox{\\textwidth}{!}{%');
+    L.push('\\begin{tikzpicture}[');
+    L.push('  box/.style={draw, rounded corners=2pt, text width=4cm, minimum height=0.9cm, align=center, font=\\small, inner sep=4pt, anchor=center},');
+    L.push('  arr/.style={->, >=stealth, thick}');
+    L.push(']');
+    L.push(tikzNodes);
+    L.push(tikzEdges);
+    L.push('\\end{tikzpicture}%');
+    L.push('}');
+    L.push('\\end{center}');
+    L.push(tensionNote);
+    L.push('');
   }
 
-  // --- Table 3: Analytical metrics (numbers) ---
-  const s4 = (steps['4'] && steps['4'].output) || {};
-  const s16 = (steps['16'] && steps['16'].output) || {};
-  const s15 = (steps['15'] && steps['15'].output) || {};
-  const s24 = (steps['24'] && steps['24'].output) || {};
-  const s30 = (steps['30'] && steps['30'].output) || {};
-  const cm = (s4.code_matrix || []);
-  const codebook = ((s15.codebook && s15.codebook.codes) || []);
-  const dims = (s24.dimensions || []);
-  const suff = s30.sufficiency || {};
-
-  // Code frequencies
-  const codeFreq = {}; let __totalCodeApps = 0;
-  const codersByCode = {}; // code -> set of coder_ids that used it
-  const recordsByCode = {}; // code -> set of record_ids where it appears
-  for (const row of cm) {
-    const cid = row.coder_id || '?';
-    for (const c of (row.codes || [])) {
-      const t = String(c).toLowerCase().trim();
-      if (!t || t === 'na') continue;
-      codeFreq[t] = (codeFreq[t] || 0) + 1; __totalCodeApps++;
-      (codersByCode[t] = codersByCode[t] || new Set()).add(cid);
-      (recordsByCode[t] = recordsByCode[t] || new Set()).add(String(row.record_id));
+  // §8 Full Evidence (residual)
+  const residual = [];
+  for (const [rid, v] of Object.entries(quoteMap)) {
+    for (const q of v.quotes) {
+      const key = rid + '|' + q.quote.slice(0, 40);
+      if (consumedQuoteKeys.has(key)) continue;
+      residual.push({ rid, coder: q.coder, codes: q.codes, quote: q.quote });
     }
   }
-  const codesSorted = Object.entries(codeFreq).sort((a,b) => b[1] - a[1]);
-  console.log('[v238.3 metrics] cm=' + cm.length + ' totalApps=' + __totalCodeApps + ' distinct=' + Object.keys(codeFreq).length);
-  const N_REC = new Set(cm.map(r => String(r.record_id))).size;
-  const codersAll = [...new Set(cm.map(r => r.coder_id))];
-  const M_CODERS = codersAll.length;
-
-  // Coder agreement per code: for each record containing this code, did all M coders use it?
-  function coderAgreement(code) {
-    const byRec = {};
-    for (const row of cm) {
-      const rec = String(row.record_id);
-      if (!byRec[rec]) byRec[rec] = new Set();
-      for (const c of (row.codes || [])) {
-        const t = String(c).toLowerCase().trim();
-        if (t) byRec[rec].add(t);
-      }
+  if (residual.length) {
+    L.push('\\clearpage');
+    L.push('\\section*{Full Evidence}');
+    L.push('\\noindent\\textit{All remaining quotations, grouped by their first coder-assigned code. Nothing in the corpus output is lost: quotations that did not match a dimension appear here with their source record and coder.}');
+    L.push('');
+    const byCode = {};
+    for (const q of residual) {
+      const c0 = (q.codes[0] || 'uncoded').toLowerCase();
+      (byCode[c0] = byCode[c0] || []).push(q);
     }
-    const has = Object.keys(byRec).filter(rec => byRec[rec].has(code)).length;
-    return has;
-  }
-
-  // Saturation: at which record did new codes stop appearing
-  let lastNovelRecord = 0;
-  const seenCodes = new Set();
-  const recIdsSorted = [...new Set(cm.map(r => String(r.record_id)))].sort((a,b)=>Number(a)-Number(b));
-  for (const rec of recIdsSorted) {
-    let novel = false;
-    for (const row of cm) {
-      if (String(row.record_id) !== rec) continue;
-      for (const c of (row.codes || [])) {
-        const t = String(c).toLowerCase().trim();
-        if (t && t !== 'na' && !seenCodes.has(t)) { seenCodes.add(t); novel = true; }
+    for (const [code, items] of Object.entries(byCode).sort()) {
+      L.push('\\subsection*{Code: \\texttt{' + esc(code) + '} (' + items.length + ' quotation' + (items.length>1?'s':'') + ')}');
+      L.push('\\begin{itemize}\\setlength{\\itemsep}{2pt}');
+      for (const q of items.slice(0, 12)) {
+        const qLine = '\\item ' + OPEN_Q + esc(q.quote) + CLOSE_Q + ' \\textit{(record ' + esc(q.rid) + ', coder ' + esc(q.coder) + ')}';
+        L.push(qLine);
       }
-    }
-    if (novel) lastNovelRecord = Number(rec) + 1;
-  }
-  const saturationFromData = lastNovelRecord;
-  const saturationFromSuff = (suff.saturation_estimate && suff.saturation_estimate.record_index_at_which_novel_codes_stopped) || null;
-
-  // Metrics table rows
-  const metricsRows = [];
-  metricsRows.push(`\\textit{Corpus} & ${N_REC} records; ${M_CODERS} coders & — \\\\`);
-  const __appsText = (__totalCodeApps > 0) ? String(__totalCodeApps) : (cm.length > 0 ? "\\textemdash{}" : "0");
-  const __appsNote = (__totalCodeApps > 0) ? `sum across ${N_REC}\\times{}${M_CODERS}=${N_REC*M_CODERS} cells` : `code-level metrics not computable on this run (see logs)`;
-  metricsRows.push(`\\textit{Total code applications} & ${__appsText} & ${__appsNote} \\\\`);
-  const __distinctText = (Object.keys(codeFreq).length > 0) ? String(Object.keys(codeFreq).length) : (cm.length > 0 ? "\\textemdash{}" : "0");
-  metricsRows.push(`\\textit{Distinct codes used} & ${__distinctText} & first-order, from coder output \\\\`);
-  for (const [code, count] of codesSorted.slice(0, 12)) {
-    const agreement = coderAgreement(code);
-    const pct = N_REC > 0 ? Math.round((agreement / N_REC) * 100) : 0;
-    metricsRows.push(`${esc(code)} & ${count} & ${agreement}/${N_REC} records (${pct}\\%) \\\\`);
-  }
-  const saturation = saturationFromSuff != null ? saturationFromSuff : saturationFromData;
-  metricsRows.push(`\\textit{Saturation} & \\multicolumn{2}{l}{novel codes stopped appearing after record ${saturation} of ${N_REC}} \\\\`);
-  const table3 = [
-    '\\begin{singlespacing}',
-    '\\begin{center}\\textbf{Table 3}\\\\[2pt]',
-    '\\textit{Analytical Metrics}\\end{center}',
-    '\\begin{footnotesize}\\setlength{\\tabcolsep}{4pt}',
-    '\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.28\\textwidth} >{\\raggedright\\arraybackslash}p{0.16\\textwidth} >{\\raggedright\\arraybackslash}X@{}}',
-    '\\toprule',
-    '\\textbf{Metric} & \\textbf{Value} & \\textbf{Notes} \\\\',
-    '\\midrule',
-    metricsRows.join('\n'),
-    '\\bottomrule',
-    '\\end{tabularx}',
-    '\\end{footnotesize}',
-    '\\end{singlespacing}', ''
-  ].join('\n');
-
-  // --- Evidence grid (per dimension: quote counts) ---
-  const quotePool = [];
-  for (const r of ((s16.panel_result && s16.panel_result.responses) || [])) {
-    for (const row of (r.rows || [])) {
-      const q = String(row.quote || '').trim();
-      const codes = (row.codes || []).filter(c => String(c).toUpperCase() !== 'NA').map(c => String(c).toLowerCase());
-      if (q.length > 40 && q.length < 350 && codes.length) {
-        quotePool.push({ code: codes[0], codes, quote: q, rec: String(row.record_id || '?') });
-      }
+      if (items.length > 12) L.push('\\item \\textit{... ' + (items.length - 12) + ' more in this code}');
+      L.push('\\end{itemize}');
+      L.push('');
     }
   }
-  let evidenceGrid = '';
-  if (dims.length && quotePool.length) {
-    const gridRows = dims.map(d => {
-      const dimName = String(d.name || '').toLowerCase();
-      const hay = (dimName + ' ' + String(d.mechanism || '') + ' ' + String(d.description || '')).toLowerCase();
-      const matchedQuotes = quotePool.filter(q => q.codes.some(c => hay.includes(c)));
-      const supporting = (d.supporting_record_ids || []).length || matchedQuotes.length;
-      const opposing = (d.opposing_record_ids || []).length;
-      const condFor = Array.isArray(d.conditions_for) && d.conditions_for.length ? d.conditions_for.length : null;
-      const condAgainst = Array.isArray(d.conditions_against) && d.conditions_against.length ? d.conditions_against.length : null;
-      return `${esc(String(d.name || ''))} & ${supporting} & ${opposing || '—'} & ${condFor != null ? condFor : '—'} & ${condAgainst != null ? condAgainst : '—'} \\\\`;
-    }).join('\n');
-    evidenceGrid = [
-      '\\begin{singlespacing}',
-      '\\begin{center}\\textbf{Table 4}\\\\[2pt]',
-      '\\textit{Evidence per Dimension}\\end{center}',
-      '\\begin{footnotesize}\\setlength{\\tabcolsep}{4pt}',
-      '\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}X >{\\raggedright\\arraybackslash}p{0.10\\textwidth} >{\\raggedright\\arraybackslash}p{0.10\\textwidth} >{\\raggedright\\arraybackslash}p{0.13\\textwidth} >{\\raggedright\\arraybackslash}p{0.13\\textwidth}@{}}',
-      '\\toprule',
-      '\\textbf{Dimension} & \\textbf{Quotes for} & \\textbf{Quotes against} & \\textbf{Conditions for} & \\textbf{Conditions against} \\\\',
-      '\\midrule',
-      gridRows,
-      '\\bottomrule',
-      '\\end{tabularx}',
-      '\\end{footnotesize}',
-      '\\end{singlespacing}', ''
-    ].join('\n');
+
+  if (discussionSection) {
+    L.push('\\section*{Discussion}');
+    L.push(esc(discussionSection));
+    L.push('');
   }
 
-  // --- Dimension conditions/relationships (from new step-24 fields) ---
-  let dimsNarrative = '';
-  if (dims.length) {
-    const parts = ['\\clearpage', '\\section*{Dimension Details}'];
-    for (const d of dims) {
-      parts.push('\\subsection*{' + esc(String(d.name || '')) + '}');
-      if (d.mechanism) parts.push('\\noindent\\textit{Mechanism.} ' + esc(String(d.mechanism)) + '\\par');
-      if (d.tension) parts.push('\\noindent\\textit{Tension.} ' + esc(String(d.tension)) + '\\par');
-      if (Array.isArray(d.conditions_for) && d.conditions_for.length) {
-        parts.push('\\noindent\\textit{Conditions for.}');
-        parts.push('\\begin{itemize}\\setlength{\\itemsep}{0pt}');
-        for (const c of d.conditions_for) parts.push('\\item ' + esc(String(c)));
-        parts.push('\\end{itemize}');
-      }
-      if (Array.isArray(d.conditions_against) && d.conditions_against.length) {
-        parts.push('\\noindent\\textit{Conditions against.}');
-        parts.push('\\begin{itemize}\\setlength{\\itemsep}{0pt}');
-        for (const c of d.conditions_against) parts.push('\\item ' + esc(String(c)));
-        parts.push('\\end{itemize}');
-      }
-      if (Array.isArray(d.relationships) && d.relationships.length) {
-        parts.push('\\noindent\\textit{Relationships.}');
-        parts.push('\\begin{itemize}\\setlength{\\itemsep}{0pt}');
-        for (const r of d.relationships) parts.push('\\item ' + esc(String(r.from||'')) + ' $\\rightarrow$ ' + esc(String(r.to||'')) + ': ' + esc(String(r.nature||'')));
-        parts.push('\\end{itemize}');
-      }
-      const hasNew = Array.isArray(d.conditions_for) || Array.isArray(d.relationships);
-      if (!hasNew) parts.push('\\noindent\\textit{Conditions and relationships not produced by this run. Re-run with updated prompt to populate.}\\par');
-      parts.push('');
-    }
-    dimsNarrative = parts.join('\n');
+  // References
+  const rdfDOIs = new Set();
+  for (const r of all) for (const d of (r.citations_used || [])) rdfDOIs.add(String(d));
+  const __allDOIs = [...new Set([...rdfDOIs, ...poolDOIs])];
+
+  function __parseName(name) {
+    const s = String(name || '').trim();
+    if (!s) return { surname: '', given: [] };
+    if (s.includes(',')) { const [last, ...rest] = s.split(','); return { surname: last.trim(), given: rest.join(' ').trim().split(/\s+/).filter(Boolean) }; }
+    const parts = s.split(/\s+/).filter(Boolean);
+    return { surname: parts[parts.length - 1] || '', given: parts.slice(0, -1) };
+  }
+  function __formatAuthor(name) {
+    const { surname, given } = __parseName(name);
+    if (!surname) return '';
+    const initials = given.map(g => { const c = String(g).replace(/\./g,'')[0]; return c ? c.toUpperCase()+'.' : ''; }).filter(Boolean).join(' ');
+    return initials ? esc(surname) + ', ' + esc(initials) : esc(surname);
+  }
+  function __formatAuthors(arr) {
+    const list = (Array.isArray(arr) ? arr : [String(arr||'')]).map(__formatAuthor).filter(Boolean);
+    if (list.length === 0) return '';
+    if (list.length === 1) return list[0];
+    if (list.length === 2) return list[0] + ', \\& ' + list[1];
+    const last = list.pop();
+    return list.join(', ') + ', \\& ' + last;
+  }
+  function lastAuthor(rec) {
+    const a = Array.isArray(rec.authors) ? rec.authors : (rec.authors ? [String(rec.authors)] : ['Anon']);
+    const parts = String(a[0]).trim().split(/[\s,]+/).filter(Boolean);
+    return parts[parts.length-1] || 'Anon';
+  }
+  function citeLabel(rec) {
+    const a = Array.isArray(rec.authors) ? rec.authors : [String(rec.authors || 'Anon')];
+    const y = rec.year || 'n.d.';
+    if (a.length === 1) return lastAuthor(rec) + '(' + y + ')';
+    if (a.length === 2) { const p2 = String(a[1]).trim().split(/[\s,]+/).filter(Boolean); return lastAuthor(rec) + ' \\& ' + (p2[p2.length-1]||'Anon') + '(' + y + ')'; }
+    return lastAuthor(rec) + ' et~al.(' + y + ')';
+  }
+  const __METHODOLOGY = {
+    "10.1177/1094428112452151": { authors: ["Gioia, D. A.","Corley, K. G.","Hamilton, A. L."], year: 2013, title: "Seeking qualitative rigor in inductive research: Notes on the Gioia methodology", journal: "Organizational Research Methods" },
+    "10.1191/1478088706qp063oa": { authors: ["Braun, V.","Clarke, V."], year: 2006, title: "Using thematic analysis in psychology", journal: "Qualitative Research in Psychology" },
+    "10.5465/amr.2009.0486": { authors: ["Charmaz, K."], year: 2009, title: "Shifting the grounds: Constructivist grounded theory methods", journal: "Academy of Management Review" },
+    "10.1177/1049732315617444": { authors: ["Malterud, K.","Siersma, V. D.","Guassora, A. D."], year: 2016, title: "Sample size in qualitative interview studies: Guided by information power", journal: "Qualitative Health Research" },
+    "10.4135/9781452230153": { authors: ["Strauss, A.","Corbin, J."], year: 1998, title: "Basics of qualitative research: Techniques and procedures for developing grounded theory", journal: "Sage" }
+  };
+  function __lookupMethodology(doi) { return __METHODOLOGY[String(doi)] || null; }
+
+  const refDOIs = __allDOIs.sort((a, b) => {
+    const ra = doiToRec[a], rb = doiToRec[b];
+    const sa = ra ? lastAuthor(ra).toLowerCase() : a.toLowerCase();
+    const sb = rb ? lastAuthor(rb).toLowerCase() : b.toLowerCase();
+    if (sa !== sb) return sa < sb ? -1 : 1;
+    return ((ra && ra.year)||0) - ((rb && rb.year)||0);
+  });
+
+  const bibitems = refDOIs.map(d => {
+    let rec = doiToRec[d];
+    if (!rec) { const m = __lookupMethodology(d); if (m) rec = m; }
+    if (!rec) return '\\bibitem[DOI]{' + d + '} \\href{https://doi.org/' + d + '}{https://doi.org/' + d + '}';
+    const authors = __formatAuthors(rec.authors);
+    const y = rec.year || 'n.d.';
+    const title = esc(rec.title || '').replace(/\.$/,'') + '.';
+    const journal = esc(rec.journal || '').replace(/\.$/,'') + '.';
+    const url = 'https://doi.org/' + d;
+    return '\\bibitem[' + citeLabel(rec) + ']{' + d + '} ' + authors + ' (' + y + '). ' + title + ' \\textit{' + journal + '} \\href{' + url + '}{' + url + '}';
+  });
+  if (bibitems.length) {
+    L.push('\\clearpage');
+    L.push('\\begin{singlespacing}');
+    L.push('\\begin{thebibliography}{99}');
+    for (const b of bibitems) L.push(b);
+    L.push('\\end{thebibliography}');
+    L.push('\\end{singlespacing}');
+    L.push('');
   }
 
-  // --- Table 1 (Codes, Themes, Dimensions) ---
-  let table1 = '';
-  if (dims.length && codebook.length) {
-    const rows = dims.map(d => {
-      const dimName = esc(d.name || '');
-      const dimMech = esc(d.mechanism || '');
-      const matched = codebook.filter(cb => {
-        const lbl = String(cb.name || cb.label || '').toLowerCase().replace(/_/g,' ');
-        const hay = (String(d.name||'') + ' ' + String(d.mechanism||'') + ' ' + String(d.description||'')).toLowerCase();
-        return lbl && (hay.includes(lbl) || lbl.split(' ').some(w => w.length > 4 && hay.includes(w)));
-      });
-      const themes = matched.length ? matched.map(cb => esc(cb.name || cb.label || '')).join('; ')
-                                    : codebook.slice(0,2).map(cb => esc(cb.name || cb.label || '')).join('; ');
-      return `\\textbf{${dimName}} & ${themes} & \\textit{${dimMech}} \\\\`;
-    }).join('\n');
-    table1 = ['\\clearpage','\\begin{singlespacing}',
-      '\\begin{center}\\textbf{Table 1}\\\\[2pt]','\\textit{Codes, Themes, and Dimensions}\\end{center}',
-      '\\begin{footnotesize}\\setlength{\\tabcolsep}{4pt}',
-      '\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.20\\textwidth} >{\\raggedright\\arraybackslash}p{0.32\\textwidth} >{\\raggedright\\arraybackslash}X@{}}',
-      '\\toprule','\\textbf{Aggregate dimension} & \\textbf{Second-order themes} & \\textbf{Mechanism} \\\\','\\midrule',
-      rows,
-      '\\bottomrule','\\end{tabularx}','\\end{footnotesize}','\\end{singlespacing}',''
-    ].join('\n');
-  }
-
-  // --- Table 2 (Representative Quotations) ---
-  const seenQ = new Set(); const uniqQ = [];
-  for (const item of quotePool) {
-    const k = item.quote.slice(0, 50).toLowerCase();
-    if (seenQ.has(k)) continue;
-    seenQ.add(k); uniqQ.push(item);
-    if (uniqQ.length >= 10) break;
-  }
-  let table2 = '';
-  if (uniqQ.length) {
-    const qRows = uniqQ.map(item => `${esc(item.code)} & ``${esc(item.quote)}''\\textsuperscript{${esc(item.rec)}} \\\\`).join('\n');
-    table2 = ['\\begin{singlespacing}',
-      '\\begin{center}\\textbf{Table 2}\\\\[2pt]','\\textit{Representative Quotations}\\end{center}',
-      '\\begin{footnotesize}\\setlength{\\tabcolsep}{4pt}',
-      '\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.24\\textwidth} >{\\raggedright\\arraybackslash}X@{}}',
-      '\\toprule','\\textbf{Code} & \\textbf{Verbatim excerpt} \\\\','\\midrule',
-      qRows,
-      '\\bottomrule','\\end{tabularx}','\\end{footnotesize}','\\end{singlespacing}',''
-    ].join('\n');
-  }
-
-  // --- Appendix: RDF ledger, no DOI spill ---
+  // Appendix A
   function poolLabel(poolId) {
     const recs = poolByID[poolId] || [];
     return recs.slice(0, 2).map(r => {
-      const authors = Array.isArray(r.authors) ? r.authors : [String(r.authors||'')];
+      const a = Array.isArray(r.authors) ? r.authors : [String(r.authors||'')];
       const y = r.year || 'n.d.';
-      const surname = lastAuthor(r);
-      if (authors.length === 1) return surname + ' (' + y + ')';
-      if (authors.length === 2) {
-        const p2 = String(authors[1]).trim().split(/[\s,]+/).filter(Boolean);
-        return surname + ' \\& ' + (p2[p2.length-1]||'Anon') + ' (' + y + ')';
-      }
-      return surname + ' et~al. (' + y + ')';
+      const sn = lastAuthor(r);
+      if (a.length === 1) return sn + ' (' + y + ')';
+      if (a.length === 2) { const p2 = String(a[1]).trim().split(/[\s,]+/).filter(Boolean); return sn + ' \\& ' + (p2[p2.length-1]||'Anon') + ' (' + y + ')'; }
+      return sn + ' et~al. (' + y + ')';
     }).join('; ');
   }
   const ledgerRows = all.map(r => {
     const num = (String(r.rdf_id || '').match(/\d+/) || [String(r.stage || '')])[0];
     const forks = Array.isArray(r.options) ? r.options.filter(o => o !== r.chosen).map(esc).join('; ') : '';
     const poolId = r.pool_id || '';
-    const support = esc(r.citation_status || '') + (poolId ? ` [${poolId}] ${esc(poolLabel(poolId))}` : '');
-    return `${esc(num)} & ${esc(r.rdf_id)} & ${esc(r.chosen || '')} & ${forks} & ${esc(r.rationale || '')} & ${support} \\\\`;
+    const support = esc(r.citation_status || '') + (poolId ? ' [' + poolId + '] ' + esc(poolLabel(poolId)) : '');
+    return esc(num) + ' & ' + esc(r.rdf_id) + ' & ' + esc(r.chosen || '') + ' & ' + forks + ' & ' + esc(r.rationale || '') + ' & ' + support + ' \\\\';
   }).join('\n');
-  const ledger = ['\\clearpage','\\section*{Appendix A: Researcher Degrees of Freedom Ledger}',
-    '\\noindent\\textit{Note.} Pool IDs (P00--P13) name the literature searches the pipeline performed. P01 = corpus scope; P02--P12 = step-specific searches (memo, RQ, lens, codebook, theme, novelty, aggregation, model, diagram, sufficiency, reporting); P13 = reporting conventions. P00 is reserved for methodology citations (e.g., Braun \\& Clarke 2006) drawn from outside the search pools. The top two papers per pool appear inline in the Support column; full bibliography in References.\\par\\vspace{0.6em}',
-    '\\begin{singlespacing}','\\begin{tiny}\\setlength{\\tabcolsep}{1.5pt}',
-    '\\begin{longtable}{@{}>{\\raggedright\\arraybackslash}p{0.035\\linewidth} >{\\raggedright\\arraybackslash}p{0.055\\linewidth} >{\\raggedright\\arraybackslash}p{0.14\\linewidth} >{\\raggedright\\arraybackslash}p{0.16\\linewidth} >{\\raggedright\\arraybackslash}p{0.36\\linewidth} >{\\raggedright\\arraybackslash}p{0.15\\linewidth}@{}}',
-    '\\toprule','\\textbf{Step} & \\textbf{RDF} & \\textbf{Choice} & \\textbf{Forks} & \\textbf{Rationale} & \\textbf{Support} \\\\','\\midrule','\\endfirsthead',
-    '\\toprule','\\textbf{Step} & \\textbf{RDF} & \\textbf{Choice} & \\textbf{Forks} & \\textbf{Rationale} & \\textbf{Support} \\\\','\\midrule','\\endhead',
-    '\\bottomrule','\\endfoot',
-    ledgerRows,
-    '\\end{longtable}','\\end{tiny}','\\end{singlespacing}'].join('\n');
 
-  // Keywords
-  const kw = [];
-  for (const d of dims) if (d.name) kw.push(String(d.name).toLowerCase());
-  for (const cb of codebook) {
-    const k = String(cb.name || cb.label || '').toLowerCase().replace(/_/g,' ');
-    if (k && !kw.includes(k)) kw.push(k);
-  }
-  const kwList = kw.slice(0, 6);
+  L.push('\\clearpage');
+  L.push('\\section*{Appendix A: Researcher Degrees of Freedom Ledger}');
+  L.push('\\noindent\\textit{Pool IDs (P00--P13) name the literature searches the pipeline performed. P01 = corpus scope; P02--P12 = step-specific searches; P13 = reporting conventions. P00 is reserved for methodology citations. The top two papers per pool appear inline in the Support column; full bibliography in References.}\\par\\vspace{0.6em}');
+  L.push('\\begin{singlespacing}\\begin{tiny}\\setlength{\\tabcolsep}{1.5pt}');
+  L.push('\\begin{longtable}{@{}>{\\raggedright\\arraybackslash}p{0.035\\linewidth} >{\\raggedright\\arraybackslash}p{0.055\\linewidth} >{\\raggedright\\arraybackslash}p{0.14\\linewidth} >{\\raggedright\\arraybackslash}p{0.16\\linewidth} >{\\raggedright\\arraybackslash}p{0.36\\linewidth} >{\\raggedright\\arraybackslash}p{0.15\\linewidth}@{}}');
+  L.push('\\toprule\\textbf{Step} & \\textbf{RDF} & \\textbf{Choice} & \\textbf{Forks} & \\textbf{Rationale} & \\textbf{Support} \\\\\\midrule\\endfirsthead');
+  L.push('\\toprule\\textbf{Step} & \\textbf{RDF} & \\textbf{Choice} & \\textbf{Forks} & \\textbf{Rationale} & \\textbf{Support} \\\\\\midrule\\endhead');
+  L.push('\\bottomrule\\endfoot');
+  L.push(ledgerRows);
+  L.push('\\end{longtable}');
+  L.push('\\end{tiny}\\end{singlespacing}');
 
-  // Assemble
-  const preamble = [
-    '\\documentclass[12pt]{article}','\\usepackage[margin=1in]{geometry}','\\usepackage{times}','\\usepackage{setspace}',
-    '\\usepackage{longtable}','\\usepackage{tabularx}','\\usepackage{array}','\\usepackage{booktabs}',
-    '\\usepackage{hyperref}','\\usepackage{ragged2e}','\\usepackage{natbib}','\\usepackage{tikz}','\\usepackage{graphicx}',
-    '\\usetikzlibrary{arrows.meta, positioning, shapes.geometric}',
-    '\\doublespacing','\\pagestyle{plain}','\\begin{document}'
-  ].join('\n');
+  L.push('\\end{document}');
 
-  const titleBlock = ['\\begin{center}','{\\Large\\bfseries ' + esc(surgeonTitle) + '}','\\end{center}',
-    '\\begin{center}','\\today','\\end{center}','\\vspace{0.5em}'].join('\n');
-
-  const abstractBlock = abstractText ? '\\section*{Abstract}\n' + abstractText + '\n' : '';
-  const kwBlock = kwList.length ? '\\vspace{0.5em}\n\\noindent\\textit{Keywords:} ' + esc(kwList.join(', ')) + '\n' : '';
-
-  const full = [preamble, titleBlock, abstractBlock, kwBlock, body, '',
-    diagram, table1, table2, table3, evidenceGrid, dimsNarrative, refs, ledger, '\\end{document}'].join('\n');
-
+  const tex = L.join('\n');
   return { output: {
     status: 'PACKAGED',
-    aqrp_report_tex: full,
+    aqrp_report_tex: tex,
     aqrp_report_audit: { version: '1', runId: runId || null, assembled_at: new Date().toISOString(), rdf_count: all.length, records: all },
-    rdf_records: [r32],
-    dropped_citations: droppedCites
+    rdf_records: [r32]
   }};
 }
 

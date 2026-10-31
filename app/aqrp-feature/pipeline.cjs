@@ -848,7 +848,7 @@ const L = [];
   const tex = __rawTex
     .replace(/\[object Object\]/g, '')
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
-    .replace(/\\noindent\\textbf\{Coder narratives\.\}[\s\S]{0,80}?\\begin\{itemize\}[\s\S]{0,300}?\\end\{itemize\}/g, function(m){ return m.indexOf('\\item') >= 0 ? m : ''; })
+    .replace(/\\noindent\\textbf\{Coder narratives\.\}[\s\S]{0,80}?\\begin\{itemize\}[\s\S]{0,300}?\\end\{itemize\}/g, function(m){ return /\\item(?![a-z])/.test(m) ? m : ''; })
     .replace(/\\begin\{itemize\}\s*\\end\{itemize\}/g, '');
   return { output: {
     status: 'PACKAGED',

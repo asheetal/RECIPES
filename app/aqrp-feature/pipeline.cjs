@@ -497,7 +497,9 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   }
 const L = [];
   L.push('\\documentclass[man,12pt]{apa7}');
-        L.push('\\usepackage[american]{babel}');
+        L.push('\\usepackage{helvet}');
+  L.push('\\renewcommand{\\familydefault}{\\sfdefault}');
+  L.push('\\usepackage[american]{babel}');
   L.push('\\usepackage{csquotes}');
   L.push('\\usepackage{setspace}');
   L.push('\\usepackage{longtable}');
@@ -523,11 +525,12 @@ const L = [];
   if (__apaKw.length) L.push('\\keywords{' + __apaKw.slice(0,6).map(esc).join(', ') + '}');
 
   L.push('\\begin{document}');
-  L.push('\\maketitle');
-
-  // Title
+  L.push('\\fontsize{11pt}{13.2pt}\\selectfont');
   L.push('\\begin{center}{\\Large\\bfseries ' + esc(displayTitle) + '}\\end{center}');
   L.push('\\begin{center}\\today\\end{center}');
+  
+
+  // Title
 
   if (!hasPaper) {
     L.push('\\vspace{0.4em}');
@@ -606,7 +609,7 @@ const L = [];
     });
     const idMap = {}; dparams.nodes.forEach((id, i) => { idMap[String(id)] = sanitize(id); });
     if (Array.isArray(dparams.paths)) for (const pth of dparams.paths) {
-      const mm = String(pth).match(/^(.+?)\\s*(?:->|\\u2192|:)\\s*(.+?)$/);
+      const mm = String(pth).match(/^(.+?)\s*(?:->|\u2192|:)\s*(.+?)$/);
       if (!mm) continue;
       const findNode = (raw) => { const lower = String(raw).toLowerCase(); let best = null, bl = 0; for (const n of nodeList) { const ln = String(n.label).toLowerCase(); if (lower.includes(ln) && ln.length > bl) { best = n; bl = ln.length; } } return best; };
       const fn = findNode(mm[1]), tn = findNode(mm[2]);
@@ -665,7 +668,22 @@ const L = [];
     return initials ? esc(surname) + ', ' + esc(initials) : esc(surname);
   }
   function __formatAuthors(arr) {
-    const list = (Array.isArray(arr) ? arr : [String(arr||'')]).map(__formatAuthor).filter(Boolean);
+    // Normalize: if arr is a single string with comma-separated authors, split
+    let authorsList = Array.isArray(arr) ? arr.slice() : [String(arr || '')];
+    const flat = [];
+    for (const a of authorsList) {
+      const s = String(a || '').trim();
+      if (!s) continue;
+      // Split on " and " or ", " when the string contains multiple author-like names
+      // Heuristic: split on " and " or on comma only if the following token starts uppercase
+      const parts = s.split(/\s+and\s+|,\s+(?=[A-Z])/);
+      if (parts.length > 1) {
+        for (const p of parts) if (p.trim()) flat.push(p.trim());
+      } else {
+        flat.push(s);
+      }
+    }
+    const list = flat.map(__formatAuthor).filter(Boolean);
     if (!list.length) return '';
     if (list.length === 1) return list[0];
     if (list.length === 2) return list[0] + ', \\& ' + list[1];
@@ -729,7 +747,7 @@ const L = [];
     for (const x of cs) { const t = String(x).toLowerCase().trim(); if (!t || t === 'na') continue; __totalApps++; codeFreq[t] = (codeFreq[t] || 0) + 1; }
   }
   const codesSorted = Object.entries(codeFreq).sort((a,b) => b[1] - a[1]);
-  L.push('\\begin{footnotesize}\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.32\\textwidth} >{\\raggedright\\arraybackslash}p{0.14\\textwidth} >{\\raggedright\\arraybackslash}X@{}}');
+  L.push('{\\fontsize{7pt}{8.4pt}\\selectfont}\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.32\\textwidth} >{\\raggedright\\arraybackslash}p{0.14\\textwidth} >{\\raggedright\\arraybackslash}X@{}}');
   L.push('\\toprule\\textbf{Metric} & \\textbf{Value} & \\textbf{Notes}\\\\\\midrule');
   L.push('Total code applications & ' + __totalApps + ' & across ' + N_REC + ' $\\times$ ' + M_CODERS + ' = ' + (N_REC*M_CODERS) + ' cells \\\\');
   L.push('Distinct codes used & ' + Object.keys(codeFreq).length + ' & first-order \\\\');
@@ -739,19 +757,19 @@ const L = [];
     L.push('{' + esc(code) + '} & ' + cnt + ' & ' + recsWithCode + '/' + N_REC + ' records (' + esc(String(pct) + '%') + ') \\\\');
   }
   L.push('Saturation & \\multicolumn{2}{l}{novel codes stopped appearing after record ' + (suff.saturation_estimate && suff.saturation_estimate.record_index_at_which_novel_codes_stopped || '?') + ' of ' + N_REC + '} \\\\');
-  L.push('\\bottomrule\\end{tabularx}\\end{footnotesize}');
+  L.push('\\bottomrule\\end{tabularx}\\par}');
   L.push('');
 
   // A.2 Codebook (FIXED: .code, .applies_when, .example)
   if (codebook.length) {
     L.push('\\subsection*{A.2 Codebook}');
-    L.push('\\begin{footnotesize}\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.13\\textwidth} >{\\raggedright\\arraybackslash}p{0.28\\textwidth} >{\\raggedright\\arraybackslash}p{0.20\\textwidth} >{\\raggedright\\arraybackslash}X@{}}');
+    L.push('{\\fontsize{7pt}{8.4pt}\\selectfont}\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.13\\textwidth} >{\\raggedright\\arraybackslash}p{0.28\\textwidth} >{\\raggedright\\arraybackslash}p{0.20\\textwidth} >{\\raggedright\\arraybackslash}X@{}}');
     L.push('\\toprule\\textbf{Code} & \\textbf{Definition} & \\textbf{Applies when} & \\textbf{Example from corpus}\\\\\\midrule');
     for (const cb of codebook) {
       const code = cb.code || cb.name || cb.label || '?';
       L.push('{' + esc(code) + '} & ' + esc(cb.definition || '') + ' & ' + esc(cb.applies_when || cb.inclusion || '') + ' & \\textit{' + esc(cb.example || cb.exclusion || '') + '} \\\\');
     }
-    L.push('\\bottomrule\\end{tabularx}\\end{footnotesize}');
+    L.push('\\bottomrule\\end{tabularx}\\par}');
     L.push('');
   }
 
@@ -772,10 +790,10 @@ const L = [];
   // A.4 Novelty Assessment (from R21, never rendered before)
   if (noveltyMap.length) {
     L.push('\\subsection*{A.4 Novelty Assessment (R21)}');
-    L.push('\\begin{footnotesize}\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.28\\textwidth} >{\\raggedright\\arraybackslash}p{0.12\\textwidth} >{\\raggedright\\arraybackslash}X@{}}');
+    L.push('{\\fontsize{7pt}{8.4pt}\\selectfont}\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.28\\textwidth} >{\\raggedright\\arraybackslash}p{0.12\\textwidth} >{\\raggedright\\arraybackslash}X@{}}');
     L.push('\\toprule\\textbf{Theme} & \\textbf{Action} & \\textbf{Rationale}\\\\\\midrule');
     for (const n of noveltyMap) L.push('{' + esc(n.theme || '') + '} & ' + esc(n.action || '') + ' & ' + esc(n.rationale || '') + ' \\\\');
-    L.push('\\bottomrule\\end{tabularx}\\end{footnotesize}');
+    L.push('\\bottomrule\\end{tabularx}\\par}');
     L.push('');
   }
 

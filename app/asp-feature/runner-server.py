@@ -45,27 +45,50 @@ class H(BaseHTTPRequestHandler):
                 body = json.loads(self.rfile.read(n) or b'{}')
             except Exception as e:
                 return self._json({'ok': False, 'error': f'bad json: {e}'})
-            tex = body.get('tex')
-            if not isinstance(tex, str) or not tex.strip():
-                return self._json({'ok': False, 'error': 'tex (string) required'})
+            if isinstance(body.get('files'), dict) and body['files']:
+                files = body['files']; main = body.get('main', ''); bib_backend = body.get('bib_backend', None)
+            elif isinstance(body.get('tex'), str) and body['tex'].strip():
+                files = {'report.tex': body['tex']}; main = 'report.tex'; bib_backend = None
+            else:
+                return self._json({'ok': False, 'error': 'either "tex" or "files"+"main" required'})
+            def _safe(fn):
+                return (isinstance(fn, str) and 0 < len(fn) < 128 and '/' not in fn and '\\' not in fn and '..' not in fn and not fn.startswith('.'))
+            if not _safe(main):
+                return self._json({'ok': False, 'error': 'bad main filename'})
+            for fn in files:
+                if not _safe(fn):
+                    return self._json({'ok': False, 'error': f'bad filename: {fn}'})
+                if not isinstance(files[fn], str):
+                    return self._json({'ok': False, 'error': f'file {fn} content must be string'})
             run_tag = ''.join(c for c in str(body.get('run_id', '')) if c.isalnum() or c in '-_')[:32] or 'run'
             workdir = os.path.join(RUNS_DIR, 'tex-' + run_tag + '-' + uuid.uuid4().hex[:8])
             os.makedirs(workdir, exist_ok=True)
-            pathlib.Path(os.path.join(workdir, 'report.tex')).write_text(tex, encoding='utf-8')
             try:
-                # Pass 1: halt-on-error for fast failure with line number
-                r1 = subprocess.run(['pdflatex', '-interaction=nonstopmode', '-halt-on-error', 'report.tex'],
+                for fn, content in files.items():
+                    pathlib.Path(os.path.join(workdir, fn)).write_text(content, encoding='utf-8')
+                r1 = subprocess.run(['pdflatex', '-interaction=nonstopmode', '-halt-on-error', main],
                                     cwd=workdir, capture_output=True, text=True, timeout=60)
                 if r1.returncode != 0:
                     log_tail = ((r1.stdout or '')[-2500:] + (r1.stderr or '')[-500:]).strip()
                     return self._json({'ok': False, 'stage': 'pdflatex-pass1', 'returncode': r1.returncode, 'log_tail': log_tail})
-                # Pass 2/3 for refs only if pass 1 succeeded
+                if bib_backend:
+                    base = os.path.splitext(main)[0]
+                    if bib_backend == 'biber':
+                        rb = subprocess.run(['biber', base], cwd=workdir, capture_output=True, text=True, timeout=60)
+                    elif bib_backend == 'bibtex':
+                        rb = subprocess.run(['bibtex', base], cwd=workdir, capture_output=True, text=True, timeout=60)
+                    else:
+                        return self._json({'ok': False, 'error': f'unknown bib_backend: {bib_backend}'})
+                    if rb.returncode != 0:
+                        log_tail = ((rb.stdout or '')[-2000:] + (rb.stderr or '')[-500:]).strip()
+                        return self._json({'ok': False, 'stage': bib_backend, 'returncode': rb.returncode, 'log_tail': log_tail})
                 for _ in range(2):
-                    subprocess.run(['pdflatex', '-interaction=nonstopmode', 'report.tex'],
-                                   cwd=workdir, capture_output=True, text=True, timeout=90)
-                pdf_path = os.path.join(workdir, 'report.pdf')
+                    subprocess.run(['pdflatex', '-interaction=nonstopmode', main],
+                                   cwd=workdir, capture_output=True, text=True, timeout=60)
+                pdf_name = os.path.splitext(main)[0] + '.pdf'
+                pdf_path = os.path.join(workdir, pdf_name)
                 if not os.path.isfile(pdf_path) or os.path.getsize(pdf_path) < 1024:
-                    return self._json({'ok': False, 'error': 'no pdf after 3 passes'})
+                    return self._json({'ok': False, 'error': f'no pdf after passes (looked for {pdf_name})'})
                 pdf_b64 = base64.b64encode(pathlib.Path(pdf_path).read_bytes()).decode('ascii')
                 return self._json({'ok': True, 'pdf_b64': pdf_b64, 'bytes': len(pdf_b64) * 3 // 4})
             finally:

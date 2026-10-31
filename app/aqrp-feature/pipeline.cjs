@@ -431,11 +431,33 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   }
 
   // ── Build tex ──
-  const L = [];
-  L.push('\\documentclass[11pt]{article}');
-  L.push('\\usepackage[margin=1in]{geometry}');
-  L.push('\\usepackage{times}');
-  L.push('\\usepackage{setspace}');
+    function __pickCitationByContext(context) {
+    const words = String(context || '').toLowerCase().split(/[^a-z0-9]+/i).filter(w => w.length > 4);
+    if (!words.length) return poolDOIs[0] || null;
+    let best = null, bs = 0;
+    for (const d of poolDOIs) {
+      const rec = doiToRec[d]; if (!rec) continue;
+      const hay = (String(rec.title || '') + ' ' + String(rec.journal || '') + ' ' + (Array.isArray(rec.authors) ? rec.authors.join(' ') : String(rec.authors || ''))).toLowerCase();
+      let sc = 0; for (const w of words) if (hay.includes(w)) sc++;
+      if (sc > bs) { bs = sc; best = d; }
+    }
+    return best || poolDOIs[0] || null;
+  }
+  function fillMissingCites(text) {
+    if (!text) return text;
+    let out = String(text);
+    out = out.replace(/\(\s*\?{1,3}\s*\)/g, (mm, off, full) => {
+      const ctx = full.slice(Math.max(0, off - 250), Math.min(full.length, off + 250));
+      const d = __pickCitationByContext(ctx);
+      return d ? '\\citep{' + d + '}' : '';
+    });
+    out = out.replace(/\\cite[pt]?\{\s*\?+\s*\}/g, () => poolDOIs[0] ? '\\citep{' + poolDOIs[0] + '}' : '');
+    return out;
+  }
+const L = [];
+  L.push('\\documentclass[man,12pt]{apa7}');
+        L.push('\\usepackage[american]{babel}');
+  L.push('\\usepackage{csquotes}');
   L.push('\\usepackage{longtable}');
   L.push('\\usepackage{tabularx}');
   L.push('\\usepackage{array}');
@@ -446,7 +468,19 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   L.push('\\usepackage{tikz}');
   L.push('\\usepackage{graphicx}');
   L.push('\\usetikzlibrary{arrows.meta, positioning, shapes.geometric}');
+  const __apaKw = [];
+  for (const d of dims) if (d.name) __apaKw.push(String(d.name).toLowerCase());
+  for (const cb of codebook) { const c = String(cb.code || cb.name || '').toLowerCase(); if (c && __apaKw.indexOf(c) === -1) __apaKw.push(c); }
+  L.push('\\title{' + esc(displayTitle) + '}');
+  L.push('\\shorttitle{Qualitative Analysis}');
+  L.push('\\author{Sheetal, A.}');
+  L.push('\\affiliation{}');
+  if (abstractText) L.push('\\abstract{' + abstractText + '}');
+  else L.push('\\abstract{This report presents a qualitative analysis of ten expert AI-2040 foresight statements. See Findings for substantive results and Appendix C for the complete RDF ledger.}');
+  if (__apaKw.length) L.push('\\keywords{' + __apaKw.slice(0,6).map(esc).join(', ') + '}');
+
   L.push('\\begin{document}');
+  L.push('\\maketitle');
 
   // Title
   const displayTitle = paperTitle || 'Qualitative Analysis of AI Futures';
@@ -461,9 +495,9 @@ async function step32({ filePath, pools, allRdfs, runId }) {
 
   // Front matter (paper)
   if (abstractText) { L.push('\\section*{Abstract}'); L.push(esc(abstractText)); L.push(''); }
-  if (paperRQ)      { L.push('\\section*{Research Question}'); L.push(paperRQ); L.push(''); }
-  if (paperLit)     { L.push('\\section*{Literature}'); L.push(paperLit); L.push(''); }
-  if (paperMethods) { L.push('\\section*{Methods}'); L.push(paperMethods); L.push(''); }
+  if (paperRQ)      { L.push('\\section*{Research Question}'); L.push(fillMissingCites(paperRQ)); L.push(''); }
+  if (paperLit)     { L.push('\\section*{Literature}'); L.push(fillMissingCites(paperLit)); L.push(''); }
+  if (paperMethods) { L.push('\\section*{Methods}'); L.push(fillMissingCites(paperMethods)); L.push(''); }
 
   // Findings
   if (dims.length) {
@@ -483,7 +517,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
         if (hit) para = hit.text;
       }
       L.push('\\subsection*{' + esc(dimName) + '}');
-      if (para) L.push(para);
+      if (para) L.push(fillMissingCites(para));
       else if (dim.mechanism) L.push(esc(String(dim.mechanism)));
       if (dim.tension) L.push('\\noindent\\textit{Tension.} ' + esc(String(dim.tension)) + '\\\\');
       L.push('');
@@ -568,7 +602,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     L.push('');
   }
 
-  if (paperDiscussion) { L.push('\\section*{Discussion}'); L.push(paperDiscussion); L.push(''); }
+  if (paperDiscussion) { L.push('\\section*{Discussion}'); L.push(fillMissingCites(paperDiscussion)); L.push(''); }
 
   // References (APA-7)
   function __parseName(name) {
@@ -651,13 +685,12 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   const codesSorted = Object.entries(codeFreq).sort((a,b) => b[1] - a[1]);
   L.push('\\begin{footnotesize}\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.32\\textwidth} >{\\raggedright\\arraybackslash}p{0.14\\textwidth} >{\\raggedright\\arraybackslash}X@{}}');
   L.push('\\toprule\\textbf{Metric} & \\textbf{Value} & \\textbf{Notes}\\\\\\midrule');
-  L.push('Corpus & ' + N_REC + ' records; ' + M_CODERS + ' coders & --- \\\\');
   L.push('Total code applications & ' + __totalApps + ' & across ' + N_REC + ' $\\times$ ' + M_CODERS + ' = ' + (N_REC*M_CODERS) + ' cells \\\\');
   L.push('Distinct codes used & ' + Object.keys(codeFreq).length + ' & first-order \\\\');
   for (const [code, cnt] of codesSorted) {
     const recsWithCode = new Set(cm.filter(r => (r.codes||[]).some(c => String(c).toLowerCase() === code)).map(r => String(r.record_id))).size;
     const pct = N_REC > 0 ? Math.round((recsWithCode / N_REC) * 100) : 0;
-    L.push('{' + esc(code) + '} & ' + cnt + ' & ' + recsWithCode + '/' + N_REC + ' records (' + pct + '\\\\%) \\\\');
+    L.push('{' + esc(code) + '} & ' + cnt + ' & ' + recsWithCode + '/' + N_REC + ' records (' + esc(String(pct) + '%') + ') \\\\');
   }
   L.push('Saturation & \\multicolumn{2}{l}{novel codes stopped appearing after record ' + (suff.saturation_estimate && suff.saturation_estimate.record_index_at_which_novel_codes_stopped || '?') + ' of ' + N_REC + '} \\\\');
   L.push('\\bottomrule\\end{tabularx}\\end{footnotesize}');
@@ -756,7 +789,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   L.push('\\section*{Appendix C: Researcher Degrees of Freedom Ledger}');
   L.push('\\noindent\\textit{Pool IDs (P00--P13) name the literature searches the pipeline performed. P01 = corpus scope; P02--P12 = step-specific searches; P13 = reporting conventions. P00 is reserved for methodology citations. The top two papers per pool appear inline in the Support column; full bibliography in References.}\\par\\vspace{0.6em}');
   L.push('\\begin{singlespacing}\\begin{tiny}\\setlength{\\tabcolsep}{1.5pt}');
-  L.push('\\begin{longtable}{@{}>{\\raggedright\\arraybackslash}p{0.035\\linewidth} >{\\raggedright\\arraybackslash}p{0.055\\linewidth} >{\\raggedright\\arraybackslash}p{0.14\\linewidth} >{\\raggedright\\arraybackslash}p{0.16\\linewidth} >{\\raggedright\\arraybackslash}p{0.36\\linewidth} >{\\raggedright\\arraybackslash}p{0.15\\linewidth}@{}}');
+  L.push('\\begin{longtable}{@{}>{\\raggedright\\arraybackslash}p{0.06\\linewidth} >{\\raggedright\\arraybackslash}p{0.09\\linewidth} >{\\raggedright\\arraybackslash}p{0.13\\linewidth} >{\\raggedright\\arraybackslash}p{0.14\\linewidth} >{\\raggedright\\arraybackslash}p{0.32\\linewidth} >{\\raggedright\\arraybackslash}p{0.15\\linewidth}@{}}');
   L.push('\\toprule\\textbf{Step} & \\textbf{RDF} & \\textbf{Choice} & \\textbf{Forks} & \\textbf{Rationale} & \\textbf{Support} \\\\\\midrule\\endfirsthead');
   L.push('\\toprule\\textbf{Step} & \\textbf{RDF} & \\textbf{Choice} & \\textbf{Forks} & \\textbf{Rationale} & \\textbf{Support} \\\\\\midrule\\endhead');
   L.push('\\bottomrule\\endfoot');

@@ -569,7 +569,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
       const t7 = (themes_k.k7||[])[i] || '';
       const t5 = (themes_k.k5||[])[i] || '';
       const t9 = (themes_k.k9||[])[i] || '';
-      L.push(esc(t7) + ' & ' + esc(t5) + ' & ' + esc(t9) + ' & \\\\');
+      L.push(themeCell(t7) + ' & ' + themeCell(t5) + ' & ' + themeCell(t9) + ' & {} \\\\');
     }
     L.push('\\bottomrule\\end{tabularx}\\end{footnotesize}\\end{singlespacing}');
     L.push('');

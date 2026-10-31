@@ -4,6 +4,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     texlive-fonts-recommended \
     texlive-latex-recommended \
     texlive-fonts-extra \
+    texlive-bibtex-extra \
+    texlive-publishers \
+    biber \
     lmodern \
  && rm -rf /var/lib/apt/lists/*
 COPY runner-server.py /app/asp-feature/runner-server.py

@@ -461,9 +461,9 @@ async function step32({ filePath, pools, allRdfs, runId }) {
 
   // Front matter (paper)
   if (abstractText) { L.push('\\section*{Abstract}'); L.push(esc(abstractText)); L.push(''); }
-  if (paperRQ)      { L.push('\\section*{Research Question}'); L.push(esc(paperRQ)); L.push(''); }
-  if (paperLit)     { L.push('\\section*{Literature}'); L.push(esc(paperLit)); L.push(''); }
-  if (paperMethods) { L.push('\\section*{Methods}'); L.push(esc(paperMethods)); L.push(''); }
+  if (paperRQ)      { L.push('\\section*{Research Question}'); L.push(paperRQ); L.push(''); }
+  if (paperLit)     { L.push('\\section*{Literature}'); L.push(paperLit); L.push(''); }
+  if (paperMethods) { L.push('\\section*{Methods}'); L.push(paperMethods); L.push(''); }
 
   // Findings
   if (dims.length) {
@@ -483,7 +483,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
         if (hit) para = hit.text;
       }
       L.push('\\subsection*{' + esc(dimName) + '}');
-      if (para) L.push(esc(para));
+      if (para) L.push(para);
       else if (dim.mechanism) L.push(esc(String(dim.mechanism)));
       if (dim.tension) L.push('\\noindent\\textit{Tension.} ' + esc(String(dim.tension)) + '\\\\');
       L.push('');
@@ -568,7 +568,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     L.push('');
   }
 
-  if (paperDiscussion) { L.push('\\section*{Discussion}'); L.push(esc(paperDiscussion)); L.push(''); }
+  if (paperDiscussion) { L.push('\\section*{Discussion}'); L.push(paperDiscussion); L.push(''); }
 
   // References (APA-7)
   function __parseName(name) {

@@ -588,9 +588,9 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     const list = (Array.isArray(arr) ? arr : [String(arr||'')]).map(__formatAuthor).filter(Boolean);
     if (!list.length) return '';
     if (list.length === 1) return list[0];
-    if (list.length === 2) return list[0] + ', \\\\& ' + list[1];
+    if (list.length === 2) return list[0] + ', \\& ' + list[1];
     const last = list.pop();
-    return list.join(', ') + ', \\\\& ' + last;
+    return list.join(', ') + ', \\& ' + last;
   }
   function lastAuthor(rec) { const a = Array.isArray(rec.authors) ? rec.authors : (rec.authors ? [String(rec.authors)] : ['Anon']); const parts = String(a[0]).trim().split(/[\\s,]+/).filter(Boolean); return parts[parts.length-1] || 'Anon'; }
   function citeLabel(rec) {
@@ -765,7 +765,8 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   L.push('\\end{tiny}\\end{singlespacing}');
 
   L.push('\\end{document}');
-  const tex = L.join('\n');
+  let __rawTex = L.join('\n');
+  const tex = __rawTex.replace(/\[object Object\]/g, '').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
   return { output: {
     status: 'PACKAGED',
     aqrp_report_tex: tex,

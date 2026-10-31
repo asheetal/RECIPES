@@ -1,7 +1,6 @@
-\documentclass[man,12pt,biblatex]{apa7}
+\documentclass[man,12pt,natbib]{apa7}
 \usepackage[american]{babel}
 \usepackage{csquotes}
-\addbibresource{aqrp_report.bib}
 
 \title{\input{aqrp_report_title}}
 \shorttitle{QUALITATIVE STUDY}
@@ -12,6 +11,7 @@
 \begin{document}
 \maketitle
 \input{aqrp_report_body}
-\printbibliography
+\bibliographystyle{apacite}
+\bibliography{aqrp_report}
 \input{aqrp_appendices}
 \end{document}

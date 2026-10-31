@@ -599,7 +599,11 @@ const L = [];
   let nodeList = [], edgeList = [];
   if (Array.isArray(dparams.nodes) && dparams.nodes.length) {
     const labels = Array.isArray(dparams.labels) ? dparams.labels : [];
-    nodeList = dparams.nodes.map((id, i) => ({ id: sanitize(id), label: String(labels[i] || id) }));
+    nodeList = dparams.nodes.map((id, i) => {
+      const raw = String(labels[i] || id);
+      const display = raw.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^\s+|\s+$/g, '');
+      return { id: sanitize(id), label: display };
+    });
     const idMap = {}; dparams.nodes.forEach((id, i) => { idMap[String(id)] = sanitize(id); });
     if (Array.isArray(dparams.paths)) for (const pth of dparams.paths) {
       const mm = String(pth).match(/^(.+?)\\s*(?:->|\\u2192|:)\\s*(.+?)$/);
@@ -673,7 +677,7 @@ const L = [];
     const a = Array.isArray(rec.authors) ? rec.authors : [String(rec.authors || 'Anon')];
     const y = rec.year || 'n.d.';
     if (a.length === 1) return lastAuthor(rec) + '(' + y + ')';
-    if (a.length === 2) { const p2 = String(a[1]).trim().split(/[\\s,]+/).filter(Boolean); return lastAuthor(rec) + ' \\\\& ' + (p2[p2.length-1]||'Anon') + '(' + y + ')'; }
+    if (a.length === 2) { const p2 = String(a[1]).trim().split(/[\\s,]+/).filter(Boolean); return lastAuthor(rec) + ' \\& ' + (p2[p2.length-1]||'Anon') + '(' + y + ')'; }
     return lastAuthor(rec) + ' et~al.(' + y + ')';
   }
   const __METHODOLOGY = {
@@ -815,7 +819,7 @@ const L = [];
       const y = r.year || 'n.d.';
       const sn = lastAuthor(r);
       if (a.length === 1) return sn + ' (' + y + ')';
-      if (a.length === 2) { const p2 = String(a[1]).trim().split(/[\\s,]+/).filter(Boolean); return sn + ' \\\\& ' + (p2[p2.length-1]||'Anon') + ' (' + y + ')'; }
+      if (a.length === 2) { const p2 = String(a[1]).trim().split(/[\\s,]+/).filter(Boolean); return sn + '  & ' + (p2[p2.length-1]||'Anon') + ' (' + y + ')'; }
       return sn + ' et~al. (' + y + ')';
     }).join('; ');
   }

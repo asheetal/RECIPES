@@ -662,10 +662,23 @@ const L = [];
     return { surname: parts[parts.length - 1] || '', given: parts.slice(0, -1) };
   }
   function __formatAuthor(name) {
-    const { surname, given } = __parseName(name);
-    if (!surname) return '';
-    const initials = given.map(g => { const c = String(g).replace(/\\./g,'')[0]; return c ? c.toUpperCase() + '.' : ''; }).filter(Boolean).join(' ');
-    return initials ? esc(surname) + ', ' + esc(initials) : esc(surname);
+    // Self-contained: handles "Surname, Given" and "Given Surname" forms.
+    const s = String(name || "").trim();
+    if (!s) return "";
+    let surname, given;
+    if (s.includes(",")) {
+      const parts = s.split(",");
+      surname = parts[0].trim();
+      given = parts.slice(1).join(" ").trim().split(/\s+/).filter(Boolean);
+    } else {
+      const parts = s.split(/\s+/).filter(Boolean);
+      if (!parts.length) return "";
+      if (parts.length === 1) { surname = parts[0]; given = []; }
+      else { surname = parts[parts.length - 1]; given = parts.slice(0, -1); }
+    }
+    if (!surname) return "";
+    const initials = given.map(g => { const c = String(g).replace(/\./g, "")[0]; return c ? c.toUpperCase() + "." : ""; }).filter(Boolean).join(" ");
+    return initials ? esc(surname) + ", " + esc(initials) : esc(surname);
   }
   function __formatAuthors(arr) {
     // Normalize: if arr is a single string with comma-separated authors, split
@@ -747,7 +760,7 @@ const L = [];
     for (const x of cs) { const t = String(x).toLowerCase().trim(); if (!t || t === 'na') continue; __totalApps++; codeFreq[t] = (codeFreq[t] || 0) + 1; }
   }
   const codesSorted = Object.entries(codeFreq).sort((a,b) => b[1] - a[1]);
-  L.push('{\\fontsize{7pt}{8.4pt}\\selectfont}\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.32\\textwidth} >{\\raggedright\\arraybackslash}p{0.14\\textwidth} >{\\raggedright\\arraybackslash}X@{}}');
+  L.push('{\\fontsize{7pt}{8.4pt}\\selectfont\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.32\\textwidth} >{\\raggedright\\arraybackslash}p{0.14\\textwidth} >{\\raggedright\\arraybackslash}X@{}}');
   L.push('\\toprule\\textbf{Metric} & \\textbf{Value} & \\textbf{Notes}\\\\\\midrule');
   L.push('Total code applications & ' + __totalApps + ' & across ' + N_REC + ' $\\times$ ' + M_CODERS + ' = ' + (N_REC*M_CODERS) + ' cells \\\\');
   L.push('Distinct codes used & ' + Object.keys(codeFreq).length + ' & first-order \\\\');
@@ -763,7 +776,7 @@ const L = [];
   // A.2 Codebook (FIXED: .code, .applies_when, .example)
   if (codebook.length) {
     L.push('\\subsection*{A.2 Codebook}');
-    L.push('{\\fontsize{7pt}{8.4pt}\\selectfont}\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.13\\textwidth} >{\\raggedright\\arraybackslash}p{0.28\\textwidth} >{\\raggedright\\arraybackslash}p{0.20\\textwidth} >{\\raggedright\\arraybackslash}X@{}}');
+    L.push('{\\fontsize{7pt}{8.4pt}\\selectfont\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.13\\textwidth} >{\\raggedright\\arraybackslash}p{0.28\\textwidth} >{\\raggedright\\arraybackslash}p{0.20\\textwidth} >{\\raggedright\\arraybackslash}X@{}}');
     L.push('\\toprule\\textbf{Code} & \\textbf{Definition} & \\textbf{Applies when} & \\textbf{Example from corpus}\\\\\\midrule');
     for (const cb of codebook) {
       const code = cb.code || cb.name || cb.label || '?';
@@ -790,7 +803,7 @@ const L = [];
   // A.4 Novelty Assessment (from R21, never rendered before)
   if (noveltyMap.length) {
     L.push('\\subsection*{A.4 Novelty Assessment (R21)}');
-    L.push('{\\fontsize{7pt}{8.4pt}\\selectfont}\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.28\\textwidth} >{\\raggedright\\arraybackslash}p{0.12\\textwidth} >{\\raggedright\\arraybackslash}X@{}}');
+    L.push('{\\fontsize{7pt}{8.4pt}\\selectfont\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.28\\textwidth} >{\\raggedright\\arraybackslash}p{0.12\\textwidth} >{\\raggedright\\arraybackslash}X@{}}');
     L.push('\\toprule\\textbf{Theme} & \\textbf{Action} & \\textbf{Rationale}\\\\\\midrule');
     for (const n of noveltyMap) L.push('{' + esc(n.theme || '') + '} & ' + esc(n.action || '') + ' & ' + esc(n.rationale || '') + ' \\\\');
     L.push('\\bottomrule\\end{tabularx}\\par}');

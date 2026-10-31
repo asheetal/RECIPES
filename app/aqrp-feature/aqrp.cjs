@@ -180,19 +180,35 @@ async function _ensureReportPdf(db, runDoc) {
   if (typeof s32.aqrp_report_pdf_b64 === 'string' && s32.aqrp_report_pdf_b64.length > 0) {
     return { b64: s32.aqrp_report_pdf_b64, source: 'cached' };
   }
-  if (typeof s32.aqrp_report_tex !== 'string' || s32.aqrp_report_tex.length === 0) return null;
+  let payload;
+  if (typeof s32.aqrp_report_body_tex === 'string' && s32.aqrp_report_body_tex.length > 0) {
+    const fs = require('fs');
+    let shell = '';
+    try { shell = fs.readFileSync('/app/aqrp-feature/latex/aqrp_report.tex', 'utf8'); } catch (e) {}
+    if (!shell) { console.error('[pdf] shell read failed'); return null; }
+    const files = {
+      'aqrp_report.tex': shell,
+      'aqrp_report_title.tex': String(s32.aqrp_report_title || 'Untitled'),
+      'aqrp_report_abstract.tex': String(s32.aqrp_report_abstract || 'No abstract.'),
+      'aqrp_report_body.tex': String(s32.aqrp_report_body_tex),
+      'aqrp_appendices.tex': String(s32.aqrp_appendices_tex || ''),
+      'aqrp_report.bib': String(s32.aqrp_report_bib || '')
+    };
+    payload = JSON.stringify({ files, main: 'aqrp_report.tex', bib_backend: 'bibtex', run_id: runDoc.runId || '' });
+  } else if (typeof s32.aqrp_report_tex === 'string' && s32.aqrp_report_tex.length > 0) {
+    payload = JSON.stringify({ tex: s32.aqrp_report_tex, run_id: runDoc.runId || '' });
+  } else {
+    return null;
+  }
   const http = require('http');
-  const payload = JSON.stringify({ tex: s32.aqrp_report_tex, run_id: runDoc.runId || '' });
   try {
     const compiled = await new Promise((resolve, reject) => {
       const req = http.request({
         hostname: 'asp-runner', port: 8091, path: '/compile-tex', method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) },
-        timeout: 120000
+        timeout: 300000
       }, res => {
-        let b = '';
-        res.on('data', c => b += c);
-        res.on('end', () => { try { resolve(JSON.parse(b)); } catch (e) { reject(new Error('bad json')); } });
+        let b = ''; res.on('data', c => b += c); res.on('end', () => { try { resolve(JSON.parse(b)); } catch (err) { reject(new Error('bad json')); } });
       });
       req.on('error', reject);
       req.on('timeout', () => { req.destroy(new Error('compile timeout')); });
@@ -202,16 +218,13 @@ async function _ensureReportPdf(db, runDoc) {
       console.error('[pdf] compile failed: ' + (compiled && compiled.error ? compiled.error : 'unknown'));
       return null;
     }
-    await db.collection('aqrpruns').updateOne(
-      { _id: runDoc._id },
-      { $set: {
-          'steps.32.output.aqrp_report_pdf_b64': compiled.pdf_b64,
-          'steps.32.output.aqrp_report_pdf_source': 'lazy-compile-' + new Date().toISOString()
-      } }
-    );
+    await db.collection('aqrpruns').updateOne({ _id: runDoc._id }, { $set: {
+      'steps.32.output.aqrp_report_pdf_b64': compiled.pdf_b64,
+      'steps.32.output.aqrp_report_pdf_source': 'compile-' + new Date().toISOString()
+    }});
     return { b64: compiled.pdf_b64, source: 'compiled', bytes: compiled.bytes };
-  } catch (e) {
-    console.error('[pdf] compile threw: ' + (e && e.message ? e.message : e));
+  } catch (err) {
+    console.error('[pdf] compile threw: ' + (err && err.message ? err.message : err));
     return null;
   }
 }

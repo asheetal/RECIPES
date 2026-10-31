@@ -495,51 +495,36 @@ async function step32({ filePath, pools, allRdfs, runId }) {
 
     return out;
   }
-const L = [];
-  L.push('\\documentclass[man,12pt]{apa7}');
-        L.push('\\usepackage{helvet}');
-  L.push('\\renewcommand{\\familydefault}{\\sfdefault}');
-  L.push('\\usepackage[american]{babel}');
-  L.push('\\usepackage{csquotes}');
-  L.push('\\usepackage{setspace}');
-  L.push('\\usepackage{longtable}');
-  L.push('\\usepackage{tabularx}');
-  L.push('\\usepackage{array}');
-  L.push('\\usepackage{booktabs}');
-  L.push('\\usepackage{hyperref}');
-  L.push('\\usepackage{ragged2e}');
-  L.push('\\usepackage{natbib}');
-  L.push('\\usepackage{tikz}');
-  L.push('\\usepackage{graphicx}');
-  L.push('\\usetikzlibrary{arrows.meta, positioning, shapes.geometric}');
-  const __apaKw = [];
-  for (const d of dims) if (d.name) __apaKw.push(String(d.name).toLowerCase());
-  for (const cb of codebook) { const c = String(cb.code || cb.name || '').toLowerCase(); if (c && __apaKw.indexOf(c) === -1) __apaKw.push(c); }
-  const displayTitle = paperTitle || 'Qualitative Analysis of AI Futures';
-  L.push('\\title{' + esc(displayTitle) + '}');
-  L.push('\\shorttitle{Qualitative Analysis}');
-  L.push('\\author{Sheetal, A.}');
-  L.push('\\affiliation{}');
-  if (abstractText) L.push('\\abstract{' + abstractText + '}');
-  else L.push('\\abstract{This report presents a qualitative analysis of ten expert AI-2040 foresight statements. See Findings for substantive results and Appendix C for the complete RDF ledger.}');
-  if (__apaKw.length) L.push('\\keywords{' + __apaKw.slice(0,6).map(esc).join(', ') + '}');
-
-  L.push('\\begin{document}');
-  L.push('\\fontsize{11pt}{13.2pt}\\selectfont');
-  L.push('\\begin{center}{\\Large\\bfseries ' + esc(displayTitle) + '}\\end{center}');
-  L.push('\\begin{center}\\today\\end{center}');
-  
-
-  // Title
-
-  if (!hasPaper) {
-    L.push('\\vspace{0.4em}');
-    L.push('\\begin{center}\\fbox{\\parbox{0.92\\textwidth}{\\small\\textit{Note:}} \\parbox{0.88\\textwidth}{\\small The surgeon\\textquotesingle s paper body is not present for this run (prior re-packages overwrote it). This PDF presents the full analytical apparatus, Findings from state, Model, and complete RDF audit. Run a fresh AQRP to regenerate the paper layer: Abstract, Research Question, Literature, Methods, and full Discussion.}}\\end{center}');
-    L.push('');
+  function citeKey(doi) {
+    const s = String(doi || '');
+    if (/^[^,{}%#&~"'\s]+$/.test(s)) return s;
+    return 'ref_' + require('crypto').createHash('sha1').update(s).digest('hex').slice(0, 12);
   }
+  function escapeBibValue(s) {
+    return String(s || '').replace(/[%&]/g, m => '\\' + m);
+  }
+  function buildBib(dois) {
+    const seen = new Set(); const out = [];
+    for (const doi of dois) {
+      const key = citeKey(doi);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const rec = (typeof doiToRec !== 'undefined' && doiToRec && doiToRec[doi]) || (typeof __METHODOLOGY !== 'undefined' && __METHODOLOGY && __METHODOLOGY[doi]) || null;
+      if (!rec) continue;
+      const a = Array.isArray(rec.authors) ? rec.authors.join(' and ') : String(rec.authors || '');
+      out.push('@article{' + key + ',\n  author = {' + escapeBibValue(a) + '},\n  year = {' + (rec.year || '') + '},\n  title = {' + escapeBibValue(rec.title || '') + '},\n  journal = {' + escapeBibValue(rec.journal || '') + '},\n  doi = {' + escapeBibValue(doi) + '}\n}');
+    }
+    return out.join('\n\n') + (out.length ? '\n' : '');
+  }
+  function fixCiteKeys(tex) {
+    return String(tex || '').replace(/\\(cite[pt]?|autocite|parencite|textcite)\{([^}]+)\}/g, (m, cmd, keys) => {
+      return '\\' + cmd + '{' + keys.split(',').map(k => citeKey(k.trim())).join(',') + '}';
+    });
+  }
+  const L = [];
+  const displayTitle = paperTitle || 'Qualitative Analysis of AI Futures';
 
   // Front matter (paper)
-  if (abstractText) { L.push('\\section*{Abstract}'); L.push(esc(abstractText)); L.push(''); }
   if (paperRQ)      { L.push('\\section*{Research Question}'); L.push(fillMissingCites(paperRQ)); L.push(''); }
   if (paperLit)     { L.push('\\section*{Literature}'); L.push(fillMissingCites(paperLit)); L.push(''); }
   if (paperMethods) { L.push('\\section*{Methods}'); L.push(fillMissingCites(paperMethods)); L.push(''); }
@@ -703,14 +688,6 @@ const L = [];
     const last = list.pop();
     return list.join(', ') + ', \\& ' + last;
   }
-  function lastAuthor(rec) { const a = Array.isArray(rec.authors) ? rec.authors : (rec.authors ? [String(rec.authors)] : ['Anon']); const parts = String(a[0]).trim().split(/[\\s,]+/).filter(Boolean); return parts[parts.length-1] || 'Anon'; }
-  function citeLabel(rec) {
-    const a = Array.isArray(rec.authors) ? rec.authors : [String(rec.authors || 'Anon')];
-    const y = rec.year || 'n.d.';
-    if (a.length === 1) return lastAuthor(rec) + '(' + y + ')';
-    if (a.length === 2) { const p2 = String(a[1]).trim().split(/[\\s,]+/).filter(Boolean); return lastAuthor(rec) + ' \\& ' + (p2[p2.length-1]||'Anon') + '(' + y + ')'; }
-    return lastAuthor(rec) + ' et~al.(' + y + ')';
-  }
   const __METHODOLOGY = {
     "10.1177/1094428112452151": { authors: ["Gioia, D. A.","Corley, K. G.","Hamilton, A. L."], year: 2013, title: "Seeking qualitative rigor in inductive research: Notes on the Gioia methodology", journal: "Organizational Research Methods" },
     "10.1191/1478088706qp063oa": { authors: ["Braun, V.","Clarke, V."], year: 2006, title: "Using thematic analysis in psychology", journal: "Qualitative Research in Psychology" },
@@ -718,33 +695,9 @@ const L = [];
     "10.1177/1049732315617444": { authors: ["Malterud, K.","Siersma, V. D.","Guassora, A. D."], year: 2016, title: "Sample size in qualitative interview studies: Guided by information power", journal: "Qualitative Health Research" },
     "10.4135/9781452230153": { authors: ["Strauss, A.","Corbin, J."], year: 1998, title: "Basics of qualitative research: Techniques and procedures for developing grounded theory", journal: "Sage" }
   };
-  function __lookupMethodology(doi) { return __METHODOLOGY[String(doi)] || null; }
-  const rdfDOIs = new Set();
-  for (const r of all) for (const d of (r.citations_used || [])) rdfDOIs.add(String(d));
-  const __allDOIs = [...new Set([...rdfDOIs, ...poolDOIs])];
-  const refDOIs = __allDOIs.sort((a, b) => {
-    const ra = doiToRec[a], rb = doiToRec[b];
-    const sa = ra ? lastAuthor(ra).toLowerCase() : a.toLowerCase();
-    const sb = rb ? lastAuthor(rb).toLowerCase() : b.toLowerCase();
-    if (sa !== sb) return sa < sb ? -1 : 1;
-    return ((ra && ra.year)||0) - ((rb && rb.year)||0);
-  });
-  const bibitems = refDOIs.map(d => {
-    let rec = doiToRec[d];
-    if (!rec) { const m = __lookupMethodology(d); if (m) rec = m; }
-    if (!rec) return '\\bibitem[DOI]{' + d + '} \\href{https://doi.org/' + d + '}{https://doi.org/' + d + '}';
-    const url = 'https://doi.org/' + d;
-    return '\\bibitem[' + citeLabel(rec) + ']{' + d + '} ' + __formatAuthors(rec.authors) + ' (' + (rec.year || 'n.d.') + '). ' + esc(rec.title || '').replace(/\\.$/,'') + '. \\textit{' + esc(rec.journal || '').replace(/\\.$/,'') + '.} \\href{' + url + '}{' + url + '}';
-  });
-  if (bibitems.length) {
-    L.push('\\clearpage');
-    L.push('\\begin{singlespacing}');
-    L.push('\\begin{thebibliography}{99}');
-    for (const b of bibitems) L.push(b);
-    L.push('\\end{thebibliography}');
-    L.push('\\end{singlespacing}');
-    L.push('');
-  }
+
+  const __bodyRaw = L.join('\n');
+  L.length = 0;
 
   // ── APPENDIX A: Supporting Data ──
   L.push('\\clearpage');
@@ -874,18 +827,26 @@ const L = [];
   L.push('\\end{longtable}');
   L.push('\\end{tiny}\\end{singlespacing}');
 
-  L.push('\\end{document}');
-  let __rawTex = L.join('\n');
-  const tex = __rawTex
-    .replace(/\[object Object\]/g, '')
-    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
-    .replace(/\\noindent\\textbf\{Coder narratives\.\}[\s\S]{0,80}?\\begin\{itemize\}[\s\S]{0,300}?\\end\{itemize\}/g, function(m){ return /\\item(?![a-z])/.test(m) ? m : ''; })
-    .replace(/\\begin\{itemize\}\s*\\end\{itemize\}/g, '');
+  const __bodyJoined = fixCiteKeys(__bodyRaw);
+  const __appendixJoined = fixCiteKeys(L.join('\n'));
+  const __citeDOIs = (function() {
+    const s = new Set();
+    if (typeof poolDOIs !== 'undefined') for (const d of poolDOIs) s.add(String(d));
+    const m = __bodyJoined.matchAll(/\\(?:cite[pt]?|autocite|parencite|textcite)\{([^}]+)\}/g);
+    for (const match of m) for (const k of match[1].split(',')) s.add(k.trim());
+    for (const r of all) for (const d of (r.citations_used || [])) s.add(String(d));
+    return [...s];
+  })();
+  const __bib = buildBib(__citeDOIs);
   return { output: {
     status: 'PACKAGED',
-    aqrp_report_tex: tex,
+    aqrp_report_title: displayTitle,
+    aqrp_report_abstract: abstractText || '',
+    aqrp_report_body_tex: __bodyJoined,
+    aqrp_appendices_tex: __appendixJoined,
+    aqrp_report_bib: __bib,
     aqrp_report_audit: { version: '1', runId: runId || null, assembled_at: new Date().toISOString(), rdf_count: all.length, records: all, has_paper_layer: hasPaper },
-    rdf_records: [r32],
+    rdf_records: all,
     submission_paper_tex: p.submission_paper_tex || ''
   }};
 }

@@ -511,7 +511,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   for (const [code, cnt] of codesSorted.slice(0, 12)) {
     const agree = cm.filter(r => (r.codes||[]).map(x=>String(x).toLowerCase()).includes(code)).length;
     const pct = N_REC > 0 ? Math.round((agree/N_REC)*100) : 0;
-    L.push(esc(code) + ' & ' + cnt + ' & ' + agree + '/' + N_REC + ' records (' + pct + '\\%) \\\\');
+    L.push('{' + esc(code) + '} & ' + cnt + ' & ' + agree + '/' + N_REC + ' records (' + pct + '\\%) \\\\');
   }
   const satIdx = (() => {
     const seen = new Set(); let last = 0;
@@ -548,6 +548,17 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   }
 
   // §5 Themes k=5/7/9
+  // Theme helper: extract string from possibly-object theme entries
+  const themeStr = (x) => {
+    if (x == null) return '';
+    if (typeof x === 'string') return x;
+    if (typeof x === 'number') return String(x);
+    if (typeof x === 'object') return x.name || x.label || x.theme || x.title || '';
+    return String(x);
+  };
+  // Cell wrapper: {content} prevents \\ from treating following [ as optional arg
+  const themeCell = (x) => '{' + esc(themeStr(x)) + '}';
+
   if (themes_k.k5 || themes_k.k7 || themes_k.k9) {
     L.push('\\section*{Themes at Three Granularities}');
     L.push('\\begin{singlespacing}\\begin{footnotesize}\\setlength{\\tabcolsep}{3pt}');

@@ -289,8 +289,8 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   const steps = await _fetchRunSteps(runId);
 
   const esc = (s) => String(s == null ? '' : s).replace(/[&%$#_{}]/g, c => '\\' + c);
-  const OPEN_Q = '\`\`';
-  const CLOSE_Q = '\u0027\u0027';
+  const OQ = '\u0060\u0060';
+  const CQ = '\u0027\u0027';
 
   // Pool DOI index
   const poolOrder = ['P01','P02','P03','P04','P05','P06','P07','P08','P09','P10','P11','P12','P13','P00'];
@@ -306,164 +306,130 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     }
   }
 
-  // Extract body, title, abstract from surgeon paper
-  let paper = p.submission_paper_tex || '';
-  const beginDoc = paper.indexOf('\\begin{document}');
-  const endDoc = paper.lastIndexOf('\\end{document}');
-  let body = (beginDoc >= 0 && endDoc > beginDoc)
-    ? paper.slice(beginDoc + '\\begin{document}'.length, endDoc)
-    : paper;
-
-  const titleMatch = paper.match(/\\title\{([\s\S]*?)\}/);
-  const surgeonTitle = titleMatch ? titleMatch[1].trim() : 'Qualitative Analysis of AI Futures';
-  const abstractMatch = body.match(/\\begin\{abstract\}([\s\S]*?)\\end\{abstract\}/);
-  let abstractText = abstractMatch ? abstractMatch[1].trim() : '';
-  body = body.replace(/\\begin\{abstract\}[\s\S]*?\\end\{abstract\}/g, '');
-  body = body.replace(/\\title\{[\s\S]*?\}/g, '').replace(/\\author\{[\s\S]*?\}/g, '')
-             .replace(/\\date\{[\s\S]*?\}/g, '').replace(/\\maketitle/g, '');
-  body = body.replace(/\\begin\{thebibliography\}[\s\S]*?\\end\{thebibliography\}/g, '');
-  body = body.replace(/\\bibliographystyle\{[^}]*\}/g, '').replace(/\\bibliography\{[^}]*\}/g, '');
-  body = body.replace(/^[ \t]*\bKeywords?\s*:\s*[^\n]+\n?/gim, '');
-  const __firstClear = body.indexOf('\\clearpage');
-  if (__firstClear >= 0) body = body.slice(0, __firstClear);
-  body = body.replace(/\\begin\{singlespacing\}[\s\S]*?\\end\{singlespacing\}/g, '');
-  body = body.replace(/\\resizebox\{[^}]*\}\{[^}]*\}\{[\s\S]*?\\end\{tikzpicture\}%?\s*\}/g, '');
-  body = body.replace(/\\begin\{tikzpicture\}[\s\S]*?\\end\{tikzpicture\}/g, '');
-  body = body.replace(/\\vspace\{[^}]*\}\s*\n?\\noindent\\textit\{Keywords:\}[^\n]*\n?/g, '');
-  body = body.replace(/\\noindent\\textit\{Keywords:\}[^\n]*\n?/g, '');
-  body = body.trim();
-
-  function extractSubsections(txt) {
-    const out = [];
-    const re = /\\subsection\*?\{([^}]+)\}([\s\S]*?)(?=\\subsection\*?\{|\\section\*?\{|$)/g;
-    let m;
-    while ((m = re.exec(txt)) !== null) out.push({ title: m[1].trim(), text: m[2].trim() });
-    return out;
-  }
-  const subsections = extractSubsections(body);
-  function extractSections(txt) {
-    const out = [];
-    const re = /\\section\*?\{([^}]+)\}([\s\S]*?)(?=\\section\*?\{|\\subsection\*?\{|$)/g;
-    let m;
-    while ((m = re.exec(txt)) !== null) out.push({ title: m[1].trim(), text: m[2].trim() });
-    return out;
-  }
-  const sections = extractSections(body);
-  const findSection = (pat) => { const s = sections.find(x => new RegExp(pat, 'i').test(x.title)); return s ? s.text : ''; };
-  const findingsSection = findSection('findings|results');
-  const methodsSection = findSection('methods|method');
-  const discussionSection = findSection('discussion|conclusion');
-
+  // Step data
+  const s1  = (steps['1']  && steps['1'].output)  || {};
   const s4  = (steps['4']  && steps['4'].output)  || {};
   const s15 = (steps['15'] && steps['15'].output) || {};
   const s16 = (steps['16'] && steps['16'].output) || {};
   const s19 = (steps['19'] && steps['19'].output) || {};
+  const s21 = (steps['21'] && steps['21'].output) || {};
   const s24 = (steps['24'] && steps['24'].output) || {};
   const s26 = (steps['26'] && steps['26'].output) || {};
+  const s28 = (steps['28'] && steps['28'].output) || {};
   const s30 = (steps['30'] && steps['30'].output) || {};
+
   const cm = (s4.code_matrix || []);
   let codebook = [];
   {
     const __cb = s15.codebook || {};
-    if (Array.isArray(__cb.codes)) codebook = __cb.codes;
-    else if (Array.isArray(__cb)) codebook = __cb;
-    else if (__cb && typeof __cb === 'object') {
-      const __vals = Object.values(__cb).filter(v => v && typeof v === 'object' && (v.name || v.label || v.definition));
-      if (__vals.length) codebook = __vals;
-    }
+    if (Array.isArray(__cb)) codebook = __cb;
+    else if (Array.isArray(__cb.codes)) codebook = __cb.codes;
+    else if (__cb && typeof __cb === 'object') codebook = Object.values(__cb).filter(v => v && typeof v === 'object' && (v.code || v.name || v.label || v.definition));
   }
   const themes_k = (s19.themes_k || {});
+  const noveltyMap = (s21.novelty_map || []);
   const dims = (s24.dimensions || []);
   const modelDraft = s26.model_draft || {};
+  const dparams = s28.diagram_script_params || {};
   const suff = s30.sufficiency || {};
 
   const N_REC = new Set(cm.map(r => String(r.record_id))).size;
-  const codersAll = [...new Set(cm.map(r => r.coder_id))];
-  const M_CODERS = codersAll.length;
-  const s1 = (steps['1'] && steps['1'].output) || {};
+  const M_CODERS = [...new Set(cm.map(r => r.coder_id))].length;
   const corpusName = s1.file_path || s1.fileName || 'corpus';
-  const recordIds = (s1.record_ids || []).map(String);
+  const fileId = s1.file_id || s1.fileId || '';
 
-  const codeFreq = {}; let __totalCodeApps = 0;
-  for (const row of cm) {
-    const c = row.codes; if (!Array.isArray(c)) continue;
-    for (const x of c) {
-      const t = String(x).toLowerCase().trim();
-      if (!t || t === 'na') continue;
-      __totalCodeApps++; codeFreq[t] = (codeFreq[t] || 0) + 1;
-    }
-  }
-  const codesSorted = Object.entries(codeFreq).sort((a,b) => b[1] - a[1]);
-  console.log('[analysis-report] cm=' + cm.length + ' apps=' + __totalCodeApps + ' codes=' + Object.keys(codeFreq).length);
-
-  const quoteMap = {};
-  for (const resp of ((s16.panel_result && s16.panel_result.responses) || [])) {
-    for (const row of (resp.rows || [])) {
-      const rid = String(row.record_id);
-      if (!quoteMap[rid]) quoteMap[rid] = { codes: new Set(), quotes: [] };
-      const cs = (row.codes || []).filter(c => String(c).toUpperCase() !== 'NA').map(c => String(c).toLowerCase());
-      for (const c of cs) quoteMap[rid].codes.add(c);
-      const q = String(row.quote || row.narrative || row.text || row.excerpt || '').trim();
-      if (q.length > 20 && q.length < 500) {
-        quoteMap[rid].quotes.push({ coder: resp.coder_id || '?', codes: cs, quote: q });
+  // Read corpus for verbatim quotes
+  function readCorpus() {
+    try {
+      const fs = require('fs');
+      const tryPaths = [
+        '/app/uploads/' + fileId,
+        '/app/uploads/' + fileId + '.json',
+        '/var/lib/librechat/uploads/' + fileId,
+        '/var/lib/librechat/uploads/' + fileId + '.json'
+      ];
+      for (const fp of tryPaths) {
+        try {
+          const st = fs.statSync(fp);
+          if (st.isFile() && st.size > 100) {
+            const data = JSON.parse(fs.readFileSync(fp, 'utf8'));
+            const arr = Array.isArray(data) ? data : (data.dataset || data.records || []);
+            if (Array.isArray(arr) && arr.length) return arr;
+          }
+        } catch (e) {}
       }
-    }
-  }
-
-  const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-  const normTokens = (s) => new Set(norm(s).split(/\s+/).filter(t => t.length > 3));
-
-  function codesForDimension(dim) {
-    const dt = normTokens(dim.name + ' ' + (dim.mechanism || '') + ' ' + (dim.description || ''));
-    const hits = [];
-    for (const cb of codebook) {
-      const ct = normTokens(cb.name || cb.label || '');
-      if (ct.size === 0) continue;
-      let overlap = 0;
-      for (const t of ct) if (dt.has(t)) overlap++;
-      if (overlap >= 1) hits.push(cb.name || cb.label || '');
-    }
-    return hits;
-  }
-  function recordsForDimension(dim, dimCodes) {
-    if (Array.isArray(dim.supporting_record_ids) && dim.supporting_record_ids.length > 0) {
-      return dim.supporting_record_ids.map(String);
-    }
-    const dimCodeSet = new Set(dimCodes.map(c => norm(c)));
-    const rids = new Set();
-    for (const [rid, v] of Object.entries(quoteMap)) {
-      for (const c of v.codes) {
-        for (const dc of dimCodeSet) {
-          if (norm(c).includes(dc) || dc.includes(norm(c))) { rids.add(rid); break; }
-        }
-      }
-    }
-    return [...rids];
-  }
-  function findingsForDimension(dim) {
-    const dn = norm(dim.name);
-    const hit = subsections.find(ss => {
-      const sn = norm(ss.title);
-      return sn.includes(dn) || dn.includes(sn) ||
-        sn.split(/\s+/).filter(w => w.length > 3).some(w => dn.includes(w)) ||
-        dn.split(/\s+/).filter(w => w.length > 3).some(w => sn.includes(w));
-    });
-    return hit ? hit.text : '';
-  }
-  function alternativeForDimension(dim) {
-    const rdfList = all.filter(r => r.rdf_id === 'R24' || r.rdf_id === 'R26');
-    const dTokens = normTokens(dim.name);
-    for (const r of rdfList) {
-      const rTokens = normTokens(r.chosen || '');
-      let overlap = 0;
-      for (const t of dTokens) if (rTokens.has(t)) overlap++;
-      if (overlap >= 1 && Array.isArray(r.options) && r.options.length > 1) {
-        return { chosen: r.chosen, alternatives: r.options.filter(o => o !== r.chosen), rdf_id: r.rdf_id };
-      }
-    }
+    } catch (e) {}
     return null;
   }
+  const corpus = readCorpus();
+  function quoteFor(recordId) {
+    if (!corpus) return null;
+    const idx = Number(recordId);
+    const rec = corpus[idx] || corpus.find(r => String(r.record_id) === String(recordId));
+    if (!rec) return null;
+    const text = rec.actual_said || rec.text || rec.content || '';
+    if (text.length < 40) return null;
+    if (text.length > 280) {
+      const cut = text.slice(0, 280);
+      const ls = cut.lastIndexOf(' ');
+      return cut.slice(0, ls) + '...';
+    }
+    return text;
+  }
+  function coderNarrativesFor(recordId) {
+    const out = [];
+    for (const resp of ((s16.panel_result && s16.panel_result.responses) || [])) {
+      for (const row of (resp.rows || [])) {
+        if (String(row.record_id) !== String(recordId)) continue;
+        const n = String(row.narrative || row.quote || '').trim();
+        if (n.length > 20 && n.length < 400) out.push({ coder: resp.coder_id || '?', narrative: n });
+      }
+    }
+    return out;
+  }
 
+  // Extract paper if present
+  let paper = p.submission_paper_tex || '';
+  const hasPaper = paper.length > 500 && paper.indexOf('\\begin{document}') >= 0;
+  let paperTitle = '', abstractText = '', paperRQ = '', paperLit = '', paperMethods = '', paperDiscussion = '';
+  const paperFindings = [];
+  if (hasPaper) {
+    const beginDoc = paper.indexOf('\\begin{document}');
+    const endDoc = paper.lastIndexOf('\\end{document}');
+    let body = paper.slice(beginDoc + 16, endDoc);
+    const titleMatch = paper.match(/\\title\{([\s\S]*?)\}/);
+    paperTitle = titleMatch ? titleMatch[1].trim() : '';
+    const abstractMatch = body.match(/\\begin\{abstract\}([\s\S]*?)\\end\{abstract\}/);
+    abstractText = abstractMatch ? abstractMatch[1].trim() : '';
+    body = body.replace(/\\begin\{abstract\}[\s\S]*?\\end\{abstract\}/g, '');
+    body = body.replace(/\\title\{[\s\S]*?\}/g, '').replace(/\\author\{[\s\S]*?\}/g, '')
+               .replace(/\\date\{[\s\S]*?\}/g, '').replace(/\\maketitle/g, '');
+    body = body.replace(/\\begin\{thebibliography\}[\s\S]*?\\end\{thebibliography\}/g, '');
+    body = body.replace(/\\bibliographystyle\{[^}]*\}/g, '').replace(/\\bibliography\{[^}]*\}/g, '');
+    body = body.replace(/^[ \t]*\bKeywords?\s*:\s*[^\n]+\n?/gim, '');
+    const __fc = body.indexOf('\\clearpage');
+    if (__fc >= 0) body = body.slice(0, __fc);
+    body = body.replace(/\\begin\{singlespacing\}[\s\S]*?\\end\{singlespacing\}/g, '');
+    body = body.replace(/\\resizebox\{[^}]*\}\{[^}]*\}\{[\s\S]*?\\end\{tikzpicture\}%?\s*\}/g, '');
+    body = body.replace(/\\begin\{tikzpicture\}[\s\S]*?\\end\{tikzpicture\}/g, '');
+    body = body.replace(/\\vspace\{[^}]*\}\s*\n?\\noindent\\textit\{Keywords:\}[^\n]*\n?/g, '');
+    body = body.replace(/\\noindent\\textit\{Keywords:\}[^\n]*\n?/g, '');
+    body = body.trim();
+    function getSection(txt, pat) {
+      const re = new RegExp('\\\\section\\*?\\{([^}]*' + pat + '[^}]*)\\}([\\s\\S]*?)(?=\\\\section|\\\\subsection|$)', 'i');
+      const m = txt.match(re);
+      return m ? m[2].trim() : '';
+    }
+    paperRQ = getSection(body, 'research question|introduction');
+    paperLit = getSection(body, 'literature|prior work');
+    paperMethods = getSection(body, 'method');
+    paperDiscussion = getSection(body, 'discussion|conclusion');
+    const reSub = /\\subsection\*?\{([^}]+)\}([\s\S]*?)(?=\\subsection|\\section|$)/g;
+    let mm;
+    while ((mm = reSub.exec(body)) !== null) paperFindings.push({ title: mm[1].trim(), text: mm[2].trim() });
+  }
+
+  // ── Build tex ──
   const L = [];
   L.push('\\documentclass[11pt]{article}');
   L.push('\\usepackage[margin=1in]{geometry}');
@@ -479,197 +445,89 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   L.push('\\usepackage{tikz}');
   L.push('\\usepackage{graphicx}');
   L.push('\\usetikzlibrary{arrows.meta, positioning, shapes.geometric}');
-  L.push('\\setlength{\\parindent}{0pt}');
-  L.push('\\setlength{\\parskip}{0.6em}');
   L.push('\\begin{document}');
 
-  L.push('\\begin{center}{\\Large\\bfseries ' + esc(surgeonTitle) + '}\\end{center}');
+  // Title
+  const displayTitle = paperTitle || 'Qualitative Analysis of AI Futures';
+  L.push('\\begin{center}{\\Large\\bfseries ' + esc(displayTitle) + '}\\end{center}');
   L.push('\\begin{center}\\today\\end{center}');
-  L.push('\\vspace{0.4em}');
 
-  // §1 Corpus
-  L.push('\\section*{Corpus}');
-  L.push('\\noindent\\textbf{Source:} \\texttt{' + esc(corpusName) + '} \\quad \\textbf{Records:} ' + N_REC + ' \\quad \\textbf{Coders:} ' + M_CODERS + '.');
-  L.push('');
-
-  // §2 Analytical approach
-  L.push('\\section*{Analytical Approach}');
-  const methodPara = methodsSection ? esc(methodsSection).slice(0, 1500) : 'Open coding was performed at the segment level; a codebook was constructed and adjudicated; themes were clustered at k=5, k=7, and k=9; novelty was assessed; negative cases were logged; and dimensions were aggregated.';
-  L.push(methodPara);
-  L.push('');
-  L.push('\\noindent\\textit{All RDFs (choices, counterfactual forks, rationales, and supporting pools) are listed in Appendix A. Every statistic in this report is computed from the step-level state, not from the analyst\\textquotesingle s prose.}');
-  L.push('');
-
-  // §3 Metrics
-  L.push('\\section*{Analytical Metrics}');
-  L.push('\\begin{singlespacing}\\begin{footnotesize}\\setlength{\\tabcolsep}{4pt}');
-  L.push('\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.30\\textwidth} >{\\raggedright\\arraybackslash}p{0.15\\textwidth} >{\\raggedright\\arraybackslash}X@{}}');
-  L.push('\\toprule\\textbf{Metric} & \\textbf{Value} & \\textbf{Notes}\\\\\\midrule');
-  L.push('Corpus & ' + N_REC + ' records; ' + M_CODERS + ' coders & --- \\\\');
-  L.push('Total code applications & ' + __totalCodeApps + ' & sum across ' + N_REC + '$\\times$' + M_CODERS + '=' + (N_REC*M_CODERS) + ' cells \\\\');
-  L.push('Distinct codes used & ' + Object.keys(codeFreq).length + ' & first-order \\\\');
-  for (const [code, cnt] of codesSorted.slice(0, 12)) {
-    const agree = cm.filter(r => (r.codes||[]).map(x=>String(x).toLowerCase()).includes(code)).length;
-    const pct = N_REC > 0 ? Math.round((agree/N_REC)*100) : 0;
-    L.push('{' + esc(code) + '} & ' + cnt + ' & ' + agree + '/' + N_REC + ' records (' + pct + '\\%) \\\\');
+  if (!hasPaper) {
+    L.push('\\vspace{0.4em}');
+    L.push('\\begin{center}\\fbox{\\parbox{0.92\\textwidth}{\\small\\textit{Note:}} \\parbox{0.88\\textwidth}{\\small The surgeon\\textquotesingle s paper body is not present for this run (prior re-packages overwrote it). This PDF presents the full analytical apparatus, Findings from state, Model, and complete RDF audit. Run a fresh AQRP to regenerate the paper layer: Abstract, Research Question, Literature, Methods, and full Discussion.}}\\end{center}');
+    L.push('');
   }
-  const satIdx = (() => {
-    const seen = new Set(); let last = 0;
-    const recs = [...new Set(cm.map(r=>String(r.record_id)))].sort((a,b)=>Number(a)-Number(b));
-    for (const rid of recs) {
-      let novel = false;
-      for (const row of cm) {
-        if (String(row.record_id) !== rid) continue;
-        for (const c of (row.codes||[])) {
-          const t = String(c).toLowerCase().trim();
-          if (t && t !== 'na' && !seen.has(t)) { seen.add(t); novel = true; }
-        }
+
+  // Front matter (paper)
+  if (abstractText) { L.push('\\section*{Abstract}'); L.push(esc(abstractText)); L.push(''); }
+  if (paperRQ)      { L.push('\\section*{Research Question}'); L.push(esc(paperRQ)); L.push(''); }
+  if (paperLit)     { L.push('\\section*{Literature}'); L.push(esc(paperLit)); L.push(''); }
+  if (paperMethods) { L.push('\\section*{Methods}'); L.push(esc(paperMethods)); L.push(''); }
+
+  // Findings
+  if (dims.length) {
+    L.push('\\section*{Findings}');
+    for (let dIdx = 0; dIdx < dims.length; dIdx++) {
+      const dim = dims[dIdx];
+      const dimName = String(dim.name || ('Dimension ' + (dIdx + 1)));
+      // Try match paper findings subsection by dim name
+      let para = '';
+      if (paperFindings.length) {
+        const dn = dimName.toLowerCase();
+        const first = dn.split(/\\s+/)[0] || '';
+        const hit = paperFindings.find(pf => {
+          const tn = pf.title.toLowerCase();
+          return tn.includes(first) || dn.includes(tn.split(/\\s+/)[0] || '');
+        });
+        if (hit) para = hit.text;
       }
-      if (novel) last = Number(rid) + 1;
-    }
-    return last;
-  })();
-  L.push('\\textit{Saturation} & \\multicolumn{2}{l}{novel codes stopped appearing after record ' + satIdx + ' of ' + N_REC + '} \\\\');
-  L.push('\\bottomrule\\end{tabularx}\\end{footnotesize}\\end{singlespacing}');
-  L.push('');
-
-  // §4 Codebook
-  if (codebook.length) {
-    L.push('\\section*{Codebook}');
-    L.push('\\begin{singlespacing}\\begin{footnotesize}\\setlength{\\tabcolsep}{3pt}');
-    L.push('\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.20\\textwidth} >{\\raggedright\\arraybackslash}p{0.28\\textwidth} >{\\raggedright\\arraybackslash}p{0.22\\textwidth} >{\\raggedright\\arraybackslash}X@{}}');
-    L.push('\\toprule\\textbf{Code} & \\textbf{Definition} & \\textbf{Inclusion} & \\textbf{Exclusion}\\\\\\midrule');
-    for (const cb of codebook) {
-      const name = cb.name || cb.label || '?';
-      L.push(esc(name) + ' & ' + esc(cb.definition || '') + ' & ' + esc(cb.inclusion || '') + ' & ' + esc(cb.exclusion || '') + ' \\\\');
-    }
-    L.push('\\bottomrule\\end{tabularx}\\end{footnotesize}\\end{singlespacing}');
-    L.push('');
-  }
-
-  // §5 Themes k=5/7/9
-  // Theme helper: extract string from possibly-object theme entries
-  const themeStr = (x) => {
-    if (x == null) return '';
-    if (typeof x === 'string') return x;
-    if (typeof x === 'number') return String(x);
-    if (typeof x === 'object') return x.name || x.label || x.theme || x.title || '';
-    return String(x);
-  };
-  // Cell wrapper: {content} prevents \\ from treating following [ as optional arg
-  const themeCell = (x) => '{' + esc(themeStr(x)) + '}';
-
-  if (themes_k.k5 || themes_k.k7 || themes_k.k9) {
-    L.push('\\section*{Themes at Three Granularities}');
-    L.push('\\begin{singlespacing}\\begin{footnotesize}\\setlength{\\tabcolsep}{3pt}');
-    L.push('\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.30\\textwidth} >{\\raggedright\\arraybackslash}p{0.20\\textwidth} >{\\raggedright\\arraybackslash}p{0.20\\textwidth} >{\\raggedright\\arraybackslash}X@{}}');
-    L.push('\\toprule\\textbf{Theme (k=7 primary)} & \\textbf{k=5} & \\textbf{k=9} & \\textbf{Note}\\\\\\midrule');
-    const maxLen = Math.max((themes_k.k5||[]).length, (themes_k.k7||[]).length, (themes_k.k9||[]).length);
-    for (let i = 0; i < maxLen; i++) {
-      const t7 = (themes_k.k7||[])[i] || '';
-      const t5 = (themes_k.k5||[])[i] || '';
-      const t9 = (themes_k.k9||[])[i] || '';
-      L.push(themeCell(t7) + ' & ' + themeCell(t5) + ' & ' + themeCell(t9) + ' & {} \\\\');
-    }
-    L.push('\\bottomrule\\end{tabularx}\\end{footnotesize}\\end{singlespacing}');
-    L.push('');
-  }
-
-  // §6 Dimensions
-  L.push('\\clearpage');
-  L.push('\\section*{Dimensions}');
-  L.push('\\noindent\\textit{Each dimension below presents its statement, its conditions, its supporting quotations (with record and coder attribution), the records from which it draws, and one alternative reading taken from the step-24/26 RDF options.}');
-  L.push('');
-
-  const consumedQuoteKeys = new Set();
-
-  for (let dIdx = 0; dIdx < dims.length; dIdx++) {
-    const dim = dims[dIdx];
-    const dimCodes = codesForDimension(dim);
-    const recs = recordsForDimension(dim, dimCodes);
-    const findingsText = findingsForDimension(dim);
-    const alt = alternativeForDimension(dim);
-
-    L.push('\\subsection*{' + esc(dim.name || ('Dimension ' + (dIdx+1))) + '}');
-
-    if (findingsText) {
-      L.push('\\noindent\\textbf{Interpretive summary.} ' + esc(findingsText));
+      L.push('\\subsection*{' + esc(dimName) + '}');
+      if (para) L.push(esc(para));
+      else if (dim.mechanism) L.push(esc(String(dim.mechanism)));
+      if (dim.tension) L.push('\\noindent\\textit{Tension.} ' + esc(String(dim.tension)) + '\\\\');
+      L.push('');
+      // Verbatim quotes from corpus by supporting records
+      const recs = (dim.supporting_record_ids || []).map(String);
+      const evid = [];
+      for (const rid of recs.slice(0, 3)) {
+        const q = quoteFor(rid);
+        if (q) evid.push({ rid, quote: q });
+      }
+      if (evid.length) {
+        L.push('\\noindent\\textbf{Representative evidence.}');
+        L.push('\\begin{itemize}\\setlength{\\itemsep}{4pt}');
+        for (const { rid, quote } of evid) L.push('\\item ' + OQ + esc(quote) + CQ + ' \\textit{(record ' + esc(rid) + ')}');
+        L.push('\\end{itemize}');
+      } else if (recs.length) {
+        // Fall back to coder narratives
+        L.push('\\noindent\\textbf{Coder narratives.}');
+        L.push('\\begin{itemize}\\setlength{\\itemsep}{3pt}');
+        let added = 0;
+        for (const rid of recs.slice(0, 2)) {
+          for (const c of coderNarrativesFor(rid).slice(0, 1)) {
+            L.push('\\item ' + OQ + esc(c.narrative) + CQ + ' \\textit{(record ' + esc(rid) + ', ' + esc(c.coder) + ')}');
+            added++;
+            if (added >= 3) break;
+          }
+          if (added >= 3) break;
+        }
+        L.push('\\end{itemize}');
+      }
       L.push('');
     }
-    if (dim.mechanism) L.push('\\noindent\\textbf{Mechanism.} ' + esc(dim.mechanism) + '\\\\');
-    if (dim.tension) L.push('\\noindent\\textbf{Tension.} ' + esc(dim.tension) + '\\\\');
-    L.push('');
-
-    if (Array.isArray(dim.conditions_for) && dim.conditions_for.length) {
-      L.push('\\noindent\\textbf{Conditions for.}');
-      L.push('\\begin{itemize}\\setlength{\\itemsep}{0pt}\\setlength{\\parskip}{0pt}');
-      for (const c of dim.conditions_for) L.push('\\item ' + esc(c));
-      L.push('\\end{itemize}');
-    }
-    if (Array.isArray(dim.conditions_against) && dim.conditions_against.length) {
-      L.push('\\noindent\\textbf{Conditions against.}');
-      L.push('\\begin{itemize}\\setlength{\\itemsep}{0pt}\\setlength{\\parskip}{0pt}');
-      for (const c of dim.conditions_against) L.push('\\item ' + esc(c));
-      L.push('\\end{itemize}');
-    }
-
-    const dimQuotes = [];
-    for (const rid of recs) {
-      const v = quoteMap[rid];
-      if (!v) continue;
-      for (const q of v.quotes.slice(0, 2)) {
-        const key = rid + '|' + q.quote.slice(0, 40);
-        if (consumedQuoteKeys.has(key)) continue;
-        // Record is explicitly in this dimension's supporting list — accept its quotes
-        consumedQuoteKeys.add(key);
-        dimQuotes.push({ rid, coder: q.coder, quote: q.quote, codes: q.codes });
-        if (dimQuotes.length >= 6) break;
-      }
-      if (dimQuotes.length >= 6) break;
-    }
-    if (dimQuotes.length) {
-      L.push('\\noindent\\textbf{Supporting quotations.}');
-      L.push('\\begin{itemize}\\setlength{\\itemsep}{2pt}');
-      for (const q of dimQuotes) {
-        const qLine = '\\item ' + OPEN_Q + esc(q.quote) + CLOSE_Q + ' \\textit{(record ' + esc(q.rid) + ', coder ' + esc(q.coder) + ', codes: ' + esc(q.codes.join(', ')) + ')}';
-        L.push(qLine);
-      }
-      L.push('\\end{itemize}');
-    }
-
-    if (recs.length) {
-      L.push('\\noindent\\textbf{Records contributing} (' + recs.length + '): ' + esc(recs.sort((a,b)=>Number(a)-Number(b)).join(', ')));
-    }
-
-    if (alt) {
-      const alts = alt.alternatives.map(a => OPEN_Q + esc(a) + CLOSE_Q).join('; ');
-      L.push('\\noindent\\textbf{Alternative reading (from RDF ' + esc(alt.rdf_id) + ').} Chosen: ' + OPEN_Q + esc(alt.chosen) + CLOSE_Q + '. Not chosen: ' + alts + '.');
-    }
-    L.push('');
   }
 
-  // §7 Model
-  const s28 = (steps['28'] && steps['28'].output) || {};
-  const dparams = s28.diagram_script_params || {};
+  // Model + Figure
   const sanitize = (s) => String(s || '').replace(/[^a-zA-Z0-9]/g, '') || 'x';
-
   let nodeList = [], edgeList = [];
   if (Array.isArray(dparams.nodes) && dparams.nodes.length) {
     const labels = Array.isArray(dparams.labels) ? dparams.labels : [];
     nodeList = dparams.nodes.map((id, i) => ({ id: sanitize(id), label: String(labels[i] || id) }));
     const idMap = {}; dparams.nodes.forEach((id, i) => { idMap[String(id)] = sanitize(id); });
     if (Array.isArray(dparams.paths)) for (const pth of dparams.paths) {
-      const mm = String(pth).match(/^(.+?)\s*(?:->|\u2192|:)\s*(.+?)$/);
+      const mm = String(pth).match(/^(.+?)\\s*(?:->|\\u2192|:)\\s*(.+?)$/);
       if (!mm) continue;
-      const findNode = (raw) => {
-        const lower = String(raw).toLowerCase();
-        let best = null, bestLen = 0;
-        for (const n of nodeList) {
-          const lblLower = String(n.label).toLowerCase();
-          if (lower.includes(lblLower) && lblLower.length > bestLen) { best = n; bestLen = lblLower.length; }
-        }
-        return best;
-      };
+      const findNode = (raw) => { const lower = String(raw).toLowerCase(); let best = null, bl = 0; for (const n of nodeList) { const ln = String(n.label).toLowerCase(); if (lower.includes(ln) && ln.length > bl) { best = n; bl = ln.length; } } return best; };
       const fn = findNode(mm[1]), tn = findNode(mm[2]);
       if (fn && tn && fn.id !== tn.id) edgeList.push({ from: fn.id, to: tn.id });
     }
@@ -680,126 +538,65 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   }
 
   if (nodeList.length >= 2) {
-    const tikzNodes = nodeList.map((n, i) => {
-      let lbl = n.label;
-      if (lbl.length > 28) { const parts = lbl.split(/\s+/); const mid = Math.ceil(parts.length/2); lbl = parts.slice(0,mid).join(' ') + '\\\\' + parts.slice(mid).join(' '); }
-      const spacing = 5;
-      return '  \\node[box] (' + n.id + ') at (' + (i * spacing - (nodeList.length - 1) * spacing / 2).toFixed(2) + ', 0) {' + lbl + '};';
-    }).join('\n');
-    const nodeIdSet = new Set(nodeList.map(n => n.id));
-    const tikzEdges = edgeList
-      .filter(e => e && e.from && e.to && e.from !== e.to && nodeIdSet.has(e.from) && nodeIdSet.has(e.to))
-      .map(e => '  \\draw[arr] (' + e.from + ') -- (' + e.to + ');')
-      .join('\n');
-    const tensionNote = modelDraft.tension ? '\\noindent\\textit{Note.} ' + esc(String(modelDraft.tension)) + '\\par\n' : '';
-
-    L.push('\\clearpage');
     L.push('\\section*{Model}');
-
     const r26 = all.find(r => r.rdf_id === 'R26');
-    const r26Just = r26 && r26.rationale ? esc(r26.rationale) : '';
-    L.push('\\noindent\\textbf{Justification.} ' + (r26Just || (modelDraft.tension ? esc(String(modelDraft.tension)) : 'The proposed structure is grounded in the aggregated dimensions.')));
-    L.push('');
-    if (Array.isArray(modelDraft.phases) && modelDraft.phases.length) {
-      L.push('\\noindent\\textbf{Phases:} ' + esc(modelDraft.phases.join(' \u2192 ')) + '.');
-    }
-    if (Array.isArray(modelDraft.arrows) && modelDraft.arrows.length) {
-      L.push('\\noindent\\textbf{Paths:}');
-      L.push('\\begin{itemize}\\setlength{\\itemsep}{0pt}');
-      for (const a of modelDraft.arrows) L.push('\\item ' + esc(a));
-      L.push('\\end{itemize}');
-    }
+    if (r26 && r26.rationale) L.push('\\noindent\\textbf{Justification.} ' + esc(r26.rationale) + '\\par\\vspace{0.4em}');
+    if (modelDraft.tension) L.push('\\noindent\\textbf{Central tension.} ' + esc(modelDraft.tension) + '\\par');
     L.push('');
     L.push('\\begin{center}\\textbf{Figure 1}\\\\[2pt]\\textit{Process Model}\\end{center}');
-    L.push('\\begin{center}');
-    L.push('\\resizebox{\\textwidth}{!}{%');
+    L.push('\\begin{center}\\resizebox{\\textwidth}{!}{%');
     L.push('\\begin{tikzpicture}[');
     L.push('  box/.style={draw, rounded corners=2pt, text width=4cm, minimum height=0.9cm, align=center, font=\\small, inner sep=4pt, anchor=center},');
     L.push('  arr/.style={->, >=stealth, thick}');
     L.push(']');
-    L.push(tikzNodes);
-    L.push(tikzEdges);
+    for (let i = 0; i < nodeList.length; i++) {
+      const n = nodeList[i];
+      let lbl = n.label;
+      if (lbl.length > 28) { const parts = lbl.split(/\\s+/); const mid = Math.ceil(parts.length/2); lbl = parts.slice(0,mid).join(' ') + '\\\\' + parts.slice(mid).join(' '); }
+      L.push('  \\node[box] (' + n.id + ') at (' + (i * 5 - (nodeList.length - 1) * 5 / 2).toFixed(2) + ', 0) {' + lbl + '};');
+    }
+    const nodeIdSet = new Set(nodeList.map(n => n.id));
+    for (const e of edgeList) {
+      if (!e || !e.from || !e.to || e.from === e.to) continue;
+      if (!nodeIdSet.has(e.from) || !nodeIdSet.has(e.to)) continue;
+      L.push('  \\draw[arr] (' + e.from + ') -- (' + e.to + ');');
+    }
     L.push('\\end{tikzpicture}%');
     L.push('}');
     L.push('\\end{center}');
-    L.push(tensionNote);
     L.push('');
   }
 
-  // §8 Full Evidence (residual)
-  const residual = [];
-  for (const [rid, v] of Object.entries(quoteMap)) {
-    for (const q of v.quotes) {
-      const key = rid + '|' + q.quote.slice(0, 40);
-      if (consumedQuoteKeys.has(key)) continue;
-      residual.push({ rid, coder: q.coder, codes: q.codes, quote: q.quote });
-    }
-  }
-  if (residual.length) {
-    L.push('\\clearpage');
-    L.push('\\section*{Full Evidence}');
-    L.push('\\noindent\\textit{All remaining quotations, grouped by their first coder-assigned code. Nothing in the corpus output is lost: quotations that did not match a dimension appear here with their source record and coder.}');
-    L.push('');
-    const byCode = {};
-    for (const q of residual) {
-      const c0 = (q.codes[0] || 'uncoded').toLowerCase();
-      (byCode[c0] = byCode[c0] || []).push(q);
-    }
-    for (const [code, items] of Object.entries(byCode).sort()) {
-      L.push('\\subsection*{Code: \\texttt{' + esc(code) + '} (' + items.length + ' quotation' + (items.length>1?'s':'') + ')}');
-      L.push('\\begin{itemize}\\setlength{\\itemsep}{2pt}');
-      for (const q of items.slice(0, 12)) {
-        const qLine = '\\item ' + OPEN_Q + esc(q.quote) + CLOSE_Q + ' \\textit{(record ' + esc(q.rid) + ', coder ' + esc(q.coder) + ')}';
-        L.push(qLine);
-      }
-      if (items.length > 12) L.push('\\item \\textit{... ' + (items.length - 12) + ' more in this code}');
-      L.push('\\end{itemize}');
-      L.push('');
-    }
-  }
+  if (paperDiscussion) { L.push('\\section*{Discussion}'); L.push(esc(paperDiscussion)); L.push(''); }
 
-  if (discussionSection) {
-    L.push('\\section*{Discussion}');
-    L.push(esc(discussionSection));
-    L.push('');
-  }
-
-  // References
-  const rdfDOIs = new Set();
-  for (const r of all) for (const d of (r.citations_used || [])) rdfDOIs.add(String(d));
-  const __allDOIs = [...new Set([...rdfDOIs, ...poolDOIs])];
-
+  // References (APA-7)
   function __parseName(name) {
     const s = String(name || '').trim();
     if (!s) return { surname: '', given: [] };
-    if (s.includes(',')) { const [last, ...rest] = s.split(','); return { surname: last.trim(), given: rest.join(' ').trim().split(/\s+/).filter(Boolean) }; }
-    const parts = s.split(/\s+/).filter(Boolean);
+    if (s.includes(',')) { const [last, ...rest] = s.split(','); return { surname: last.trim(), given: rest.join(' ').trim().split(/\\s+/).filter(Boolean) }; }
+    const parts = s.split(/\\s+/).filter(Boolean);
     return { surname: parts[parts.length - 1] || '', given: parts.slice(0, -1) };
   }
   function __formatAuthor(name) {
     const { surname, given } = __parseName(name);
     if (!surname) return '';
-    const initials = given.map(g => { const c = String(g).replace(/\./g,'')[0]; return c ? c.toUpperCase()+'.' : ''; }).filter(Boolean).join(' ');
+    const initials = given.map(g => { const c = String(g).replace(/\\./g,'')[0]; return c ? c.toUpperCase() + '.' : ''; }).filter(Boolean).join(' ');
     return initials ? esc(surname) + ', ' + esc(initials) : esc(surname);
   }
   function __formatAuthors(arr) {
     const list = (Array.isArray(arr) ? arr : [String(arr||'')]).map(__formatAuthor).filter(Boolean);
-    if (list.length === 0) return '';
+    if (!list.length) return '';
     if (list.length === 1) return list[0];
-    if (list.length === 2) return list[0] + ', \\& ' + list[1];
+    if (list.length === 2) return list[0] + ', \\\\& ' + list[1];
     const last = list.pop();
-    return list.join(', ') + ', \\& ' + last;
+    return list.join(', ') + ', \\\\& ' + last;
   }
-  function lastAuthor(rec) {
-    const a = Array.isArray(rec.authors) ? rec.authors : (rec.authors ? [String(rec.authors)] : ['Anon']);
-    const parts = String(a[0]).trim().split(/[\s,]+/).filter(Boolean);
-    return parts[parts.length-1] || 'Anon';
-  }
+  function lastAuthor(rec) { const a = Array.isArray(rec.authors) ? rec.authors : (rec.authors ? [String(rec.authors)] : ['Anon']); const parts = String(a[0]).trim().split(/[\\s,]+/).filter(Boolean); return parts[parts.length-1] || 'Anon'; }
   function citeLabel(rec) {
     const a = Array.isArray(rec.authors) ? rec.authors : [String(rec.authors || 'Anon')];
     const y = rec.year || 'n.d.';
     if (a.length === 1) return lastAuthor(rec) + '(' + y + ')';
-    if (a.length === 2) { const p2 = String(a[1]).trim().split(/[\s,]+/).filter(Boolean); return lastAuthor(rec) + ' \\& ' + (p2[p2.length-1]||'Anon') + '(' + y + ')'; }
+    if (a.length === 2) { const p2 = String(a[1]).trim().split(/[\\s,]+/).filter(Boolean); return lastAuthor(rec) + ' \\\\& ' + (p2[p2.length-1]||'Anon') + '(' + y + ')'; }
     return lastAuthor(rec) + ' et~al.(' + y + ')';
   }
   const __METHODOLOGY = {
@@ -810,7 +607,9 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     "10.4135/9781452230153": { authors: ["Strauss, A.","Corbin, J."], year: 1998, title: "Basics of qualitative research: Techniques and procedures for developing grounded theory", journal: "Sage" }
   };
   function __lookupMethodology(doi) { return __METHODOLOGY[String(doi)] || null; }
-
+  const rdfDOIs = new Set();
+  for (const r of all) for (const d of (r.citations_used || [])) rdfDOIs.add(String(d));
+  const __allDOIs = [...new Set([...rdfDOIs, ...poolDOIs])];
   const refDOIs = __allDOIs.sort((a, b) => {
     const ra = doiToRec[a], rb = doiToRec[b];
     const sa = ra ? lastAuthor(ra).toLowerCase() : a.toLowerCase();
@@ -818,17 +617,12 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     if (sa !== sb) return sa < sb ? -1 : 1;
     return ((ra && ra.year)||0) - ((rb && rb.year)||0);
   });
-
   const bibitems = refDOIs.map(d => {
     let rec = doiToRec[d];
     if (!rec) { const m = __lookupMethodology(d); if (m) rec = m; }
     if (!rec) return '\\bibitem[DOI]{' + d + '} \\href{https://doi.org/' + d + '}{https://doi.org/' + d + '}';
-    const authors = __formatAuthors(rec.authors);
-    const y = rec.year || 'n.d.';
-    const title = esc(rec.title || '').replace(/\.$/,'') + '.';
-    const journal = esc(rec.journal || '').replace(/\.$/,'') + '.';
     const url = 'https://doi.org/' + d;
-    return '\\bibitem[' + citeLabel(rec) + ']{' + d + '} ' + authors + ' (' + y + '). ' + title + ' \\textit{' + journal + '} \\href{' + url + '}{' + url + '}';
+    return '\\bibitem[' + citeLabel(rec) + ']{' + d + '} ' + __formatAuthors(rec.authors) + ' (' + (rec.year || 'n.d.') + '). ' + esc(rec.title || '').replace(/\\.$/,'') + '. \\textit{' + esc(rec.journal || '').replace(/\\.$/,'') + '.} \\href{' + url + '}{' + url + '}';
   });
   if (bibitems.length) {
     L.push('\\clearpage');
@@ -840,7 +634,104 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     L.push('');
   }
 
-  // Appendix A
+  // ── APPENDIX A: Supporting Data ──
+  L.push('\\clearpage');
+  L.push('\\section*{Appendix A: Supporting Data}');
+  L.push('\\noindent\\textit{This appendix holds the detailed apparatus a qualitative researcher would consult: metrics, codebook, thematic structure at three granularities, novelty assessment, all coder narratives, and the full RDF audit. A lay reader can skip directly to the RDF ledger at Appendix C.}');
+  L.push('');
+
+  // A.1 Analytical Metrics (FIXED: distinct record count)
+  L.push('\\subsection*{A.1 Analytical Metrics}');
+  const codeFreq = {}; let __totalApps = 0;
+  for (const row of cm) {
+    const cs = Array.isArray(row.codes) ? row.codes : [];
+    for (const x of cs) { const t = String(x).toLowerCase().trim(); if (!t || t === 'na') continue; __totalApps++; codeFreq[t] = (codeFreq[t] || 0) + 1; }
+  }
+  const codesSorted = Object.entries(codeFreq).sort((a,b) => b[1] - a[1]);
+  L.push('\\begin{footnotesize}\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.32\\textwidth} >{\\raggedright\\arraybackslash}p{0.14\\textwidth} >{\\raggedright\\arraybackslash}X@{}}');
+  L.push('\\toprule\\textbf{Metric} & \\textbf{Value} & \\textbf{Notes}\\\\\\midrule');
+  L.push('Corpus & ' + N_REC + ' records; ' + M_CODERS + ' coders & --- \\\\');
+  L.push('Total code applications & ' + __totalApps + ' & across ' + N_REC + ' $\\times$ ' + M_CODERS + ' = ' + (N_REC*M_CODERS) + ' cells \\\\');
+  L.push('Distinct codes used & ' + Object.keys(codeFreq).length + ' & first-order \\\\');
+  for (const [code, cnt] of codesSorted) {
+    const recsWithCode = new Set(cm.filter(r => (r.codes||[]).some(c => String(c).toLowerCase() === code)).map(r => String(r.record_id))).size;
+    const pct = N_REC > 0 ? Math.round((recsWithCode / N_REC) * 100) : 0;
+    L.push('{' + esc(code) + '} & ' + cnt + ' & ' + recsWithCode + '/' + N_REC + ' records (' + pct + '\\\\%) \\\\');
+  }
+  L.push('Saturation & \\multicolumn{2}{l}{novel codes stopped appearing after record ' + (suff.saturation_estimate && suff.saturation_estimate.record_index_at_which_novel_codes_stopped || '?') + ' of ' + N_REC + '} \\\\');
+  L.push('\\bottomrule\\end{tabularx}\\end{footnotesize}');
+  L.push('');
+
+  // A.2 Codebook (FIXED: .code, .applies_when, .example)
+  if (codebook.length) {
+    L.push('\\subsection*{A.2 Codebook}');
+    L.push('\\begin{footnotesize}\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.13\\textwidth} >{\\raggedright\\arraybackslash}p{0.28\\textwidth} >{\\raggedright\\arraybackslash}p{0.20\\textwidth} >{\\raggedright\\arraybackslash}X@{}}');
+    L.push('\\toprule\\textbf{Code} & \\textbf{Definition} & \\textbf{Applies when} & \\textbf{Example from corpus}\\\\\\midrule');
+    for (const cb of codebook) {
+      const code = cb.code || cb.name || cb.label || '?';
+      L.push('{' + esc(code) + '} & ' + esc(cb.definition || '') + ' & ' + esc(cb.applies_when || cb.inclusion || '') + ' & \\textit{' + esc(cb.example || cb.exclusion || '') + '} \\\\');
+    }
+    L.push('\\bottomrule\\end{tabularx}\\end{footnotesize}');
+    L.push('');
+  }
+
+  // A.3 Themes at three granularities (FIXED: 3 separate lists)
+  if (themes_k.k5 || themes_k.k7 || themes_k.k9) {
+    L.push('\\subsection*{A.3 Themes at Three Granularities}');
+    const themeName = (x) => { if (x == null) return ''; if (typeof x === 'string') return x; if (typeof x === 'object') return x.theme || x.name || x.label || ''; return String(x); };
+    for (const [k, arr] of [['k=5', themes_k.k5], ['k=7 (primary)', themes_k.k7], ['k=9', themes_k.k9]]) {
+      if (!Array.isArray(arr) || !arr.length) continue;
+      L.push('\\noindent\\textbf{' + k + ' solution (' + arr.length + ' themes):}');
+      L.push('\\begin{itemize}\\setlength{\\itemsep}{0pt}');
+      for (const t of arr) L.push('\\item ' + esc(themeName(t)));
+      L.push('\\end{itemize}');
+    }
+    L.push('');
+  }
+
+  // A.4 Novelty Assessment (from R21, never rendered before)
+  if (noveltyMap.length) {
+    L.push('\\subsection*{A.4 Novelty Assessment (R21)}');
+    L.push('\\begin{footnotesize}\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.28\\textwidth} >{\\raggedright\\arraybackslash}p{0.12\\textwidth} >{\\raggedright\\arraybackslash}X@{}}');
+    L.push('\\toprule\\textbf{Theme} & \\textbf{Action} & \\textbf{Rationale}\\\\\\midrule');
+    for (const n of noveltyMap) L.push('{' + esc(n.theme || '') + '} & ' + esc(n.action || '') + ' & ' + esc(n.rationale || '') + ' \\\\');
+    L.push('\\bottomrule\\end{tabularx}\\end{footnotesize}');
+    L.push('');
+  }
+
+  // ── APPENDIX B: Full Evidence (all coder narratives) ──
+  const allCoderNarr = [];
+  for (const resp of ((s16.panel_result && s16.panel_result.responses) || [])) {
+    for (const row of (resp.rows || [])) {
+      const n = String(row.narrative || row.quote || '').trim();
+      if (n.length > 20 && n.length < 500) {
+        const codes = (row.codes || []).filter(c => String(c).toUpperCase() !== 'NA');
+        allCoderNarr.push({ rid: String(row.record_id), coder: resp.coder_id, codes, narrative: n });
+      }
+    }
+  }
+  if (allCoderNarr.length) {
+    L.push('\\clearpage');
+    L.push('\\section*{Appendix B: Full Evidence}');
+    L.push('\\noindent\\textit{Every coder narrative produced across all records and coders, grouped by first-assigned code. This is the raw material a researcher would consult when building their own analysis from this dataset.}');
+    L.push('');
+    const byCode = {};
+    for (const c of allCoderNarr) {
+      const k0 = (c.codes[0] || 'uncoded').toLowerCase();
+      (byCode[k0] = byCode[k0] || []).push(c);
+    }
+    for (const [code, items] of Object.entries(byCode).sort()) {
+      L.push('\\subsection*{Code \\texttt{' + esc(code) + '} --- ' + items.length + ' narrative' + (items.length>1?'s':'') + '}');
+      L.push('\\begin{itemize}\\setlength{\\itemsep}{2pt}');
+      for (const c of items) {
+        L.push('\\item ' + OQ + esc(c.narrative) + CQ + ' \\textit{(record ' + esc(c.rid) + ', ' + esc(c.coder) + ')}');
+      }
+      L.push('\\end{itemize}');
+    }
+    L.push('');
+  }
+
+  // ── APPENDIX C: RDF Ledger ──
   function poolLabel(poolId) {
     const recs = poolByID[poolId] || [];
     return recs.slice(0, 2).map(r => {
@@ -848,12 +739,12 @@ async function step32({ filePath, pools, allRdfs, runId }) {
       const y = r.year || 'n.d.';
       const sn = lastAuthor(r);
       if (a.length === 1) return sn + ' (' + y + ')';
-      if (a.length === 2) { const p2 = String(a[1]).trim().split(/[\s,]+/).filter(Boolean); return sn + ' \\& ' + (p2[p2.length-1]||'Anon') + ' (' + y + ')'; }
+      if (a.length === 2) { const p2 = String(a[1]).trim().split(/[\\s,]+/).filter(Boolean); return sn + ' \\\\& ' + (p2[p2.length-1]||'Anon') + ' (' + y + ')'; }
       return sn + ' et~al. (' + y + ')';
     }).join('; ');
   }
   const ledgerRows = all.map(r => {
-    const num = (String(r.rdf_id || '').match(/\d+/) || [String(r.stage || '')])[0];
+    const num = (String(r.rdf_id || '').match(/\\d+/) || [String(r.stage || '')])[0];
     const forks = Array.isArray(r.options) ? r.options.filter(o => o !== r.chosen).map(esc).join('; ') : '';
     const poolId = r.pool_id || '';
     const support = esc(r.citation_status || '') + (poolId ? ' [' + poolId + '] ' + esc(poolLabel(poolId)) : '');
@@ -861,7 +752,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   }).join('\n');
 
   L.push('\\clearpage');
-  L.push('\\section*{Appendix A: Researcher Degrees of Freedom Ledger}');
+  L.push('\\section*{Appendix C: Researcher Degrees of Freedom Ledger}');
   L.push('\\noindent\\textit{Pool IDs (P00--P13) name the literature searches the pipeline performed. P01 = corpus scope; P02--P12 = step-specific searches; P13 = reporting conventions. P00 is reserved for methodology citations. The top two papers per pool appear inline in the Support column; full bibliography in References.}\\par\\vspace{0.6em}');
   L.push('\\begin{singlespacing}\\begin{tiny}\\setlength{\\tabcolsep}{1.5pt}');
   L.push('\\begin{longtable}{@{}>{\\raggedright\\arraybackslash}p{0.035\\linewidth} >{\\raggedright\\arraybackslash}p{0.055\\linewidth} >{\\raggedright\\arraybackslash}p{0.14\\linewidth} >{\\raggedright\\arraybackslash}p{0.16\\linewidth} >{\\raggedright\\arraybackslash}p{0.36\\linewidth} >{\\raggedright\\arraybackslash}p{0.15\\linewidth}@{}}');
@@ -873,12 +764,11 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   L.push('\\end{tiny}\\end{singlespacing}');
 
   L.push('\\end{document}');
-
-  const tex = L.join('\n');
+  const tex = L.join('\\n');
   return { output: {
     status: 'PACKAGED',
     aqrp_report_tex: tex,
-    aqrp_report_audit: { version: '1', runId: runId || null, assembled_at: new Date().toISOString(), rdf_count: all.length, records: all },
+    aqrp_report_audit: { version: '1', runId: runId || null, assembled_at: new Date().toISOString(), rdf_count: all.length, records: all, has_paper_layer: hasPaper },
     rdf_records: [r32]
   }};
 }

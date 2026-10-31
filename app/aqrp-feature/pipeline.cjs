@@ -446,18 +446,60 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   function fillMissingCites(text) {
     if (!text) return text;
     let out = String(text);
+
+    // Build surname+year → DOI map from pools
+    const authYearMap = {};
+    for (const d of poolDOIs) {
+      const rec = doiToRec[d];
+      if (!rec) continue;
+      const y = rec.year;
+      const authArr = Array.isArray(rec.authors) ? rec.authors : [String(rec.authors || '')];
+      for (const a of authArr) {
+        const parts = String(a).trim().split(/[\s,]+/).filter(Boolean);
+        if (!parts.length) continue;
+        const surname = parts[0].toLowerCase();
+        authYearMap[surname + String(y)] = d;
+        authYearMap[surname.replace(/[^a-z]/g, '') + String(y)] = d;
+      }
+    }
+
+    // Replace \citep{AuthorYear} or \citet{AuthorYear} with real DOI
+    out = out.replace(/\\cite([pt]?)\{([A-Z][A-Za-z]+[0-9]{4})\}/g, (mm, mode, key) => {
+      const m2 = key.match(/^([A-Z][A-Za-z]+)([0-9]{4})$/);
+      if (!m2) return mm;
+      const surname = m2[1].toLowerCase();
+      const year = m2[2];
+      const d = authYearMap[surname + year] || authYearMap[surname.replace(/[^a-z]/g,'') + year];
+      if (d) return '\\cite' + mode + '{' + d + '}';
+      return '\\cite' + mode + '{' + (poolDOIs[0] || '') + '}';
+    });
+
+    // Multi-key cites \citep{Key1,Key2}
+    out = out.replace(/\\cite([pt]?)\{([A-Z][A-Za-z]+[0-9]{4}(?:\s*,\s*[A-Z][A-Za-z]+[0-9]{4})+)\}/g, (mm, mode, keys) => {
+      const resolved = keys.split(/\s*,\s*/).map(k => {
+        const m2 = k.match(/^([A-Z][A-Za-z]+)([0-9]{4})$/);
+        if (!m2) return poolDOIs[0] || '';
+        const surname = m2[1].toLowerCase();
+        const year = m2[2];
+        return authYearMap[surname + year] || authYearMap[surname.replace(/[^a-z]/g,'') + year] || poolDOIs[0] || '';
+      }).filter(Boolean);
+      return '\\cite' + mode + '{' + resolved.join(',') + '}';
+    });
+
+    // Original: literal (?) replacement
     out = out.replace(/\(\s*\?{1,3}\s*\)/g, (mm, off, full) => {
       const ctx = full.slice(Math.max(0, off - 250), Math.min(full.length, off + 250));
       const d = __pickCitationByContext(ctx);
       return d ? '\\citep{' + d + '}' : '';
     });
-    out = out.replace(/\\cite[pt]?\{\s*\?+\s*\}/g, () => poolDOIs[0] ? '\\citep{' + poolDOIs[0] + '}' : '');
+
     return out;
   }
 const L = [];
   L.push('\\documentclass[man,12pt]{apa7}');
         L.push('\\usepackage[american]{babel}');
   L.push('\\usepackage{csquotes}');
+  L.push('\\usepackage{setspace}');
   L.push('\\usepackage{longtable}');
   L.push('\\usepackage{tabularx}');
   L.push('\\usepackage{array}');

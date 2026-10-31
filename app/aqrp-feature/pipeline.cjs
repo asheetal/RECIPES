@@ -471,6 +471,7 @@ const L = [];
   const __apaKw = [];
   for (const d of dims) if (d.name) __apaKw.push(String(d.name).toLowerCase());
   for (const cb of codebook) { const c = String(cb.code || cb.name || '').toLowerCase(); if (c && __apaKw.indexOf(c) === -1) __apaKw.push(c); }
+  const displayTitle = paperTitle || 'Qualitative Analysis of AI Futures';
   L.push('\\title{' + esc(displayTitle) + '}');
   L.push('\\shorttitle{Qualitative Analysis}');
   L.push('\\author{Sheetal, A.}');
@@ -483,7 +484,6 @@ const L = [];
   L.push('\\maketitle');
 
   // Title
-  const displayTitle = paperTitle || 'Qualitative Analysis of AI Futures';
   L.push('\\begin{center}{\\Large\\bfseries ' + esc(displayTitle) + '}\\end{center}');
   L.push('\\begin{center}\\today\\end{center}');
 

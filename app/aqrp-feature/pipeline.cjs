@@ -288,7 +288,8 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   const all = [...(allRdfs || []), r32];
   const steps = await _fetchRunSteps(runId);
 
-  const esc = (s) => String(s == null ? '' : s).replace(/[&%$#_{}]/g, c => '\\' + c);
+  const esc = (s) => { if (s == null) return ''; if (typeof s === 'object') { const inner = s.id || s.name || s.label || s.theme || s.code || ''; return String(inner).replace(/[&%$#_{}]/g, c => '\\' + c); } return String(s).replace(/[&%$#_{}]/g, c => '\\' + c); };
+  const safeId = (x) => { if (x == null) return ''; if (typeof x === 'string' || typeof x === 'number') return String(x); if (typeof x === 'object') return String(x.id || x.record_id || x.name || ''); return String(x); };
   const OQ = '\u0060\u0060';
   const CQ = '\u0027\u0027';
 
@@ -487,7 +488,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
       if (dim.tension) L.push('\\noindent\\textit{Tension.} ' + esc(String(dim.tension)) + '\\\\');
       L.push('');
       // Verbatim quotes from corpus by supporting records
-      const recs = (dim.supporting_record_ids || []).map(String);
+      const recs = (dim.supporting_record_ids || []).map(safeId);
       const evid = [];
       for (const rid of recs.slice(0, 3)) {
         const q = quoteFor(rid);
@@ -764,12 +765,13 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   L.push('\\end{tiny}\\end{singlespacing}');
 
   L.push('\\end{document}');
-  const tex = L.join('\\n');
+  const tex = L.join('\n');
   return { output: {
     status: 'PACKAGED',
     aqrp_report_tex: tex,
     aqrp_report_audit: { version: '1', runId: runId || null, assembled_at: new Date().toISOString(), rdf_count: all.length, records: all, has_paper_layer: hasPaper },
-    rdf_records: [r32]
+    rdf_records: [r32],
+    submission_paper_tex: p.submission_paper_tex || ''
   }};
 }
 

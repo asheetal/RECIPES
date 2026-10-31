@@ -464,7 +464,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     }
 
     // Replace \citep{AuthorYear} or \citet{AuthorYear} with real DOI
-    out = out.replace(/\\cite([pt]?)\{([A-Z][A-Za-z]+[0-9]{4})\}/g, (mm, mode, key) => {
+    out = out.replace(/\\cite([pt]?)\{([A-Za-z][A-Za-z]+[0-9]{4})\}/g, (mm, mode, key) => {
       const m2 = key.match(/^([A-Z][A-Za-z]+)([0-9]{4})$/);
       if (!m2) return mm;
       const surname = m2[1].toLowerCase();
@@ -475,7 +475,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     });
 
     // Multi-key cites \citep{Key1,Key2}
-    out = out.replace(/\\cite([pt]?)\{([A-Z][A-Za-z]+[0-9]{4}(?:\s*,\s*[A-Z][A-Za-z]+[0-9]{4})+)\}/g, (mm, mode, keys) => {
+    out = out.replace(/\\cite([pt]?)\{([A-Za-z][A-Za-z]+[0-9]{4}(?:\s*,\s*[A-Za-z][A-Za-z]+[0-9]{4})+)\}/g, (mm, mode, keys) => {
       const resolved = keys.split(/\s*,\s*/).map(k => {
         const m2 = k.match(/^([A-Z][A-Za-z]+)([0-9]{4})$/);
         if (!m2) return poolDOIs[0] || '';
@@ -845,7 +845,11 @@ const L = [];
 
   L.push('\\end{document}');
   let __rawTex = L.join('\n');
-  const tex = __rawTex.replace(/\[object Object\]/g, '').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+  const tex = __rawTex
+    .replace(/\[object Object\]/g, '')
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
+    .replace(/\\noindent\\textbf\{Coder narratives\.\}[\s\S]{0,80}?\\begin\{itemize\}[\s\S]{0,300}?\\end\{itemize\}/g, function(m){ return m.indexOf('\\item') >= 0 ? m : ''; })
+    .replace(/\\begin\{itemize\}\s*\\end\{itemize\}/g, '');
   return { output: {
     status: 'PACKAGED',
     aqrp_report_tex: tex,

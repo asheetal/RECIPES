@@ -55,6 +55,12 @@ function registerRoutes(router, projectFilesService) {
       const mongoose = require('mongoose');
       const db = mongoose.connection.db;
       const conversationId = new mongoose.Types.ObjectId().toString();
+      try {
+        const __st = await svc.getState(s);
+        if (__st && __st.runId) {
+          await db.collection('aqrpruns').updateOne({ runId: __st.runId }, { $set: { conversationId } });
+        }
+      } catch (e) { console.error('[AQRP] conversationId update: ' + (e && e.message ? e.message : e)); }
       const now = new Date();
       const recipe = require('/app/recipes/aqrp.cjs');
       await db.collection('conversations').insertOne({ conversationId, title: recipe.name, user: s.user, tenant: s.tenant, chatProjectId: s.projectId, recipeId: recipe.recipeId, recipeName: recipe.name, createdAt: now, updatedAt: now });
@@ -389,6 +395,25 @@ router.get('/:projectId/aqrp/bundle', async (req, res, next) => {
       const s = await svc.scope(req, req.params.projectId);
       const ctl = RUN_ABORTS.get(runKeyOf(s));
       if (ctl) { try { ctl.abort(); } catch (_) {} RUN_ABORTS.delete(runKeyOf(s)); }
+      try {
+        const mongoose = require('mongoose');
+        const fs = require('fs');
+        const db = mongoose.connection.db;
+        const cur = await db.collection('aqrpruns').findOne({ user: s.user, tenant: s.tenant, projectId: s.projectId });
+        if (cur) {
+          if (cur.traceId) {
+            const dir = '/app/admin-tools/prompt-dumps/' + cur.traceId;
+            if (fs.existsSync(dir)) fs.rmSync(dir, { recursive: true, force: true });
+          }
+          if (cur.runId) {
+            await Promise.all([
+              db.collection('aqrp_rows').deleteMany({ runId: cur.runId }),
+              db.collection('aqrp_progress').deleteMany({ runId: cur.runId }),
+              db.collection('aqrp_batch_calls').deleteMany({ runId: cur.runId })
+            ]);
+          }
+        }
+      } catch (e) { console.error('[aqrp delete] cleanup: ' + (e && e.message ? e.message : e)); }
       res.json(await svc.deleteRun(s));
     } catch (e) { next(e); }
   });

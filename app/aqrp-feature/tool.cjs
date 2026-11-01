@@ -61,7 +61,7 @@ async function invoke(req, args) {
       let result;
       try { result = await pipeline.runStep({ step: 1, filePath: tmp }); }
       finally { try { fs.unlinkSync(tmp); } catch (_) {} }
-      await stateSvc.completeStep(s, 1, result.output, null);
+      await stateSvc.completeStep(s, 1, result.output, (() => { try { if (typeof req !== 'undefined' && req && req.__workflow && req.__workflow.id) return { traceId: String(req.__workflow.id) }; } catch (_) {} return null; })());
       gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, step: 1, status: 'ok' });
       return JSON.stringify({ status: 'step_complete', step: 1, output: result.output });
     }
@@ -89,7 +89,7 @@ async function invoke(req, args) {
       let result;
       try { result = await pipeline.runStep({ step, filePath: tmp, expectedRecordIds }); }
       finally { try { fs.unlinkSync(tmp); } catch (_) {} }
-      await stateSvc.completeStep(s, step, result.output, null);
+      await stateSvc.completeStep(s, step, result.output, (() => { try { if (typeof req !== 'undefined' && req && req.__workflow && req.__workflow.id) return { traceId: String(req.__workflow.id) }; } catch (_) {} return null; })());
       gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, step, status: 'ok' });
       return JSON.stringify({ status: 'step_complete', step, output: result.output });
     }
@@ -154,7 +154,7 @@ async function invoke(req, args) {
       }
     }
     finally { try { fs.unlinkSync(tmp); } catch (_) {} }
-    await stateSvc.completeStep(s, step, result.output, null);
+    await stateSvc.completeStep(s, step, result.output, (() => { try { if (typeof req !== 'undefined' && req && req.__workflow && req.__workflow.id) return { traceId: String(req.__workflow.id) }; } catch (_) {} return null; })());
     gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, step, status: 'ok' });
     return JSON.stringify({ status: 'step_complete', step, output: result.output });
   } catch (e) {

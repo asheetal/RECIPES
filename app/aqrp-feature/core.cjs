@@ -47,6 +47,7 @@ function makeService(repo, deps) {
     if (extra) entry.extra = extra;
     r.steps = { ...(r.steps || {}), [String(step)]: entry };
     r.lastProgressAt = new Date();
+    if (extra && extra.traceId && !r.traceId) r.traceId = String(extra.traceId);
     if (Number(step) === FINAL_STEP) { r.status = 'done'; r.finishedAt = new Date(); }
     await repo.putRun(s, r);
     return await getState(s);

@@ -3,7 +3,7 @@ const NAME = 'asp_step_run';
 const { FINAL_STEP } = require('./core.cjs');
 const def = {
   name: NAME,
-  description: `Execute step N of the Automated SEM Pipeline. Steps 1..${FINAL_STEP}. Tool steps (1,4,6,8,9,11,13): call with {step:N}. Cognitive steps (2,3,5,7,10,12): call with {step:N, payload:{...}}. Step 1 also requires file_id. Call in order, one step per iteration, then stop when step 13 returns done.`,
+  description: 'Execute step N of the Automated SEM Pipeline. Steps 1..${FINAL_STEP}. Tool steps (1,4,6,8,9,11,13): call with {step:N}. Cognitive steps (2,3,5,7,10,12): call with {step:N, payload:{...}}. Step 1 also requires file_id. Call in order, one step per iteration, then stop when step 13 returns done. PLAN AND PAYLOAD RULES: (1) the plan JSON MUST be passed as the value of the top-level plan key, never spread at the top level. (2) payload is a top-level key required for every cognitive step.',
   parameters: {
     type: 'object',
     properties: {

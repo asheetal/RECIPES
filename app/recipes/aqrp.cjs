@@ -27,7 +27,7 @@ STEP 10 (surgeon): From rq, lit_map, P04 propose at least 3 candidate theoretica
 STEP 11 (surgeon->tool): From candidate_lenses search the literature for each lens. aqrp_step_run({step:11, payload:{P05}}).
 STEP 12 (surgeon): From candidate_lenses, lit_map, P05 select one framing (chosen_framing) with a comparison table (framing_comparison) scoring coverage x novelty x negative-case fit. Emit RDF R12 (pool P05). aqrp_step_run({step:12, payload:{chosen_framing, framing_comparison, rdf_records:[R12]}}).
 
-STEP 13 (tool): aqrp_step_run({step:13, payload:{code_matrix}}).
+STEP 13 (tool): No payload required. Call aqrp_step_run({step:13}). The tool assembles the merged code matrix from your own step-4 output and writes step13_out.json. Do NOT include payload:{code_matrix} — it will be rejected by the schema refine.
 
 STEP 14 (surgeon->tool): From merge_candidates and chosen_framing search the literature for codebook precedents. aqrp_step_run({step:14, payload:{P06}}).
 STEP 15 (surgeon): From merge_candidates, chosen_framing, P06 produce a codebook. Emit RDF R15 (pool P06). aqrp_step_run({step:15, payload:{codebook, rdf_records:[R15]}}).

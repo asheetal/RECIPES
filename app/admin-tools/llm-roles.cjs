@@ -147,7 +147,12 @@ async function save(req,res){
     try{await require('./model-access.cjs').assertRole(value,role);}
     catch(error){return res.status(400).json({message:role+': '+error.message});}
    }
+   const __tempRaw = value.temperature !== undefined ? value.temperature : previous?.temperature;
+   const __temp = __tempRaw === undefined ? undefined : Number(__tempRaw);
+   if (__temp !== undefined && (!Number.isFinite(__temp) || __temp < 0 || __temp > 2))
+    return res.status(400).json({message: role + ': temperature must be a number in [0, 2]'});
    assignments[role]={endpoint:value.endpoint,model:value.model};
+   if (__temp !== undefined) assignments[role].temperature = __temp;
   }
   // Persist roster to the vault; plaintext never touches lab_llm_role_settings again.
   for(let i=0;i<panelMembers.length;i++){

@@ -111,6 +111,7 @@ async function bindRequest(req,role){
  req.config=await access.overlay(req.config);
  const maxContextTokens=(await access.model(b))?.maxContextTokens??configuredContextLimit(b);
  for(const key of ['spec','preset','agent_id','assistant_id','addedConvo','promptPrefix','modelLabel','greeting','iconURL','model_parameters','temperature','top_p','max_tokens','maxTokens','maxContextTokens','maxOutputTokens','reasoning_effort'])delete req.body[key];
+ if (b.temperature !== undefined && Number.isFinite(b.temperature)) req.body.temperature = b.temperature;
  req.body.endpoint=b.endpoint;req.body.endpointType='custom';req.body.model=b.model;req.body.modelLabel='Assistant';
  if(maxContextTokens!==undefined)req.body.maxContextTokens=maxContextTokens;
  const assignedSpec=role==='LLM_SURGERY'?configuredModelSpec(b):undefined;

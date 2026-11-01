@@ -136,7 +136,7 @@ async function step3({ filePath, pools }) {
   const p = readJson(filePath);
   if (!p.coding_brief || typeof p.coding_brief !== 'object') throw new Error('Step 3: coding_brief required');
   const cb = p.coding_brief;
-  if (!Array.isArray(cb.code_for) || cb.code_for.length === 0 || !cb.code_for.every(s => typeof s === 'string' && s.trim())) throw new Error('Step 3: coding_brief.code_for must be non-empty strings');
+  if (!Array.isArray(cb.code_for) || cb.code_for.length === 0 || !cb.code_for.every(s => typeof s === 'string' && s.trim())) throw new Error('Step 3: coding_brief.code_for must be a non-empty array of non-blank strings — for example ["governance", "identity", "amplification"]. The step-3 brief must list the codes the panel will apply in step 4.');
   if (!Array.isArray(cb.ignore) || !Array.isArray(cb.flag)) throw new Error('Step 3: coding_brief.ignore and .flag must be arrays');
   if (typeof cb.granularity !== 'string' || !cb.granularity.trim()) throw new Error('Step 3: coding_brief.granularity required');
   if (typeof p.notes !== 'string' || p.notes.length < 600) throw new Error('Step 3: notes must be >=600 chars');
@@ -283,7 +283,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   const p = readJson(filePath);
   const rdfs = p.rdf_records || [];
   const r32 = rdfs.find(r => r.rdf_id === 'R32');
-  if (!r32) throw new Error('Step 32: missing R32');
+  if (!r32) throw new Error('Step 32: missing R32. The payload must include rdf_records:[R32] — one RDF record with rdf_id:"R32", stage:"final_packaging", type:"SURGEON", options (>=2), chosen, rationale, citations_used (from pool P13), pool_id:"P13", citation_status, gut_rationale:null.');
   validateRdfRecord(r32, 'Step 32.R32', ['P13'], pools);
   const all = [...(allRdfs || []), r32];
   const steps = await _fetchRunSteps(runId);

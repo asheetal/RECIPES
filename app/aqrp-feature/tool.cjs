@@ -75,7 +75,7 @@ async function invoke(req, args) {
           const env = await stateSvc.assembleStep4Envelope(s);
           if (env) p4 = { panel_result: env };
           else throw new Error('payload required for step 4 (no panel_result and no complete tally for this corpus)');
-        } else throw new Error(`payload required for step ${step}`);
+        } else throw new Error(`payload required for step ${step}. Include the step-specific payload object (topics+pool for step 2, coding_brief+notes+rdf_records for step 3, rdf_records for RDF-bearing steps, etc.) — see recipe prompt for the exact shape for step ${step}.`);
       }
       const tmp = path.join(os.tmpdir(), `aqrp-step${step}-${Date.now()}.json`);
       fs.writeFileSync(tmp, JSON.stringify(p4));

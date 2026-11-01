@@ -185,6 +185,18 @@ async function invoke(req, args) {
         throw new Error('[llm_assistant_panel_batch] all ' + __allCells.length + ' cells returned NA or empty — panel is not producing usable codes; the batch cannot succeed');
       }
     }
+    // NA-normalize each row: individual empty/non-array codes become ['NA']
+    // per design §15.7. The all-cells-NA check above still rejects the
+    // whole batch if every cell failed; a mixed batch passes with NA rows.
+    if (result && Array.isArray(result.responses)) {
+      for (const __r of result.responses) {
+        if (Array.isArray(__r.rows)) {
+          for (const __row of __r.rows) {
+            if (!Array.isArray(__row.codes) || __row.codes.length === 0) __row.codes = ['NA'];
+          }
+        }
+      }
+    }
     if (__markerStep && [4,16,17,22].includes(__markerStep) && storeRunId) {
       try {
         await db.collection('aqrp_batch_calls').updateOne(

@@ -15,12 +15,27 @@ async function resolveProjectId(req) {
 }
 async function invoke(req, args) {
   const gateway = require('/app/admin-tools/role-gateway.cjs');
-  gateway.audit(req, 'LLM_SURGERY', 'tool_call', { tool: NAME });
+  gateway.audit(req, 'LLM_SURGERY', 'tool_call', { tool: NAME, has_records: Array.isArray(args.records), has_file_id: !!(args.file_id||args.fileId||args.projectFileId) });
   try {
     const query = args.query;
     let schema = args.schema;
     let records = args.records;
-    const fileId = args.file_id || args.fileId || args.projectFileId;
+    let fileId = args.file_id || args.fileId || args.projectFileId;
+    // auto-fileId from run: if no file_id and no records provided, use the current run's fileId
+    // (the only valid corpus for this scope — integration fallback for surgeon omissions).
+    if (!fileId && (!Array.isArray(args.records) || !args.records.length)) {
+      try {
+        const __db = require('mongoose').connection.db;
+        const __pid = await resolveProjectId(req);
+        if (__pid) {
+          const __run = await __db.collection('aqrpruns').findOne(
+            { user: String(req.user.id || req.user._id), tenant: String(req.user.tenantId || ''), projectId: __pid },
+            { sort: { startedAt: -1 } }
+          );
+          if (__run && __run.fileId) fileId = __run.fileId;
+        }
+      } catch (_) {}
+    }
     if ((!Array.isArray(records) || !records.length) && fileId) {
       const projectId = await resolveProjectId(req);
       if (!projectId) throw new Error('project scope required to read file_id');

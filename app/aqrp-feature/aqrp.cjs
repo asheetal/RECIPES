@@ -362,11 +362,11 @@ router.get('/:projectId/aqrp/bundle', async (req, res, next) => {
             if (pdf_b64) {
               zip.file('aqrp_report.pdf', Buffer.from(pdf_b64, 'base64'));
               if (out.aqrp_report_audit) zip.file('aqrp_report_audit.json', JSON.stringify(out.aqrp_report_audit, null, 2));
-            } else if (out.aqrp_report_tex) {
-              zip.file('aqrp_report.tex', out.aqrp_report_tex);
+            } else {
+              if (typeof out.aqrp_report_tex === 'string' && out.aqrp_report_tex.length > 0) zip.file('aqrp_report.tex', out.aqrp_report_tex);
               zip.file('_compile_failed.txt', 'asp-runner compile failed for run ' + (st.runId || '') + '; check docker logs asp-runner');
               if (out.aqrp_report_audit) zip.file('aqrp_report_audit.json', JSON.stringify(out.aqrp_report_audit, null, 2));
-            } else if (out.submission_paper_tex) {
+            
               zip.file('submission_paper.tex', out.submission_paper_tex);
               if (out.supplementary_rdf_tex) zip.file('supplementary_rdf.tex', out.supplementary_rdf_tex);
               if (out.aqrp_report) zip.file('aqrp_report.rdf', JSON.stringify(out.aqrp_report, null, 2));

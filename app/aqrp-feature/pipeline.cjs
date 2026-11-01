@@ -859,7 +859,6 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     aqrp_report_bib: __bib,
     aqrp_report_audit: { version: '1', runId: runId || null, assembled_at: new Date().toISOString(), rdf_count: all.length, records: all, has_paper_layer: hasPaper },
     rdf_records: all,
-    submission_paper_tex: p.submission_paper_tex || ''
   }};
 }
 

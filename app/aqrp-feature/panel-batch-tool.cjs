@@ -324,7 +324,7 @@ function makeTool(req) {
   return new DynamicStructuredTool({
     name: NAME,
     description: def.description,
-    schema: z.object({ plan: z.any().optional(), query: z.string(), schema: z.union([z.record(z.any()), z.string()]), records: z.union([z.array(z.any()), z.string()]).optional(), file_id: z.string().optional(), fileId: z.string().optional(), projectFileId: z.string().optional() }).strip(),
+    schema: z.object({ plan: z.any().optional(), query: z.string(), schema: z.union([z.record(z.any()), z.string()]), records: z.union([z.array(z.any()), z.string()]).optional(), file_id: z.string().optional(), fileId: z.string().optional(), projectFileId: z.string().optional() }).strict(),
     func: (a) => invoke(req, a),
   });
 }

@@ -1,5 +1,26 @@
 
 'use strict';
+
+// __toolNodeRigid — force handleToolErrors=false so any tool throw or schema
+// rejection propagates to complete() -> OPD, never gets swallowed by ToolNode.
+try {
+  const __tnPath = '/app/node_modules/@librechat/agents/dist/cjs/tools/ToolNode.cjs';
+  if (require('fs').existsSync(__tnPath)) {
+    const __mod = require(__tnPath);
+    if (__mod && __mod.ToolNode && !__mod.ToolNode.__rigidPatched) {
+      const __orig = __mod.ToolNode;
+      const __Patched = class extends __orig {
+        constructor(opts) {
+          super({ ...opts, handleToolErrors: false });
+        }
+      };
+      Object.defineProperty(__Patched, '__rigidPatched', { value: true });
+      Object.defineProperty(__Patched, 'name', { value: 'ToolNode' });
+      __mod.ToolNode = __Patched;
+    }
+  }
+} catch (__e) { try { console.error('[toolNodeRigid] patch failed: ' + (__e && __e.message)); } catch (_) {} }
+
 const crypto=require('node:crypto');
 const gateway=require('./role-gateway.cjs');
 const director=require('./director.cjs');

@@ -568,7 +568,7 @@ const PAYLOAD_SCHEMAS = {
       downstream_impact: z.string(),
       claims: z.array(z.string()),
     }).strip()).min(1),
-  }).strip(),
+  }).strict(),
 };
 
 function validatePayloadSchema(step, payload, zlib) {
@@ -586,7 +586,7 @@ function makeTool(req) {
   return new DynamicStructuredTool({
     name: NAME,
     description: def.description,
-    schema: z.object({ plan: z.any().optional(), step: z.number().int(), file_id: z.string().optional(), payload: z.union([z.record(z.any()), z.string()]).optional() }).strip(),
+    schema: z.object({ plan: z.any().optional(), step: z.number().int(), file_id: z.string().optional(), payload: z.union([z.record(z.any()), z.string()]).optional() }).strict(),
     func: (a) => invoke(req, a),
   });
 }

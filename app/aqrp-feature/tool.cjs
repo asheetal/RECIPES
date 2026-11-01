@@ -35,34 +35,6 @@ async function collectAllRdfs(s, stateSvc) {
   }
   return all;
 }
-function tryParsePayload(str, depth) {
-  depth = depth || 0;
-  if (depth > 15) throw new Error('payload repair exceeded depth limit — emit smaller payload (fewer top_k entries)');
-  try { return JSON.parse(str); }
-  catch (e) {
-    const m = e.message.match(/position (\d+)/);
-    if (m) {
-      const pos = parseInt(m[1], 10);
-      const ch = str[pos];
-      if (ch === '}') {
-        try { return tryParsePayload(str.slice(0, pos) + str.slice(pos + 1), depth + 1); } catch (_) {}
-      }
-      if (ch === '"' || ch === '{' || ch === '[') {
-        try { return tryParsePayload(str.slice(0, pos) + ',' + str.slice(pos), depth + 1); } catch (_) {}
-      }
-      for (let back = 1; back <= 3 && pos - back > 0; back++) {
-        const c = str[pos - back];
-        if (c === '"' || c === '}' || c === ']') {
-          try { return tryParsePayload(str.slice(0, pos - back + 1) + ',' + str.slice(pos - back + 1), depth + 1); } catch (_) {}
-        }
-      }
-    }
-    for (let cut = 1; cut <= 5 && cut < str.length; cut++) {
-      try { return JSON.parse(str.slice(0, -cut)); } catch (_) {}
-    }
-    throw new Error('payload JSON parse failed: ' + e.message + ' — emit payload as a NATIVE JSON object; if unavoidable, reduce top_k to 3 entries');
-  }
-}
 
 async function invoke(req, args) {
   const gateway = require('/app/admin-tools/role-gateway.cjs');
@@ -127,7 +99,7 @@ async function invoke(req, args) {
     if (!payload && step !== 13) throw new Error(`payload required for step ${step}`);
     let p;
     if (!payload) { p = {}; }
-    else if (typeof payload === 'string') { p = tryParsePayload(payload); }
+    else if (typeof payload === 'string') { throw new Error(`payload must be a JSON object for step ${step}, not a string`); }
     else { p = payload; }
     const tmp = path.join(os.tmpdir(), `aqrp-step${step}-${Date.now()}.json`);
     fs.writeFileSync(tmp, JSON.stringify(p));
@@ -200,7 +172,7 @@ function makeTool(req) {
   return new DynamicStructuredTool({
     name: NAME,
     description: def.description,
-    schema: z.object({ plan: z.any().optional(), step: z.coerce.number().int(), file_id: z.string().optional(), fileId: z.string().optional(), projectFileId: z.string().optional(), payload: z.union([z.record(z.any()), z.string()]).optional() }).strip(),
+    schema: z.object({ plan: z.any().optional(), step: z.coerce.number().int(), file_id: z.string().optional(), fileId: z.string().optional(), projectFileId: z.string().optional(), payload: z.record(z.any()).optional() }).strict().refine((v) => v.step === 1 || (v.payload && Object.keys(v.payload).length > 0), { message: 'payload required for steps 2-32' }),
     func: (a) => invoke(req, a),
   });
 }

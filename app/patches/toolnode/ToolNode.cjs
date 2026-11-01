@@ -1634,6 +1634,16 @@ var ToolNode = class extends require_run.RunnableCallable {
 				*/
 				let finalToolOutput = result.content;
 				if (result.status === "error") {
+					// RIGID_TOOL_ERROR_ABORT: propagate instead of returning a
+					// retryable ToolMessage when handleToolErrors is false.
+					// The thrown error reaches complete() in prompt-flow.cjs:150,
+					// which sets handoff.status='needs_resolution' and routes to OPD.
+					if (this.handleToolErrors === false) {
+						const err = new Error(result.errorMessage ?? "Tool execution failed");
+						err.toolName = request?.name;
+						err.toolCallId = result.toolCallId;
+						throw err;
+					}
 					contentString = `Error: ${result.errorMessage ?? "Unknown error"}\n Please fix your mistakes.`;
 					/**
 					* Error results bypass registration but stamp the

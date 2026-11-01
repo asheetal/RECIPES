@@ -70,6 +70,22 @@ async function invoke(req, args) {
     if (PANEL_STEPS.has(step)) {
       let payload = args.payload;
       let p4 = payload ? (typeof payload === 'string' ? JSON.parse(payload) : payload) : null;
+      // Step 4: prefer the authoritative envelope assembled from aqrp_rows + aqrp_batch_calls.
+      // The surgeon may re-emit panel_result as a stringified JSON and silently drop a row
+      // during re-emission (evidence: trace 1040192b, run 642988e1 — panel-slot-1 returned 9/10
+      // rows despite aqrp_rows holding all 30 cells). The assembler reconstructs the complete
+      // set from persistence; the surgeon's forwarded copy is discarded when the assembler
+      // has a complete tally. Falls back to the surgeon's payload only when the assembler
+      // has nothing (mid-flight run, no persisted rows yet).
+      if (step === 4) {
+        try {
+          const env = await stateSvc.assembleStep4Envelope(s);
+          if (env) {
+            p4 = { panel_result: env };
+            gateway.audit(req, 'LLM_SURGERY', 'step4_envelope_source', { source: 'assembler' });
+          }
+        } catch (_) {}
+      }
       const pr = p4 && p4.panel_result;
       if (!pr || !Array.isArray(pr.responses) || pr.responses.length === 0) {
         if (step === 4) {

@@ -28,6 +28,21 @@ function registerRoutes(router, projectFilesService) {
       if (!fileId) return res.status(400).json({ error: 'fileId required' });
       const pfScope = { user: s.user, tenant: s.tenant, projectId: s.projectId };
       const { file, buffer } = await projectFilesService.read(pfScope, fileId);
+      // v246.1.6: enforce ONE ASP trace per project — delete previous run+trace+conversation on new start.
+      try {
+        const fs = require('fs');
+        const mongoose = require('mongoose');
+        const db = mongoose.connection.db;
+        const prev = await db.collection('aspruns').findOne({ user: s.user, tenant: s.tenant, projectId: s.projectId });
+        if (prev) {
+          if (prev.traceId) { const d = '/app/admin-tools/prompt-dumps/' + prev.traceId; if (fs.existsSync(d)) fs.rmSync(d, { recursive: true, force: true }); }
+          if (prev.conversationId) {
+            await db.collection('conversations').deleteOne({ conversationId: prev.conversationId });
+            await db.collection('messages').deleteMany({ conversationId: prev.conversationId });
+          }
+          await db.collection('aspruns').deleteOne({ _id: prev._id });
+        }
+      } catch (__e) { console.error('[ASP start] prev cleanup: ' + (__e && __e.message)); }
       const started = await svc.startRun(s, fileId, file.name, buffer);
       await require('mongoose').connection.db.collection('searchmodes').updateOne({ user: s.user, tenant: s.tenant || null }, { $set: { mode: 'academic' } }, { upsert: true });
       if (started.status === 'no_new_run') return res.json(started);

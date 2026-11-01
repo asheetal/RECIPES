@@ -45,6 +45,26 @@ function registerRoutes(router, projectFilesService) {
       const pfScope = { user: s.user, tenant: s.tenant, projectId: s.projectId };
       const { file, buffer } = await projectFilesService.read(pfScope, fileId);
       if (!/\.json$/i.test(file.name)) return res.status(415).json({ error: 'AQRP accepts JSON only' });
+      // v246.1.6: enforce ONE AQRP trace per project — delete previous run+trace+conversation on new start.
+      try {
+        const fs = require('fs');
+        const mongoose = require('mongoose');
+        const db = mongoose.connection.db;
+        const prev = await db.collection('aqrpruns').findOne({ user: s.user, tenant: s.tenant, projectId: s.projectId });
+        if (prev) {
+          if (prev.traceId) { const d = '/app/admin-tools/prompt-dumps/' + prev.traceId; if (fs.existsSync(d)) fs.rmSync(d, { recursive: true, force: true }); }
+          if (prev.conversationId) {
+            await db.collection('conversations').deleteOne({ conversationId: prev.conversationId });
+            await db.collection('messages').deleteMany({ conversationId: prev.conversationId });
+          }
+          if (prev.runId) await Promise.all([
+            db.collection('aqrp_rows').deleteMany({ runId: prev.runId }),
+            db.collection('aqrp_progress').deleteMany({ runId: prev.runId }),
+            db.collection('aqrp_batch_calls').deleteMany({ runId: prev.runId })
+          ]);
+          await db.collection('aqrpruns').deleteOne({ _id: prev._id });
+        }
+      } catch (__e) { console.error('[AQRP start] prev cleanup: ' + (__e && __e.message)); }
       const started = await svc.startRun(s, fileId, file.name, buffer);
       const rk = runKeyOf(s);
       const ctl = new AbortController();

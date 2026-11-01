@@ -154,10 +154,10 @@ services:
       source: /home/sheetal/librechat-src/app/aqrp-feature
       target: /app/aqrp-feature
       read_only: true
-      - type: bind
-        source: /home/sheetal/librechat-src/app/patches/toolnode/ToolNode.cjs
-        target: /app/node_modules/@librechat/agents/dist/cjs/tools/ToolNode.cjs
-        read_only: true
+    - type: bind
+      source: /home/sheetal/librechat-src/app/patches/toolnode/ToolNode.cjs
+      target: /app/node_modules/@librechat/agents/dist/cjs/tools/ToolNode.cjs
+      read_only: true
     - type: bind
       source: /home/sheetal/librechat-src/app/workflow-feature
       target: /app/workflow-feature

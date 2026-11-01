@@ -69,36 +69,33 @@ async function invoke(req, args) {
     }
 
     if (PANEL_STEPS.has(step)) {
-      let payload = args.payload;
-      let p4 = payload ? (typeof payload === 'string' ? JSON.parse(payload) : payload) : null;
-      // Step 4: prefer the authoritative envelope assembled from aqrp_rows + aqrp_batch_calls.
-      // The surgeon may re-emit panel_result as a stringified JSON and silently drop a row
-      // during re-emission (evidence: trace 1040192b, run 642988e1 — panel-slot-1 returned 9/10
-      // rows despite aqrp_rows holding all 30 cells). The assembler reconstructs the complete
-      // set from persistence; the surgeon's forwarded copy is discarded when the assembler
-      // has a complete tally. Falls back to the surgeon's payload only when the assembler
-      // has nothing (mid-flight run, no persisted rows yet).
-      // All PANEL_STEPS: prefer assembler envelope from aqrp_rows (authoritative).
-      // Evidence (trace be528cc1, run 29c70b37): surgeon synthesized 6 rows for step 22
-      // despite aqrp_rows holding 30 complete cells. Assemble from persistence; keep
-      // surgeon's other payload keys (negative_case_log/resolution for step 22).
-      if (PANEL_STEPS.has(step)) {
-        try {
-          const env = await stateSvc.assembleStep4Envelope(s, step);
-          if (env) {
-            p4 = p4 || {};
-            p4.panel_result = env;
-            gateway.audit(req, 'LLM_SURGERY', 'panel_envelope_source', { step, source: 'assembler' });
+      // panel_assembler_first_v2 (v246.2.23): assembler wins; skip surgeon payload parse.
+      const payload = args.payload;
+      let env = null;
+      try { env = await stateSvc.assembleStep4Envelope(s, step); } catch (_) {}
+
+      let p4;
+      if (step === 22) {
+        if (!payload) throw new Error('payload required for step 22');
+        p4 = typeof payload === 'string' ? JSON.parse(payload) : payload;
+        if (!p4 || typeof p4 !== 'object') throw new Error('step 22 payload must be an object');
+        if (env) {
+          p4.panel_result = env;
+          gateway.audit(req, 'LLM_SURGERY', 'panel_envelope_source', { step: 22, source: 'assembler-override' });
+        } else if (!p4.panel_result) {
+          throw new Error('step 22: no panel_result and assembler returned null');
+        }
+      } else {
+        if (env) {
+          p4 = { panel_result: env };
+          gateway.audit(req, 'LLM_SURGERY', 'panel_envelope_source', { step, source: 'assembler', surgeon_payload_skipped: true });
+        } else {
+          p4 = payload ? (typeof payload === 'string' ? JSON.parse(payload) : payload) : null;
+          if (!p4 || !p4.panel_result || !Array.isArray(p4.panel_result.responses) || p4.panel_result.responses.length === 0) {
+            if (step === 4) throw new Error('payload required for step 4 (no panel_result and no complete tally for this corpus)');
+            else throw new Error(`payload required for step ${step}`);
           }
-        } catch (_) {}
-      }
-      const pr = p4 && p4.panel_result;
-      if (!pr || !Array.isArray(pr.responses) || pr.responses.length === 0) {
-        if (step === 4) {
-          const env = await stateSvc.assembleStep4Envelope(s);
-          if (env) p4 = { panel_result: env };
-          else throw new Error('payload required for step 4 (no panel_result and no complete tally for this corpus)');
-        } else throw new Error(`payload required for step ${step}. Include the step-specific payload object (topics+pool for step 2, coding_brief+notes+rdf_records for step 3, rdf_records for RDF-bearing steps, etc.) — see recipe prompt for the exact shape for step ${step}.`);
+        }
       }
       const tmp = path.join(os.tmpdir(), `aqrp-step${step}-${Date.now()}.json`);
       fs.writeFileSync(tmp, JSON.stringify(p4));

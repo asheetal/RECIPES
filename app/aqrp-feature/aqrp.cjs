@@ -52,17 +52,37 @@ function registerRoutes(router, projectFilesService) {
         const db = mongoose.connection.db;
         const prev = await db.collection('aqrpruns').findOne({ user: s.user, tenant: s.tenant, projectId: s.projectId });
         if (prev) {
-          if (prev.traceId) { const d = '/app/admin-tools/prompt-dumps/' + prev.traceId; if (fs.existsSync(d)) fs.rmSync(d, { recursive: true, force: true }); }
-          if (prev.conversationId) {
-            await db.collection('conversations').deleteOne({ conversationId: prev.conversationId });
-            await db.collection('messages').deleteMany({ conversationId: prev.conversationId });
+          const __isFailed = prev.status === 'failed';
+          if (__isFailed) {
+            // Evidence retention: failed runs are diagnostic gold. Log to aqrp_failed_runs,
+            // leave trace + rows + progress + batch_calls intact on disk, do not delete conversation.
+            try {
+              await db.collection('aqrp_failed_runs').insertOne({
+                runId: prev.runId,
+                traceId: prev.traceId || null,
+                status: prev.status,
+                error: prev.error || null,
+                startedAt: prev.startedAt || null,
+                finishedAt: prev.finishedAt || null,
+                preservedAt: new Date()
+              });
+            } catch (_) {}
+            console.error('[AQRP start] preserving failed run evidence: runId=' + (prev.runId || '?') + ' traceId=' + (prev.traceId || 'none'));
+            // Do NOT delete trace, rows, progress, batch_calls, conversation.
+            // Run doc will be overwritten by svc.startRun (upsert).
+          } else {
+            if (prev.traceId) { const d = '/app/admin-tools/prompt-dumps/' + prev.traceId; if (fs.existsSync(d)) fs.rmSync(d, { recursive: true, force: true }); }
+            if (prev.conversationId) {
+              await db.collection('conversations').deleteOne({ conversationId: prev.conversationId });
+              await db.collection('messages').deleteMany({ conversationId: prev.conversationId });
+            }
+            if (prev.runId) await Promise.all([
+              db.collection('aqrp_rows').deleteMany({ runId: prev.runId }),
+              db.collection('aqrp_progress').deleteMany({ runId: prev.runId }),
+              db.collection('aqrp_batch_calls').deleteMany({ runId: prev.runId })
+            ]);
+            await db.collection('aqrpruns').deleteOne({ _id: prev._id });
           }
-          if (prev.runId) await Promise.all([
-            db.collection('aqrp_rows').deleteMany({ runId: prev.runId }),
-            db.collection('aqrp_progress').deleteMany({ runId: prev.runId }),
-            db.collection('aqrp_batch_calls').deleteMany({ runId: prev.runId })
-          ]);
-          await db.collection('aqrpruns').deleteOne({ _id: prev._id });
         }
       } catch (__e) { console.error('[AQRP start] prev cleanup: ' + (__e && __e.message)); }
       const started = await svc.startRun(s, fileId, file.name, buffer);

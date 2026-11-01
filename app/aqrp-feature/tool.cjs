@@ -40,6 +40,7 @@ async function invoke(req, args) {
   const gateway = require('/app/admin-tools/role-gateway.cjs');
   const step = Number(args.step);
   gateway.audit(req, 'LLM_SURGERY', 'tool_call', { tool: NAME, step });
+  let currentState = null;
   try {
     if (!Number.isInteger(step) || step < 1 || step > FINAL_STEP) throw new Error(`step must be 1..${FINAL_STEP}`);
     const projectId = await resolveProjectId(req);
@@ -47,7 +48,7 @@ async function invoke(req, args) {
     const projectFiles = require('/app/project-files-feature/project-files.cjs').service();
     const s = { user: String(req.user.id || req.user._id), tenant: String(req.user.tenantId || ''), projectId };
     const stateSvc = require('/app/aqrp-feature/aqrp.cjs').service();
-    const currentState = await stateSvc.getState(s);
+    currentState = await stateSvc.getState(s);
     if (currentState.status !== 'running') throw new Error(`no active run (status=${currentState.status})`);
     const pipeline = require('/app/aqrp-feature/pipeline.cjs');
     const os = require('node:os'); const path = require('node:path'); const fs = require('node:fs');
@@ -226,6 +227,20 @@ async function invoke(req, args) {
     return JSON.stringify({ status: 'step_complete', step, output: result.output });
   } catch (e) {
     gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, step, status: 'error', error: e.message });
+    // Evidence retention: preserve surgeon's exact payload + args for post-mortem even if trace is deleted.
+    try {
+      const __mongoose = require('mongoose');
+      const __db = __mongoose.connection.db;
+      await __db.collection('aqrp_failed_payloads').insertOne({
+        runId: currentState ? currentState.runId : null,
+        step: step,
+        payload_raw: (args && typeof args.payload !== 'undefined') ? args.payload : null,
+        payload_type: (args && typeof args.payload !== 'undefined') ? typeof args.payload : 'absent',
+        args_raw: args,
+        error: e.message,
+        at: new Date()
+      });
+    } catch (_) {}
     throw e;
   }
 }

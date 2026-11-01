@@ -3,7 +3,7 @@ const NAME = 'llm_assistant_panel_batch';
 const def = {
   name: NAME,
   description:
-    'Advisory multi-agent panel over records. Submit {query, schema, records} or {query, schema, file_id}; schema MUST be a JSON Schema object {type:'object', properties:{...}, required:[...]} — NOT a JSON string, NOT a plain object without type/properties; with file_id it reads every record of that JSON corpus. Returns {panel, n, responses}: n complete sets, each with coder_id and rows, rows spanning the input records in order. Recipe-agnostic. Not a search, research, bash, or computation tool.',
+    'Advisory multi-agent panel over records. Submit {query, schema, records} or {query, schema, file_id}; schema MUST be a JSON Schema object with keys type, properties, and required (type value must be the string object) — NOT a JSON string, NOT a plain object without type/properties; with file_id it reads every record of that JSON corpus. Returns {panel, n, responses}: n complete sets, each with coder_id and rows, rows spanning the input records in order. Recipe-agnostic. Not a search, research, bash, or computation tool.',
 };
 async function resolveProjectId(req) {
   if (req?.__aqrpProjectId) return req.__aqrpProjectId;

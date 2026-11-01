@@ -35,6 +35,35 @@ async function collectAllRdfs(s, stateSvc) {
   }
   return all;
 }
+function tryParsePayload(str, depth) {
+  depth = depth || 0;
+  if (depth > 15) throw new Error('payload repair exceeded depth limit — emit smaller payload (fewer top_k entries)');
+  try { return JSON.parse(str); }
+  catch (e) {
+    const m = e.message.match(/position (\d+)/);
+    if (m) {
+      const pos = parseInt(m[1], 10);
+      const ch = str[pos];
+      if (ch === '}') {
+        try { return tryParsePayload(str.slice(0, pos) + str.slice(pos + 1), depth + 1); } catch (_) {}
+      }
+      if (ch === '"' || ch === '{' || ch === '[') {
+        try { return tryParsePayload(str.slice(0, pos) + ',' + str.slice(pos), depth + 1); } catch (_) {}
+      }
+      for (let back = 1; back <= 3 && pos - back > 0; back++) {
+        const c = str[pos - back];
+        if (c === '"' || c === '}' || c === ']') {
+          try { return tryParsePayload(str.slice(0, pos - back + 1) + ',' + str.slice(pos - back + 1), depth + 1); } catch (_) {}
+        }
+      }
+    }
+    for (let cut = 1; cut <= 5 && cut < str.length; cut++) {
+      try { return JSON.parse(str.slice(0, -cut)); } catch (_) {}
+    }
+    throw new Error('payload JSON parse failed: ' + e.message + ' — emit payload as a NATIVE JSON object; if unavoidable, reduce top_k to 3 entries');
+  }
+}
+
 async function invoke(req, args) {
   const gateway = require('/app/admin-tools/role-gateway.cjs');
   const step = Number(args.step);
@@ -98,18 +127,7 @@ async function invoke(req, args) {
     if (!payload && step !== 13) throw new Error(`payload required for step ${step}`);
     let p;
     if (!payload) { p = {}; }
-    else if (typeof payload === 'string') {
-      // fallback: repair loop for any legacy or edge-case stringified payload
-      try { p = JSON.parse(payload); }
-      catch (e) {
-        let repaired = null;
-        for (let cut = 1; cut <= 5 && cut < payload.length; cut++) {
-          try { repaired = JSON.parse(payload.slice(0, -cut)); break; } catch (_) {}
-        }
-        if (!repaired) throw new Error(`payload JSON parse failed for step ${step} (${e.message}). Emit payload as a NATIVE JSON object, not as a stringified JSON string.`);
-        p = repaired;
-      }
-    }
+    else if (typeof payload === 'string') { p = tryParsePayload(payload); }
     else { p = payload; }
     const tmp = path.join(os.tmpdir(), `aqrp-step${step}-${Date.now()}.json`);
     fs.writeFileSync(tmp, JSON.stringify(p));

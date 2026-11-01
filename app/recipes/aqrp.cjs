@@ -22,7 +22,7 @@ STEP 7 (surgeon->tool): From salience_ranking search the literature for RQ frami
 STEP 8 (surgeon): From salience_ranking and P03 formulate a research question (rq). Emit RDF R8 (pool P03). aqrp_step_run({step:8, payload:{rq, rdf_records:[R8]}}).
 
 STEP 9 (surgeon->tool): From rq search the literature to map prior work. aqrp_step_run({step:9, payload:{lit_map, P04}}).
-STEP 10 (surgeon): From rq, lit_map, P04 propose >=3 candidate theoretical lenses (candidate_lenses). Emit RDF R10 (pool P04). aqrp_step_run({step:10, payload:{candidate_lenses, rdf_records:[R10]}}).
+STEP 10 (surgeon): From rq, lit_map, P04 propose at least 3 candidate theoretical lenses (candidate_lenses). Emit RDF R10 (pool_id='P04', citation_status='pool_selected', gut_rationale=null). R10.citations_used MUST be a subset of the DOIs in P04.top_k[].doi — do NOT cite any DOI that you did not promote into P04.top_k at step 9, even if it appeared in search results. R10 must include all RDF fields: {rdf_id:'R10', stage:'lensing', type:'SURGEON', options (>=2 strings), chosen (one of options), rationale, citations_used (subset of P04.top_k DOIs), pool_id:'P04', citation_status:'pool_selected', gut_rationale:null}. aqrp_step_run({step:10, payload:{candidate_lenses, rdf_records:[R10]}}).
 
 STEP 11 (surgeon->tool): From candidate_lenses search the literature for each lens. aqrp_step_run({step:11, payload:{P05}}).
 STEP 12 (surgeon): From candidate_lenses, lit_map, P05 select one framing (chosen_framing) with a comparison table (framing_comparison) scoring coverage x novelty x negative-case fit. Emit RDF R12 (pool P05). aqrp_step_run({step:12, payload:{chosen_framing, framing_comparison, rdf_records:[R12]}}).

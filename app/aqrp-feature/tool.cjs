@@ -99,7 +99,7 @@ async function invoke(req, args) {
     if (!payload && step !== 13) throw new Error(`payload required for step ${step}`);
     let p;
     if (!payload) { p = {}; }
-    else if (typeof payload === 'string') { throw new Error(`payload must be a JSON object for step ${step}, not a string`); }
+    else if (typeof payload === 'string') { try { p = JSON.parse(payload); } catch (e) { throw new Error(`step ${step} payload is a string but not valid JSON: ${e.message}`); } }
     else { p = payload; }
     const tmp = path.join(os.tmpdir(), `aqrp-step${step}-${Date.now()}.json`);
     fs.writeFileSync(tmp, JSON.stringify(p));
@@ -172,7 +172,7 @@ function makeTool(req) {
   return new DynamicStructuredTool({
     name: NAME,
     description: def.description,
-    schema: z.object({ plan: z.any().optional(), step: z.coerce.number().int(), file_id: z.string().optional(), fileId: z.string().optional(), projectFileId: z.string().optional(), payload: z.record(z.any()).optional() }).strict().refine((v) => v.step === 1 || (v.payload && Object.keys(v.payload).length > 0), { message: 'payload required for steps 2-32' }),
+    schema: z.object({ plan: z.any().optional(), step: z.coerce.number().int(), file_id: z.string().optional(), fileId: z.string().optional(), projectFileId: z.string().optional(), payload: z.union([z.record(z.any()), z.string()]).optional() }).strict().refine((v) => v.step === 1 || (v.payload && Object.keys(v.payload).length > 0), { message: 'payload required for steps 2-32' }),
     func: (a) => invoke(req, a),
   });
 }

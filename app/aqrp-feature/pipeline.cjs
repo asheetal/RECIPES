@@ -564,19 +564,23 @@ async function step32({ filePath, pools, allRdfs, runId }) {
         for (const { rid, quote } of evid) L.push('\\item ' + OQ + esc(quote) + CQ + ' \\textit{(record ' + esc(rid) + ')}');
         L.push('\\end{itemize}');
       } else if (recs.length) {
-        // Fall back to coder narratives
-        L.push('\\noindent\\textbf{Coder narratives.}');
-        L.push('\\begin{itemize}\\setlength{\\itemsep}{3pt}');
+        // Fall back to coder narratives — build lines in temp, only emit if non-empty
+        const __narrLines = [];
         let added = 0;
         for (const rid of recs.slice(0, 2)) {
           for (const c of coderNarrativesFor(rid).slice(0, 1)) {
-            L.push('\\item ' + OQ + esc(c.narrative) + CQ + ' \\textit{(record ' + esc(rid) + ', ' + esc(c.coder) + ')}');
+            __narrLines.push('\\item ' + OQ + esc(c.narrative) + CQ + ' \\textit{(record ' + esc(rid) + ', ' + esc(c.coder) + ')}');
             added++;
             if (added >= 3) break;
           }
           if (added >= 3) break;
         }
-        L.push('\\end{itemize}');
+        if (added > 0) {
+          L.push('\\noindent\\textbf{Coder narratives.}');
+          L.push('\\begin{itemize}\\setlength{\\itemsep}{3pt}');
+          for (const __l of __narrLines) L.push(__l);
+          L.push('\\end{itemize}');
+        }
       }
       L.push('');
     }

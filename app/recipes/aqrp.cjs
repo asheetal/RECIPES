@@ -32,7 +32,7 @@ STEP 13 (tool): aqrp_step_run({step:13, payload:{code_matrix}}).
 STEP 14 (surgeon->tool): From merge_candidates and chosen_framing search the literature for codebook precedents. aqrp_step_run({step:14, payload:{P06}}).
 STEP 15 (surgeon): From merge_candidates, chosen_framing, P06 produce a codebook. Emit RDF R15 (pool P06). aqrp_step_run({step:15, payload:{codebook, rdf_records:[R15]}}).
 
-STEP 16 (surgeon->coder): Call llm_assistant_panel_batch with corpus and codebook to code each case as a narrative (within_case). aqrp_step_run({step:16, payload:{panel_result}}).
+STEP 16 (surgeon->coder): Call llm_assistant_panel_batch with schema {type:'object', properties:{record_id:{type:'string'}, narrative:{type:'string'}, codes:{type:'array', items:{type:'string'}}}, required:['record_id','narrative','codes']} and query asking for a 40-80-word within-case narrative per record summarizing what the codebook codes reveal about that record's framing. Each response row MUST have a non-empty narrative field (at least 40 characters) — do NOT pass the step-4 open-coding schema {record_id,codes,quote}; step 16 requires narratives. aqrp_step_run({step:16, payload:{panel_result}}).
 STEP 17 (surgeon->coder): Call llm_assistant_panel_batch with within_case to compare across cases (cross_case). aqrp_step_run({step:17, payload:{panel_result}}).
 
 STEP 18 (surgeon->tool): From cross_case and codebook search the literature for themes. aqrp_step_run({step:18, payload:{P07}}).

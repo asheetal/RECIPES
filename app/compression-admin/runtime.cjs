@@ -80,6 +80,7 @@ function unitsFor(projection){
 }
 const measure=units=>countTokens(units.map(u=>u.text).join('\n\n'));
 async function beforeJob(user,chat,req){
+  if(req?.body?.recipeWorkflow)return;  // recipe runs have no inter-triage snowball — compression cannot fire
  await require('/app/workflow-feature/search-mode/prompt.cjs').snapshot(req);
  if(req?.body?.isTemporary)return;
  await encodingReady();initialize();const s=scope(req,user,chat);
@@ -149,6 +150,7 @@ function prepare(_client,req,response){
  return {
   delivered(){
    return delivered??=(async()=>{
+     try {
     await encodingReady();
     const rows=await branch(ticket.scope,response.messageId);
     if(rows.at(-1)?.unfinished)throw Error('Response is unfinished');
@@ -157,7 +159,11 @@ function prepare(_client,req,response){
     await manager.complete(ticket.scope,{promptId:ticket.id,
      deltaTokens:Math.max(0,total-state.active.baseTokens),
      snapshot:{headMessageId:response.messageId,sources:rows.map(m=>({id:identity(m),hash:digest(m)}))}});
-    req._compressionDelivered=true;
+     } catch (__e) {
+       console.error('[ChatCompression] delivered() failed (triage unaffected): ' + (__e && __e.message ? __e.message : __e));
+     } finally {
+       req._compressionDelivered=true;
+     }
    })();
   },
   async start(){if(delivered)await delivered;kick(ticket.scope);},

@@ -8,7 +8,7 @@ STEP 1 (tool): aqrp_step_run({step:1, file_id:"<attached file_id>"}).
 
 STEP 2 (surgeon->tool): From step 1's sample_records, name 2-5 topical domains (plain nouns). Search the literature for those domains. aqrp_step_run({step:2, payload:{topics:[...], P01:{pool_id:'P01', query, n_returned, top_k, ranking_rule}}}).
 
-STEP 3 (surgeon): From steps 1-2 write notes (a >=600-character familiarization memo: what the corpus is about, contrasts, tensions, uncertainties, questions) and coding_brief {code_for, ignore, flag, granularity}. Emit RDF R3 (scope, pool P01) and R3a (granularity, pool P00, must cite one of: 10.1177/1094428112452151, 10.1191/1478088706qp063oa, 10.5465/amr.2009.0486). aqrp_step_run({step:3, payload:{coding_brief, notes, rdf_records:[R3,R3a]}}).
+STEP 3 (surgeon): From steps 1-2 write notes (a >=600-character familiarization memo: what the corpus is about, contrasts, tensions, uncertainties, questions) and coding_brief {code_for: NON-EMPTY array of non-blank strings (e.g. ['governance','identity','amplification']), ignore: array of strings, flag: array of strings, granularity: string}. Emit RDF R3 (scope, pool P01) and R3a (granularity, pool P00, must cite one of: 10.1177/1094428112452151, 10.1191/1478088706qp063oa, 10.5465/amr.2009.0486). aqrp_step_run({step:3, payload:{coding_brief, notes, rdf_records:[R3,R3a]}}).
 
 STEP 4 (surgeon->coder): Call llm_assistant_panel_batch with file_id and coding_brief. Submit aqrp_step_run({step:4, payload:{panel_result:{panel,n,responses}}}).
 
@@ -55,7 +55,7 @@ STEP 30 (surgeon): From rdf_log and P12 decide sufficiency (stop / continue) wit
 
 STEP 31 (surgeon->tool): From model_draft and novelty_map search the literature for reporting conventions. aqrp_step_run({step:31, payload:{P13}}).
 
-STEP 32 (surgeon): Write the paper as LaTeX source and emit RDF R32. Payload: {submission_paper_tex, rdf_records:[R32]}. The paper orders RQ -> literature -> methods -> findings, cites P13, and does not mention RDFs. R32 (pool P13) records the ordering and the suppression decision. aqrp_step_run({step:32, payload:{submission_paper_tex, rdf_records:[R32]}}).
+STEP 32 (surgeon): Write the paper as LaTeX source and emit RDF R32. Payload MUST be {submission_paper_tex, rdf_records:[R32]} — if you have already drafted the paper, resubmit the same submission_paper_tex plus rdf_records array containing exactly one record: R32 = {rdf_id:'R32', stage:'final_packaging', type:'SURGEON', options:[at least 2], chosen, rationale, citations_used:[from P13], pool_id:'P13', citation_status, gut_rationale:null}. The paper orders RQ -> literature -> methods -> findings, cites P13, and does not mention RDFs. R32 (pool P13) records the ordering and the suppression decision. aqrp_step_run({step:32, payload:{submission_paper_tex, rdf_records:[R32]}}).
 
 AFTER THE LAST STEP NAMED IN THE REQUEST: reply with a list of completed steps and their output file names (__aqrp_stepN_out.json).
 `;

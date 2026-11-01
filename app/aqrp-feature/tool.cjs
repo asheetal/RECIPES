@@ -4,7 +4,7 @@ const { FINAL_STEP } = require('./steps.cjs');
 const PANEL_STEPS = new Set([4, 16, 17, 22]);
 const def = {
   name: NAME,
-  description: `AQRP step dispatcher. Run one step per call, in order. Step 1 input: {file_id}. Panel steps (4, 16, 17, 22) input: {payload:{panel_result:{panel,n,responses}}}. All other steps input: {payload:{...step-specific fields, rdf_records when SURGEON}}. Step 32 input: {payload:{submission_paper_tex, rdf_records:[R32]}}. Returns {status:'step_complete', step, output}.`,
+  description: `AQRP step dispatcher. Run one step per call, in order. Step 1 input: {file_id}. Panel steps (4, 16, 17, 22) input: {payload:{panel_result:{panel,n,responses}}}. All other steps input: {payload:{...step-specific fields, rdf_records when SURGEON}}. Step 32 input: {payload:{submission_paper_tex, rdf_records:[R32]}}. Returns {status:'step_complete', step, output}. IMPORTANT: payload is required for every step except step 1. RDF-bearing steps (3,6,8,10,12,15,19,21,24,26,28,30,32) MUST include payload.rdf_records array with at least one record in the standard RDF shape. Step 32 must include exactly one R32 record (rdf_id:'R32', pool_id:'P13').`,
 };
 async function resolveProjectId(req) {
   if (req?.__aqrpProjectId) return req.__aqrpProjectId;

@@ -688,6 +688,14 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     const last = list.pop();
     return list.join(', ') + ', \\& ' + last;
   }
+  function lastAuthor(rec) { const a = Array.isArray(rec.authors) ? rec.authors : (rec.authors ? [String(rec.authors)] : ['Anon']); const parts = String(a[0]).trim().split(/[\\s,]+/).filter(Boolean); return parts[parts.length-1] || 'Anon'; }
+  function citeLabel(rec) {
+    const a = Array.isArray(rec.authors) ? rec.authors : [String(rec.authors || 'Anon')];
+    const y = rec.year || 'n.d.';
+    if (a.length === 1) return lastAuthor(rec) + '(' + y + ')';
+    if (a.length === 2) { const p2 = String(a[1]).trim().split(/[\\s,]+/).filter(Boolean); return lastAuthor(rec) + ' \\& ' + (p2[p2.length-1]||'Anon') + '(' + y + ')'; }
+    return lastAuthor(rec) + ' et~al.(' + y + ')';
+  }
   const __METHODOLOGY = {
     "10.1177/1094428112452151": { authors: ["Gioia, D. A.","Corley, K. G.","Hamilton, A. L."], year: 2013, title: "Seeking qualitative rigor in inductive research: Notes on the Gioia methodology", journal: "Organizational Research Methods" },
     "10.1191/1478088706qp063oa": { authors: ["Braun, V.","Clarke, V."], year: 2006, title: "Using thematic analysis in psychology", journal: "Qualitative Research in Psychology" },

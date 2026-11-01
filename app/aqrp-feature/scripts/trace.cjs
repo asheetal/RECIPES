@@ -94,7 +94,7 @@ function render(events) {
         if (args.file_id) desc += '  file_id=' + String(args.file_id).slice(0, 12);
         if (args.payload && typeof args.payload === 'object') desc += '  payload=[' + Object.keys(args.payload).join(',') + ']';
       }
-      if (!desc) desc = '(no args)';
+      if (!desc) desc = '(no args; data keys: ' + Object.keys(d || {}).join(',') + ')';
       console.log('[' + fmtTime(n) + ']  ' + (activeRole || 'LLM_SURGERY') + '  iter ' + String(iter).padStart(2, ' ') + '  → ' + name + '  ' + desc);
       continue;
     }

@@ -111,6 +111,7 @@ async function beforeJob(user,chat,req){
  kick(s);
 }
 async function wait(user,chat,signal,req){
+ if(!req?._compressionTicket)return;
  if(req?.body?.isTemporary)return;
  initialize();const ticket=req?._compressionTicket;
  if(!ticket)throw Error('Prompt queue ticket missing');
@@ -132,6 +133,7 @@ async function wait(user,chat,signal,req){
  }
 }
 async function finishPrompt(req){
+ if(!req?._compressionTicket)return;
  const ticket=req?._compressionTicket;if(!ticket||req._compressionDelivered)return;
  initialize();await manager.cancel(ticket.scope,ticket.id);
  await manager.finishCancellation(ticket.scope,ticket.id);

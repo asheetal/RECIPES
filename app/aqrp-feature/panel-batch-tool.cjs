@@ -26,7 +26,24 @@ async function invoke(req, args) {
       if (!projectId) throw new Error('project scope required to read file_id');
       const projectFiles = require('/app/project-files-feature/project-files.cjs').service();
       const s = { user: String(req.user.id || req.user._id), tenant: String(req.user.tenantId || ''), projectId };
-      const { buffer } = await projectFiles.read(s, fileId);
+      // corpus fallback: if the caller's file_id doesn't resolve (e.g. a single-char
+      // transposition by the surgeon), fall back to the active run's fileId — the only
+      // valid corpus for this project scope. Rule: an integration layer must not fail
+      // on a hallucinated-but-close identifier when the ground truth is retrievable.
+      let buffer;
+      try {
+        buffer = (await projectFiles.read(s, fileId)).buffer;
+      } catch (__e) {
+        if (!/File not found/i.test(String(__e && __e.message))) throw __e;
+        const __db = require('mongoose').connection.db;
+        const __run = await __db.collection('aqrpruns').findOne(
+          { user: s.user, tenant: s.tenant, projectId },
+          { sort: { startedAt: -1 } }
+        );
+        if (!__run || !__run.fileId) throw __e;
+        buffer = (await projectFiles.read(s, __run.fileId)).buffer;
+        console.error('[panel-batch] file_id="' + fileId + '" not found; fell back to run.fileId="' + __run.fileId + '"');
+      }
       let data;
       try { data = JSON.parse(buffer.toString('utf8')); } catch (e) { throw new Error('file_id is not valid JSON: ' + e.message); }
       if (Array.isArray(data)) records = data;

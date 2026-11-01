@@ -120,7 +120,39 @@ async function invoke(req, args) {
     if (!payload && step !== 13) throw new Error(`payload required for step ${step}`);
     let p;
     if (!payload) { p = {}; }
-    else if (typeof payload === 'string') { try { p = JSON.parse(payload); } catch (e) { throw new Error(`step ${step} payload is a string but not valid JSON: ${e.message}`); } }
+    else if (typeof payload === 'string') {
+      try { p = JSON.parse(payload); }
+      catch (__e) {
+        // Narrow deterministic repair: repeated "}]" close artifact after last object
+        // in an array, followed by ", key: ...". Evidence: trace b49e2f6c step 24 payload
+        // had "}]}]}, ..." where correct is "}], ...". Only fires when JSON.parse reports
+        // "Unexpected non-whitespace character after JSON at position N" AND str[N-1]='}'
+        // AND str[N]=']'. Delete those 2 chars and retry once. If retry parses, accept;
+        // otherwise abort via OPD unchanged.
+        const __posMatch = String(__e.message).match(/position (\d+)/);
+        let __repaired = false;
+        if (__posMatch) {
+          const __N = parseInt(__posMatch[1], 10);
+          if (payload[__N - 1] === '}' && payload[__N] === ']') {
+            const __r = payload.slice(0, __N - 1) + payload.slice(__N + 1);
+            try {
+              p = JSON.parse(__r);
+              __repaired = true;
+              gateway.audit(req, 'LLM_SURGERY', 'payload_repair', {
+                step,
+                kind: 'trailing_brace_bracket_artifact',
+                position: __N,
+                originalLength: payload.length,
+                repairedLength: __r.length
+              });
+            } catch (_) {}
+          }
+        }
+        if (!__repaired) {
+          throw new Error(`step ${step} payload is a string but not valid JSON: ${__e.message}`);
+        }
+      }
+    }
     else { p = payload; }
     // step-13: assemble code_matrix from step 4 authoritative state.
     // The prompt says "no payload required" for step 13; the tool must provide

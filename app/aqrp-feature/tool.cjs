@@ -122,6 +122,16 @@ async function invoke(req, args) {
     if (!payload) { p = {}; }
     else if (typeof payload === 'string') { try { p = JSON.parse(payload); } catch (e) { throw new Error(`step ${step} payload is a string but not valid JSON: ${e.message}`); } }
     else { p = payload; }
+    // step-13: assemble code_matrix from step 4 authoritative state.
+    // The prompt says "no payload required" for step 13; the tool must provide
+    // code_matrix so pipeline.step13() does not throw. If the surgeon ever
+    // provides code_matrix in payload, that takes precedence.
+    if (step === 13 && (!Array.isArray(p.code_matrix) || p.code_matrix.length === 0)) {
+      const s4 = (await stateSvc.getStepOutput(s, 4)) || {};
+      if (Array.isArray(s4.code_matrix) && s4.code_matrix.length > 0) {
+        p.code_matrix = s4.code_matrix;
+      }
+    }
     const tmp = path.join(os.tmpdir(), `aqrp-step${step}-${Date.now()}.json`);
     fs.writeFileSync(tmp, JSON.stringify(p));
     const pools = await collectPools(s, stateSvc);

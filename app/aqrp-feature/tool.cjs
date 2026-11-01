@@ -96,7 +96,21 @@ async function invoke(req, args) {
 
     const payload = args.payload;
     if (!payload && step !== 13) throw new Error(`payload required for step ${step}`);
-    const p = payload ? (typeof payload === 'string' ? JSON.parse(payload) : payload) : {};
+    let p;
+    if (!payload) { p = {}; }
+    else if (typeof payload === 'string') {
+      // fallback: repair loop for any legacy or edge-case stringified payload
+      try { p = JSON.parse(payload); }
+      catch (e) {
+        let repaired = null;
+        for (let cut = 1; cut <= 5 && cut < payload.length; cut++) {
+          try { repaired = JSON.parse(payload.slice(0, -cut)); break; } catch (_) {}
+        }
+        if (!repaired) throw new Error(`payload JSON parse failed for step ${step} (${e.message}). Emit payload as a NATIVE JSON object, not as a stringified JSON string.`);
+        p = repaired;
+      }
+    }
+    else { p = payload; }
     const tmp = path.join(os.tmpdir(), `aqrp-step${step}-${Date.now()}.json`);
     fs.writeFileSync(tmp, JSON.stringify(p));
     const pools = await collectPools(s, stateSvc);
@@ -168,7 +182,7 @@ function makeTool(req) {
   return new DynamicStructuredTool({
     name: NAME,
     description: def.description,
-    schema: z.object({ plan: z.any().optional(), step: z.coerce.number().int(), file_id: z.string().optional(), fileId: z.string().optional(), projectFileId: z.string().optional(), payload: z.union([z.record(z.any()), z.string()]).optional() }).strip(),
+    schema: z.object({ plan: z.any().optional(), step: z.coerce.number().int(), file_id: z.string().optional(), fileId: z.string().optional(), projectFileId: z.string().optional(), payload: z.record(z.any()).optional() }).strip(),
     func: (a) => invoke(req, a),
   });
 }

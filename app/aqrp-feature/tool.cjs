@@ -2,9 +2,22 @@
 const NAME = 'aqrp_step_run';
 const { FINAL_STEP } = require('./steps.cjs');
 const PANEL_STEPS = new Set([4, 16, 17, 22]);
+const { z } = require('zod');
+const { zodToJsonSchema } = require('zod-to-json-schema');
+const STEP_SCHEMA = z.object({
+  plan: z.any().optional(),
+  step: z.coerce.number().int(),
+  file_id: z.string().optional(),
+  fileId: z.string().optional(),
+  projectFileId: z.string().optional(),
+  payload: z.record(z.any()).optional()
+}).strict().refine((v) => v.step === 1 || v.step === 13 || (v.payload && Object.keys(v.payload).length > 0), { message: 'payload required for steps 2-12, 14-32 (steps 1 and 13 are tool-only, no payload)' });
+const { $schema: _step$schema$, ...STEP_PARAMETERS } = zodToJsonSchema(STEP_SCHEMA);
+
 const def = {
   name: NAME,
   description: `AQRP step dispatcher. Run one step per call, in order. Step 1 input: {file_id}. Panel steps (4, 16, 17, 22) input: {payload:{panel_result:{panel,n,responses}}}. All other steps input: {payload:{...step-specific fields, rdf_records when SURGEON}}. Step 32 input: {payload:{submission_paper_tex, rdf_records:[R32]}}. Returns {status:'step_complete', step, output}. IMPORTANT: payload is required for every step except step 1. RDF-bearing steps (3,6,8,10,12,15,19,21,24,26,28,30,32) MUST include payload.rdf_records array with at least one record in the standard RDF shape. Step 32 must include exactly one R32 record (rdf_id:'R32', pool_id:'P13'). PLAN AND PAYLOAD RULES: (1) the plan JSON MUST be passed as the value of the top-level plan key, never spread at the top level; do not put changed/current/outputs/steps at the top level. (2) payload is a top-level key required for every step except step 1; step 2 needs payload={topics:[...], P01:{...}}.`,
+  parameters: STEP_PARAMETERS,
 };
 async function resolveProjectId(req) {
   if (req?.__aqrpProjectId) return req.__aqrpProjectId;
@@ -216,11 +229,10 @@ async function invoke(req, args) {
 }
 function makeTool(req) {
   const { DynamicStructuredTool } = require('@librechat/agents/langchain/tools');
-  const { z } = require('zod');
   return new DynamicStructuredTool({
     name: NAME,
     description: def.description,
-    schema: z.object({ plan: z.any().optional(), step: z.coerce.number().int(), file_id: z.string().optional(), fileId: z.string().optional(), projectFileId: z.string().optional(), payload: z.record(z.any()).optional() }).strict().refine((v) => v.step === 1 || v.step === 13 || (v.payload && Object.keys(v.payload).length > 0), { message: 'payload required for steps 2-12, 14-32 (steps 1 and 13 are tool-only, no payload)' }),
+    schema: STEP_SCHEMA,
     func: (a) => invoke(req, a),
   });
 }

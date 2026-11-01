@@ -96,7 +96,8 @@ function makeService(repo, deps) {
     } catch (e) {}
     return 4;
   }
-  async function assembleStep4Envelope(s) {
+  async function assembleStep4Envelope(s, __targetStep) {
+  const __step = Number.isInteger(__targetStep) ? __targetStep : 4;
     const mongoose = require('mongoose');
     const db = mongoose.connection.db;
     const r = await repo.getRun(s);
@@ -104,14 +105,14 @@ function makeService(repo, deps) {
     const siblings = await db.collection('aqrpruns').find({ projectId: s.projectId, fileId: r.fileId, sha256: r.sha256 }).toArray();
     let pick = null;
     for (const c of siblings) {
-      const prog = await db.collection('aqrp_progress').findOne({ runId: c.runId, step: 4 });
+      const prog = await db.collection('aqrp_progress').findOne({ runId: c.runId, step: __step });
       if (prog && Number.isInteger(prog.done) && Number.isInteger(prog.total) && prog.total > 0 && prog.done === prog.total && Number.isInteger(prog.n)) {
         pick = { runId: c.runId, n: prog.n };
         break;
       }
     }
     if (!pick) return null;
-    const all = await db.collection('aqrp_rows').find({ runId: pick.runId, step: 4 }).toArray();
+    const all = await db.collection('aqrp_rows').find({ runId: pick.runId, step: __step }).toArray();
     if (!all.length) return null;
     const step1 = r.steps && r.steps['1'] && r.steps['1'].output;
     let expected = (step1 && Array.isArray(step1.record_ids)) ? step1.record_ids.map(String) : null;

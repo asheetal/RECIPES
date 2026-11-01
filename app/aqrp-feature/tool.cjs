@@ -77,12 +77,17 @@ async function invoke(req, args) {
       // set from persistence; the surgeon's forwarded copy is discarded when the assembler
       // has a complete tally. Falls back to the surgeon's payload only when the assembler
       // has nothing (mid-flight run, no persisted rows yet).
-      if (step === 4) {
+      // All PANEL_STEPS: prefer assembler envelope from aqrp_rows (authoritative).
+      // Evidence (trace be528cc1, run 29c70b37): surgeon synthesized 6 rows for step 22
+      // despite aqrp_rows holding 30 complete cells. Assemble from persistence; keep
+      // surgeon's other payload keys (negative_case_log/resolution for step 22).
+      if (PANEL_STEPS.has(step)) {
         try {
-          const env = await stateSvc.assembleStep4Envelope(s);
+          const env = await stateSvc.assembleStep4Envelope(s, step);
           if (env) {
-            p4 = { panel_result: env };
-            gateway.audit(req, 'LLM_SURGERY', 'step4_envelope_source', { source: 'assembler' });
+            p4 = p4 || {};
+            p4.panel_result = env;
+            gateway.audit(req, 'LLM_SURGERY', 'panel_envelope_source', { step, source: 'assembler' });
           }
         } catch (_) {}
       }

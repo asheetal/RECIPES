@@ -124,42 +124,7 @@ async function invoke(req, args) {
     else if (typeof payload === 'string') {
       try { p = JSON.parse(payload); }
       catch (__e) {
-        // payload_repair_chain: deterministic repair for the two known LLM
-        // generation artifacts on stringified payloads:
-        //   (a) doubled close "}]}]" mid-payload (trace b49e2f6c step 24)
-        //   (b) trailing extra close "}}}" (trace cd8e98be step 9)
-        // Try three repairs in order; accept first that parses. If none parse,
-        // re-throw original — OPD fires as designed. Every successful repair
-        // is logged so the artifact class is visible in post-mortem.
-        const __posMatch = String(__e.message).match(/position (\d+)/);
-        let __repaired = false;
-        let __repairKind = null;
-        if (__posMatch && String(__e.message).includes('Unexpected non-whitespace character after JSON')) {
-          const __N = parseInt(__posMatch[1], 10);
-          if (Number.isInteger(__N) && __N > 0 && __N < payload.length) {
-            const __candidates = [
-              { kind: 'delete-2-mid', str: payload.slice(0, __N - 1) + payload.slice(__N + 1) },
-              { kind: 'delete-1-at-pos', str: payload.slice(0, __N) + payload.slice(__N + 1) },
-              { kind: 'truncate-at-pos', str: payload.slice(0, __N) }
-            ];
-            for (const __c of __candidates) {
-              try {
-                const __parsed = JSON.parse(__c.str);
-                p = __parsed;
-                __repaired = true;
-                __repairKind = __c.kind;
-                gateway.audit(req, 'LLM_SURGERY', 'payload_repair', {
-                  step, kind: __c.kind, position: __N,
-                  originalLength: payload.length, repairedLength: __c.str.length
-                });
-                break;
-              } catch (_) {}
-            }
-          }
-        }
-        if (!__repaired) {
-          throw new Error(`step ${step} payload is a string but not valid JSON: ${__e.message}`);
-        }
+        throw new Error(`step ${step} payload is a string but not valid JSON: ${__e.message}`);
       }
     }
     else { p = payload; }

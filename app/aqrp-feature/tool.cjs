@@ -220,7 +220,7 @@ function makeTool(req) {
   return new DynamicStructuredTool({
     name: NAME,
     description: def.description,
-    schema: z.object({ plan: z.any().optional(), step: z.coerce.number().int(), file_id: z.string().optional(), fileId: z.string().optional(), projectFileId: z.string().optional(), payload: z.union([z.record(z.any()), z.string()]).optional() }).strict().refine((v) => v.step === 1 || v.step === 13 || (v.payload && Object.keys(v.payload).length > 0), { message: 'payload required for steps 2-12, 14-32 (steps 1 and 13 are tool-only, no payload)' }),
+    schema: z.object({ plan: z.any().optional(), step: z.coerce.number().int(), file_id: z.string().optional(), fileId: z.string().optional(), projectFileId: z.string().optional(), payload: z.record(z.any()).optional() }).strict().refine((v) => v.step === 1 || v.step === 13 || (v.payload && Object.keys(v.payload).length > 0), { message: 'payload required for steps 2-12, 14-32 (steps 1 and 13 are tool-only, no payload)' }),
     func: (a) => invoke(req, a),
   });
 }

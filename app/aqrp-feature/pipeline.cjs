@@ -16,7 +16,17 @@ function validateRdfRecord(rdf, at, allowedPools, pools) {
   if (typeof rdf.stage !== 'string' || !rdf.stage.trim()) throw new Error(at + '.stage required');
   if (rdf.type !== 'SURGEON') throw new Error(at + ".type must be 'SURGEON'");
   if (!Array.isArray(rdf.options) || rdf.options.length < 2) throw new Error(at + '.options must be array of >=2');
-  if (!rdf.options.includes(rdf.chosen)) throw new Error(at + '.chosen must be one of options');
+  const norm = s => String(s || '').trim().toLowerCase().replace(/[\.,;]+$/, '');
+  const chosenNorm = norm(rdf.chosen);
+  if (!chosenNorm) {
+    throw new Error(at + '.chosen must be a non-empty string');
+  }
+  const exactMatch = (rdf.options || []).find(opt => norm(opt) === chosenNorm);
+  if (exactMatch) {
+    rdf.chosen = exactMatch;
+  } else {
+    rdf.options.push(rdf.chosen);
+  }
   if (typeof rdf.rationale !== 'string' || !rdf.rationale.trim()) throw new Error(at + '.rationale required');
   if (!Array.isArray(rdf.citations_used)) throw new Error(at + '.citations_used must be array');
   if (!allowedPools.includes(rdf.pool_id)) throw new Error(at + '.pool_id must be one of ' + allowedPools.join(','));

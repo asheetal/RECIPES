@@ -11,23 +11,11 @@ const baseProperties = {
   projectFileId: z.string().optional(),
 };
 
-const ToolStepSchema = z.object({
+const STEP_SCHEMA = z.object({
   ...baseProperties,
-  step: z.union([z.literal(1), z.literal(13)]),
-  payload: z.record(z.any()).optional(),
-}).strict();
-
-const CognitiveStepSchema = z.object({
-  ...baseProperties,
-  step: z.number().int().refine((n) => (n >= 2 && n <= 12) || (n >= 14 && n <= FINAL_STEP), {
-    message: `step must be 2..12 or 14..${FINAL_STEP}`,
-  }),
-  payload: z.record(z.any()).refine((p) => p && typeof p === 'object' && Object.keys(p).length > 0, {
-    message: 'payload must be a non-empty object',
-  }),
-}).strict();
-
-const STEP_SCHEMA = z.union([ToolStepSchema, CognitiveStepSchema]);
+  step: z.preprocess((val) => (val !== undefined && val !== null ? Number(val) : undefined), z.number().int().optional()),
+  payload: z.union([z.record(z.any()), z.string()]).optional(),
+}).passthrough();
 
 const STEP_PARAMETERS = {
   type: 'object',
@@ -105,11 +93,10 @@ async function collectAllRdfs(s, stateSvc) {
 
 async function invoke(req, args) {
   const gateway = require('/app/admin-tools/role-gateway.cjs');
-  const step = Number(args.step);
-  gateway.audit(req, 'LLM_SURGERY', 'tool_call', { tool: NAME, step });
+  let step = args.step !== undefined && args.step !== null ? Number(args.step) : null;
+  gateway.audit(req, 'LLM_SURGERY', 'tool_call', { tool: NAME, step, rawArgs: Object.keys(args || {}) });
   let currentState = null;
   try {
-    if (!Number.isInteger(step) || step < 1 || step > FINAL_STEP) throw new Error(`step must be 1..${FINAL_STEP}`);
     const projectId = await resolveProjectId(req);
     if (!projectId) throw new Error('AQRP requires a project scope');
     const projectFiles = require('/app/project-files-feature/project-files.cjs').service();
@@ -117,6 +104,10 @@ async function invoke(req, args) {
     const stateSvc = require('/app/aqrp-feature/aqrp.cjs').service();
     currentState = await stateSvc.getState(s);
     if (currentState.status !== 'running') throw new Error(`no active run (status=${currentState.status})`);
+    if (!Number.isInteger(step) || step < 1 || step > FINAL_STEP) {
+      step = (currentState.lastStepOk || 0) + 1;
+    }
+    if (!Number.isInteger(step) || step < 1 || step > FINAL_STEP) throw new Error(`step must be 1..${FINAL_STEP}`);
     const pipeline = require('/app/aqrp-feature/pipeline.cjs');
     const os = require('node:os'); const path = require('node:path'); const fs = require('node:fs');
 

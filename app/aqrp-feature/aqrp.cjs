@@ -28,8 +28,9 @@ function registerRoutes(router, projectFilesService) {
       const s = await svc.scope(req, req.params.projectId);
       let st = await svc.getState(s);
       if (st.status === 'running' && st.runId && !RUN_ABORTS.has(runKeyOf(s))) {
+        const isDone = Boolean(st.progress && st.progress.total > 0 && st.progress.done >= st.progress.total);
         const idleMs = st.lastProgressAt ? (Date.now() - new Date(st.lastProgressAt).getTime()) : Infinity;
-        if (idleMs > 90000) {
+        if (!isDone && idleMs > 600000) {
           st = await svc.failRun(s, 'dispatcher not alive: chat fetch ended or container restarted. Completed steps and partial step outputs are downloadable.');
         }
       }

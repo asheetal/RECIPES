@@ -1,12 +1,62 @@
-{ "$schema":"http://json-schema.org/draft-07/schema#", "$id":"aqrp://step9_10",
-  "title":"AQRP step 9 (search) output = step 10 input",
-  "type":"object",
-  "required":["status", "P04", "lit_map"],
-  "properties":{
-    "status": {"const": "LIT_SCAN_COMPLETE"},
-    "P04": {"$ref": "aqrp://shared/citation_pool"},
-    "lit_map": {"type": "array"}
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "aqrp://step9_10",
+  "title": "AQRP step 9 (search) output = step 10 input",
+  "type": "object",
+  "required": [
+    "status",
+    "P04",
+    "lit_map"
+  ],
+  "properties": {
+    "status": {
+      "const": "LIT_SCAN_COMPLETE"
+    },
+    "P04": {
+      "$ref": "aqrp://shared/citation_pool"
+    },
+    "lit_map": {
+      "type": "object",
+      "required": [
+        "clusters",
+        "gaps"
+      ],
+      "properties": {
+        "clusters": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "label",
+              "works"
+            ],
+            "properties": {
+              "label": {
+                "type": "string",
+                "minLength": 1
+              },
+              "works": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "gaps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true,
+      "description": "lit_map is an OBJECT {clusters:[{label,works}], gaps:[string]}. v246.2.32 emits this shape; the earlier schema declared array and threw at step 9."
+    }
   },
-  "additionalProperties":true,
-  "$comment":"Producer: pipeline.cjs searchStep(9, {poolId:'P04', status:'LIT_SCAN_COMPLETE', extraFields:['lit_map']}). Upstream fields from step 8 pass through verbatim."
+  "additionalProperties": true,
+  "$comment": "Producer: pipeline.cjs searchStep(9, {poolId:'P04', status:'LIT_SCAN_COMPLETE', extraFields:['lit_map']}). Upstream fields from step 8 pass through verbatim."
 }

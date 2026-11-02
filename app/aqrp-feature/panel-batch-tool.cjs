@@ -1,9 +1,15 @@
 'use strict';
 const NAME = 'llm_assistant_panel_batch';
+const { z } = require('zod');
+const { zodToJsonSchema } = require('zod-to-json-schema');
+const PANEL_SCHEMA = z.object({ plan: z.any().optional(), query: z.string(), schema: z.union([z.record(z.any()), z.string()]), records: z.union([z.array(z.any()), z.string()]).optional(), file_id: z.string().optional(), fileId: z.string().optional(), projectFileId: z.string().optional() }).strict();
+const { $schema: _panel$schema$, ...PANEL_PARAMETERS } = zodToJsonSchema(PANEL_SCHEMA);
+
 const def = {
   name: NAME,
   description:
     'Advisory multi-agent panel over records. Submit {query, schema, records} or {query, schema, file_id}; schema MUST be a JSON Schema object with keys type, properties, and required (type value must be the string object) — NOT a JSON string, NOT a plain object without type/properties; with file_id it reads every record of that JSON corpus. Returns {panel, n, responses}: n complete sets, each with coder_id and rows, rows spanning the input records in order. Recipe-agnostic. Not a search, research, bash, or computation tool.',
+  parameters: PANEL_PARAMETERS,
 };
 async function resolveProjectId(req) {
   if (req?.__aqrpProjectId) return req.__aqrpProjectId;
@@ -320,11 +326,10 @@ function makeTally(db, runId, projectId, tallyStep) {
 }
 function makeTool(req) {
   const { DynamicStructuredTool } = require('@librechat/agents/langchain/tools');
-  const { z } = require('zod');
   return new DynamicStructuredTool({
     name: NAME,
     description: def.description,
-    schema: z.object({ plan: z.any().optional(), query: z.string(), schema: z.union([z.record(z.any()), z.string()]), records: z.union([z.array(z.any()), z.string()]).optional(), file_id: z.string().optional(), fileId: z.string().optional(), projectFileId: z.string().optional() }).strict(),
+    schema: PANEL_SCHEMA,
     func: (a) => invoke(req, a),
   });
 }

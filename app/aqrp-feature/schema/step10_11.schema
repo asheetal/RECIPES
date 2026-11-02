@@ -1,0 +1,19 @@
+{ "$schema":"http://json-schema.org/draft-07/schema#", "$id":"aqrp://step10_11",
+  "title":"AQRP step 10 (surgeon) output = step 11 input",
+  "type":"object",
+  "required":["status", "candidate_lenses", "rdf_records"],
+  "properties":{
+    "status": {"const": "LENSES_PROPOSED"},
+    "candidate_lenses": {"not": {"type": "null"}},
+    "rdf_records": {
+      "type": "array",
+      "contains": {"type": "object", "required": ["rdf_id", "pool_id"],
+                     "properties": {"rdf_id": {"const": "R10"},
+                                    "pool_id": {"const": "P04"}}},
+      "items": {"$ref": "aqrp://shared/rdf_record"}
+    },
+    "P04": {"$ref": "aqrp://shared/citation_pool"}
+  },
+  "additionalProperties":true,
+  "$comment":"Producer: pipeline.cjs surgeonStep(10, {requiredFields:[candidate_lenses], rdfIds:['R10'], allowedPools:['P04'], status:'LENSES_PROPOSED'}). Exactly one RDF (R10) at this boundary; upstream fields pass through verbatim."
+}

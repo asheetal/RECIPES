@@ -1,0 +1,19 @@
+{ "$schema":"http://json-schema.org/draft-07/schema#", "$id":"aqrp://step30_31",
+  "title":"AQRP step 30 (surgeon) output = step 31 input",
+  "type":"object",
+  "required":["status", "sufficiency", "rdf_records"],
+  "properties":{
+    "status": {"const": "SUFFICIENCY_COMPLETE"},
+    "sufficiency": {"not": {"type": "null"}},
+    "rdf_records": {
+      "type": "array",
+      "contains": {"type": "object", "required": ["rdf_id", "pool_id"],
+                     "properties": {"rdf_id": {"const": "R30"},
+                                    "pool_id": {"const": "P12"}}},
+      "items": {"$ref": "aqrp://shared/rdf_record"}
+    },
+    "P12": {"$ref": "aqrp://shared/citation_pool"}
+  },
+  "additionalProperties":true,
+  "$comment":"Producer: pipeline.cjs surgeonStep(30, {requiredFields:[sufficiency], rdfIds:['R30'], allowedPools:['P12'], status:'SUFFICIENCY_COMPLETE'}). Exactly one RDF (R30) at this boundary; upstream fields pass through verbatim."
+}

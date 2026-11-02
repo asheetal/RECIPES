@@ -1,0 +1,19 @@
+{ "$schema":"http://json-schema.org/draft-07/schema#", "$id":"aqrp://step8_9",
+  "title":"AQRP step 8 (surgeon) output = step 9 input",
+  "type":"object",
+  "required":["status", "rq", "rdf_records"],
+  "properties":{
+    "status": {"const": "RQ_COMPLETE"},
+    "rq": {"not": {"type": "null"}},
+    "rdf_records": {
+      "type": "array",
+      "contains": {"type": "object", "required": ["rdf_id", "pool_id"],
+                     "properties": {"rdf_id": {"const": "R8"},
+                                    "pool_id": {"const": "P03"}}},
+      "items": {"$ref": "aqrp://shared/rdf_record"}
+    },
+    "P03": {"$ref": "aqrp://shared/citation_pool"}
+  },
+  "additionalProperties":true,
+  "$comment":"Producer: pipeline.cjs surgeonStep(8, {requiredFields:[rq], rdfIds:['R8'], allowedPools:['P03'], status:'RQ_COMPLETE'}). Exactly one RDF (R8) at this boundary; upstream fields pass through verbatim."
+}

@@ -1,0 +1,19 @@
+{ "$schema":"http://json-schema.org/draft-07/schema#", "$id":"aqrp://step24_25",
+  "title":"AQRP step 24 (surgeon) output = step 25 input",
+  "type":"object",
+  "required":["status", "dimensions", "rdf_records"],
+  "properties":{
+    "status": {"const": "DIMENSIONS_COMPLETE"},
+    "dimensions": {"not": {"type": "null"}},
+    "rdf_records": {
+      "type": "array",
+      "contains": {"type": "object", "required": ["rdf_id", "pool_id"],
+                     "properties": {"rdf_id": {"const": "R24"},
+                                    "pool_id": {"const": "P09"}}},
+      "items": {"$ref": "aqrp://shared/rdf_record"}
+    },
+    "P09": {"$ref": "aqrp://shared/citation_pool"}
+  },
+  "additionalProperties":true,
+  "$comment":"Producer: pipeline.cjs surgeonStep(24, {requiredFields:[dimensions], rdfIds:['R24'], allowedPools:['P09'], status:'DIMENSIONS_COMPLETE'}). Exactly one RDF (R24) at this boundary; upstream fields pass through verbatim."
+}

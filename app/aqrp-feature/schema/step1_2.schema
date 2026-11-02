@@ -1,0 +1,16 @@
+{ "$schema":"http://json-schema.org/draft-07/schema#", "$id":"aqrp://step1_2",
+  "title":"AQRP step 1 output = step 2 input",
+  "type":"object",
+  "required":["status","json_type","bytes"],
+  "properties":{
+    "status":{"const":"LOADED"},
+    "json_type":{"enum":["array","object","string","number","boolean","null"]},
+    "top_keys":{"type":"array","items":{"type":"string"}},
+    "array_key":{"type":"string"},
+    "n_elements":{"type":"integer","minimum":0},
+    "sample_keys":{"type":"array","items":{"type":"string"}},
+    "sample_records":{"type":"array","maxItems":5,"items":{"type":"object"}},
+    "bytes":{"type":"integer","minimum":0},
+    "record_ids":{"type":"array","items":{"type":"string"}}
+  },
+  "additionalProperties":true }

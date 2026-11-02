@@ -1,0 +1,17 @@
+{ "$schema":"http://json-schema.org/draft-07/schema#", "$id":"aqrp://step13_14",
+  "title":"AQRP step 13 (code grouping) output = step 14 input",
+  "type":"object",
+  "required":["status","merge_candidates"],
+  "properties":{
+    "status":{"const":"CODE_GROUPING_COMPLETE"},
+    "merge_candidates":{"type":"array","items":{
+      "type":"object","required":["normalized","variants"],
+      "properties":{
+        "normalized":{"type":"string","minLength":1},
+        "variants":{"type":"array","minItems":2,"items":{"type":"string","minLength":1}}},
+      "additionalProperties":true}},
+    "code_matrix":{"type":"array"}
+  },
+  "additionalProperties":true,
+  "$comment":"Producer: pipeline.cjs step13(). code_matrix is injected by aqrp_step_run from step-4 state when the surgeon omits it; it is passed through."
+}

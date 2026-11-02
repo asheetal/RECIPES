@@ -1,0 +1,19 @@
+{ "$schema":"http://json-schema.org/draft-07/schema#", "$id":"aqrp://step19_20",
+  "title":"AQRP step 19 (surgeon) output = step 20 input",
+  "type":"object",
+  "required":["status", "themes_k", "rdf_records"],
+  "properties":{
+    "status": {"const": "THEMES_COMPLETE"},
+    "themes_k": {"not": {"type": "null"}},
+    "rdf_records": {
+      "type": "array",
+      "contains": {"type": "object", "required": ["rdf_id", "pool_id"],
+                     "properties": {"rdf_id": {"const": "R19"},
+                                    "pool_id": {"const": "P07"}}},
+      "items": {"$ref": "aqrp://shared/rdf_record"}
+    },
+    "P07": {"$ref": "aqrp://shared/citation_pool"}
+  },
+  "additionalProperties":true,
+  "$comment":"Producer: pipeline.cjs surgeonStep(19, {requiredFields:[themes_k], rdfIds:['R19'], allowedPools:['P07'], status:'THEMES_COMPLETE'}). Exactly one RDF (R19) at this boundary; upstream fields pass through verbatim."
+}

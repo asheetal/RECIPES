@@ -1,0 +1,9 @@
+{ "$schema":"http://json-schema.org/draft-07/schema#", "$id":"aqrp://shared/warning",
+  "type":"object",
+  "required":["step","kind","blame"],
+  "properties":{
+    "step":{"type":"integer","minimum":1,"maximum":32},
+    "kind":{"enum":["ALL_MEMBERS_NA","SOME_MEMBERS_NA","FLAG_ITEM_CODED","CODE_NOT_IN_BRIEF","PANEL_MEMBER_NA","MISSING_ARTIFACT"]},
+    "blame":{"type":"string","pattern":"^(admin roster|step-\\d+ surgeon)$"}
+  },
+  "additionalProperties":true }

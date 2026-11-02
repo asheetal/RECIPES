@@ -1,0 +1,20 @@
+{ "$schema":"http://json-schema.org/draft-07/schema#", "$id":"aqrp://step6_7",
+  "title":"AQRP step 6 (surgeon) output = step 7 input",
+  "type":"object",
+  "required":["status", "salience_ranking", "memos", "rdf_records"],
+  "properties":{
+    "status": {"const": "MEMO_COMPLETE"},
+    "salience_ranking": {"not": {"type": "null"}},
+    "memos": {"not": {"type": "null"}},
+    "rdf_records": {
+      "type": "array",
+      "contains": {"type": "object", "required": ["rdf_id", "pool_id"],
+                     "properties": {"rdf_id": {"const": "R6"},
+                                    "pool_id": {"const": "P02"}}},
+      "items": {"$ref": "aqrp://shared/rdf_record"}
+    },
+    "P02": {"$ref": "aqrp://shared/citation_pool"}
+  },
+  "additionalProperties":true,
+  "$comment":"Producer: pipeline.cjs surgeonStep(6, {requiredFields:[salience_ranking,'memos'], rdfIds:['R6'], allowedPools:['P02'], status:'MEMO_COMPLETE'}). Exactly one RDF (R6) at this boundary; upstream fields pass through verbatim."
+}

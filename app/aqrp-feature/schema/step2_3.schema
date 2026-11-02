@@ -1,0 +1,10 @@
+{ "$schema":"http://json-schema.org/draft-07/schema#", "$id":"aqrp://step2_3",
+  "title":"AQRP step 2 output = step 3 input",
+  "type":"object",
+  "required":["status","topics","P01"],
+  "properties":{
+    "status":{"const":"TOPICS_IDENTIFIED"},
+    "topics":{"type":"array","minItems":2,"maxItems":5,"items":{"type":"string","minLength":1}},
+    "P01":{"$ref":"aqrp://shared/citation_pool"}
+  },
+  "additionalProperties":true }

@@ -1,0 +1,11 @@
+{ "$schema":"http://json-schema.org/draft-07/schema#", "$id":"aqrp://step25_26",
+  "title":"AQRP step 25 (search) output = step 26 input",
+  "type":"object",
+  "required":["status", "P10"],
+  "properties":{
+    "status": {"const": "MODEL_SEARCH_COMPLETE"},
+    "P10": {"$ref": "aqrp://shared/citation_pool"}
+  },
+  "additionalProperties":true,
+  "$comment":"Producer: pipeline.cjs searchStep(25, {poolId:'P10', status:'MODEL_SEARCH_COMPLETE'}). Upstream fields from step 24 pass through verbatim."
+}

@@ -1,0 +1,18 @@
+{ "$schema":"http://json-schema.org/draft-07/schema#", "$id":"aqrp://shared/rdf_record",
+  "type":"object",
+  "required":["rdf_id","stage","type","options","chosen","rationale","citations_used","pool_id","citation_status"],
+  "properties":{
+    "rdf_id":{"type":"string","minLength":1},
+    "stage":{"type":"string","minLength":1},
+    "type":{"const":"SURGEON"},
+    "options":{"type":"array","minItems":2,"items":{"type":"string"}},
+    "chosen":{"type":"string","minLength":1},
+    "rationale":{"type":"string","minLength":1},
+    "citations_used":{"type":"array","items":{"type":"string"}},
+    "pool_id":{"type":"string","pattern":"^P\\d+$"},
+    "citation_status":{"enum":["pool_selected","partial","none_gut_feeling"]},
+    "gut_rationale":{"type":"string"}
+  },
+  "additionalProperties":true,
+  "description":"Semantic rule (pipeline.cjs): chosen ∈ options; every DOI in citations_used is in the declared pool; gut_rationale required when citation_status=none_gut_feeling."
+}

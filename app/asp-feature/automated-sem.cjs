@@ -1,4 +1,6 @@
 'use strict';
+const RUN_ABORTS = new Map();
+const runKeyOf = (s) => `${s.user}|${s.tenant}|${s.projectId}`;
 const { makeService } = require('./core.cjs');
 let instance;
 function service() {
@@ -58,16 +60,21 @@ function registerRoutes(router, projectFilesService) {
       const token = jwt.sign({ id: s.user }, process.env.JWT_SECRET, { expiresIn: '10m' });
       const base = `http://127.0.0.1:${process.env.PORT || 3080}`;
       console.error('[ASP] dispatching to chat', conversationId);
+      const rk = runKeyOf(s);
+      const ctl = new AbortController();
+      RUN_ABORTS.set(rk, ctl);
+      const __timeout = setTimeout(() => { try { ctl.abort(); } catch (_) {} }, 1800000);
       fetch(`${base}/api/agents/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'User-Agent': req.headers['user-agent'] || 'LibreChat/0.8.7' },
         body: JSON.stringify({ conversationId, text: recipe.prompt + '\n\nWorkbook file_id: ' + fileId, parentMessageId: null, tools: recipe.tools || [], files: [{ file_id: fileId, projectFileId: fileId, filename: file.name }], recipeWorkflow: recipe.workflow || null }),
-        signal: AbortSignal.timeout(1800000),
+        signal: ctl.signal,
       }).then(async (r) => {
         const body = await r.text().catch(() => '');
         console.error('[ASP] chat response', r.status, body.slice(0, 2000));
         if (!r.ok) await svc.failRun(s, `chat ${r.status}: ${body.slice(0, 200)}`);
-      }).catch(async (e) => { console.error('[ASP] chat fetch error', e.message); await svc.failRun(s, e.message); });
+      }).catch(async (e) => { console.error('[ASP] chat fetch error', e.message); await svc.failRun(s, e.message); })
+      .finally(() => { clearTimeout(__timeout); RUN_ABORTS.delete(rk); });
     } catch (e) { next(e); }
   });
   router.get('/:projectId/automated-sem/output/:step', async (req, res, next) => {
@@ -101,6 +108,15 @@ function registerRoutes(router, projectFilesService) {
       res.set('Content-Type', 'application/zip');
       res.set('Content-Disposition', 'attachment; filename="asp_artifacts.zip"');
       res.send(buf);
+    } catch (e) { next(e); }
+  });
+  router.post('/:projectId/automated-sem/kill', async (req, res, next) => {
+    try {
+      const s = await svc.scope(req, req.params.projectId);
+      const ctl = RUN_ABORTS.get(runKeyOf(s));
+      if (ctl) { try { ctl.abort(); } catch (_) {} RUN_ABORTS.delete(runKeyOf(s)); }
+      const killed = await svc.killRun(s, 'killed by user');
+      res.json(killed);
     } catch (e) { next(e); }
   });
   router.delete('/:projectId/automated-sem', async (req, res, next) => {

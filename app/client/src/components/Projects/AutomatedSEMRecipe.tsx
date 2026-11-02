@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Check, Download, FileJson, Trash2, Upload } from 'lucide-react';
+import { Check, Download, FileJson, Square, Trash2, Upload } from 'lucide-react';
 import { Spinner } from '@librechat/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { request, apiBaseUrl } from 'librechat-data-provider';
@@ -8,7 +8,7 @@ import { cn } from '~/utils';
 type FileRow = { id: string; name: string; bytes: number };
 const STEP_LABELS = ['Preview workbook','Schema resolve','Taxonomy','Search grid','Thresholds','Filter','Theory review','Bootstrap','Descriptives','Topology','Render diagram','Report','Package'];
 type StepInfo = { ok: boolean };
-type RunState = { status: 'idle' | 'running' | 'done' | 'failed'; fileId?: string | null; fileName?: string | null; steps?: Record<string, StepInfo>; error?: string | null };
+type RunState = { status: 'idle' | 'running' | 'done' | 'failed' | 'killed'; fileId?: string | null; fileName?: string | null; steps?: Record<string, StepInfo>; error?: string | null };
 
 async function getJson(u: string) { return request.get(u); }
 async function postJson(u: string, b: unknown) { return request.post(u, b); }
@@ -92,17 +92,33 @@ export default function AutomatedSEMRecipe({ projectId }: { projectId: string })
 
   const remove = useCallback(async () => { await delJson(base); setState({ status: 'idle' }); queryClient.invalidateQueries(); }, [base, queryClient]);
 
+  const kill = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try { await postJson(`${base}/kill`, {}); } catch { /* state surfaces via refresh */ }
+    refresh();
+  }, [base, refresh]);
+
   const have = latestStep() > 0;
 
   return (
     <>
-      <button type="button" onClick={openModal} data-testid="recipe-tile-automated-sem" aria-label="Automated SEM Pipeline recipe" disabled={state.status === 'running'}
-        className={cn('group/recipe flex min-h-[6.5rem] flex-col rounded-xl border border-border-medium bg-surface-secondary p-4 text-left transition-colors', 'hover:border-border-heavy hover:bg-surface-tertiary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary', state.status === 'running' && 'opacity-60')}>
+      <div role="button" tabIndex={0}
+        onClick={() => { if (state.status !== 'running') openModal(); }}
+        onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && state.status !== 'running') { e.preventDefault(); openModal(); } }}
+        data-testid="recipe-tile-automated-sem" aria-label="Automated SEM Pipeline recipe"
+        className={cn('group/recipe flex min-h-[6.5rem] flex-col rounded-xl border border-border-medium bg-surface-secondary p-4 text-left transition-colors', 'hover:border-border-heavy hover:bg-surface-tertiary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary', state.status === 'running' && 'opacity-80')}>
         <span className="flex min-w-0 items-center gap-2"><FileJson className="h-4 w-4 shrink-0 text-text-secondary" aria-hidden="true" /><span className="truncate text-base font-semibold text-text-primary">Automated SEM Pipeline</span></span>
         <span className="mt-2 flex items-center gap-2 text-sm">
           {state.status === 'running' && <Spinner className="h-4 w-4" />}
           {state.status === 'running' && <span className="text-text-secondary">{(() => { const done = latestStep(); const cur = done >= 13 ? 13 : done + 1; const lbl = STEP_LABELS[cur - 1] || ''; return `Step ${cur}/13 · ${lbl}`; })()}</span>}
+          {state.status === 'running' && (
+            <button type="button" onClick={kill} aria-label="Stop run" title="Stop the recipe. Completed steps stay downloadable."
+              className="inline-flex items-center gap-1 rounded bg-red-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400">
+              <Square className="h-3 w-3" /> Stop
+            </button>
+          )}
           {state.status === 'failed' && <span className="text-red-600 dark:text-red-400" title={state.error ?? 'Failed'}>{state.error ? state.error.slice(0, 80) : 'Failed'}</span>}
+          {state.status === 'killed' && <span className="text-amber-600 dark:text-amber-400">Stopped at step {latestStep() || 0}</span>}
           {state.status === 'done' && <Check className="h-4 w-4 text-green-600 dark:text-green-400" />}
           {state.status === 'done' && <span className="text-text-secondary">13/13 · complete</span>}
           {state.status === 'idle' && <span className="text-text-secondary">Upload an Excel file with codebook and survey data</span>}
@@ -113,7 +129,7 @@ export default function AutomatedSEMRecipe({ projectId }: { projectId: string })
             <button type="button" onClick={(e) => { e.stopPropagation(); remove(); }} aria-label="Delete run" className="rounded p-1 hover:bg-surface-hover"><Trash2 className="h-4 w-4" /></button>
           )}
         </span>
-      </button>
+      </div>
       {open && (
         <div role="dialog" aria-modal="true" aria-label="Automated SEM Pipeline recipe" className="fixed inset-0 z-[130] flex items-center justify-center bg-black/40" onClick={() => setOpen(false)}>
           <div className="w-11/12 max-w-lg rounded-xl border border-border-medium bg-surface-primary p-5" onClick={(e) => e.stopPropagation()}>

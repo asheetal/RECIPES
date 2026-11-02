@@ -32,6 +32,8 @@ export default function AQRPTile({ projectId }: { projectId: string }) {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const pollRef = useRef<number | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const pdfBlobRef = useRef<Blob | null>(null);
+  const [pdf, setPdf] = useState<{ status: 'idle' | 'checking' | 'ready' | 'error'; error?: string }>({ status: 'idle' });
 
   const base = `${apiBaseUrl()}/api/projects/${encodeURIComponent(projectId)}/aqrp`;
   const filesBase = `${apiBaseUrl()}/api/projects/${encodeURIComponent(projectId)}/files`;
@@ -84,6 +86,8 @@ export default function AQRPTile({ projectId }: { projectId: string }) {
   const start = useCallback(async () => {
     if (!selected) return;
     setOpen(false);
+    setPdf({ status: 'idle' });
+    pdfBlobRef.current = null;
     setState({ status: 'running', fileId: selected.id, fileName: selected.name, currentStep: 0 });
     try {
       const res = await postJson(`${base}/start`, { fileId: selected.id });
@@ -93,6 +97,44 @@ export default function AQRPTile({ projectId }: { projectId: string }) {
     }
     refresh();
   }, [selected, base, refresh]);
+
+  const checkPdf = useCallback(async () => {
+    setPdf({ status: 'checking' });
+    try {
+      const blob = (await request.get(`${base}/pdf`, { responseType: 'blob', timeout: 320000 })) as unknown as Blob;
+      pdfBlobRef.current = blob;
+      setPdf({ status: 'ready' });
+    } catch (e) {
+      const err = e as { response?: { status?: number; data?: unknown }; message?: string };
+      const code = err?.response?.status;
+      let msg = err?.message || 'PDF compile failed';
+      const data = err?.response?.data;
+      if (data instanceof Blob) {
+        try { const text = await data.text(); if (text) msg = text.slice(0, 240); } catch { /* ignore */ }
+      } else if (typeof data === 'string') {
+        msg = data.slice(0, 240);
+      }
+      setPdf({ status: 'error', error: code ? `HTTP ${code} — ${msg}` : msg });
+      pdfBlobRef.current = null;
+    }
+  }, [base]);
+
+  const downloadPdf = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    const blob = pdfBlobRef.current;
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'aqrp_report.pdf';
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  }, []);
+
+  useEffect(() => {
+    if (state.status === 'done' && state.lastStepOk === FINAL_STEP && pdf.status === 'idle') {
+      checkPdf();
+    }
+  }, [state.status, state.lastStepOk, pdf.status, checkPdf]);
 
   const download = useCallback(async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -121,6 +163,8 @@ export default function AQRPTile({ projectId }: { projectId: string }) {
   const remove = useCallback(async (e: React.MouseEvent) => {
     e.stopPropagation();
     await delJson(base);
+    setPdf({ status: 'idle' });
+    pdfBlobRef.current = null;
     setState({ status: 'idle' });
     queryClient.invalidateQueries();
   }, [base, queryClient]);
@@ -209,10 +253,31 @@ export default function AQRPTile({ projectId }: { projectId: string }) {
       );
     }
     if (state.status === 'done') {
+      const doneLabel = `Done (step ${state.lastStepOk ?? state.currentStep})`;
+      if (pdf.status === 'error') {
+        return (
+          <span className="mt-2 flex flex-wrap items-center gap-2 text-sm text-red-600 dark:text-red-400">
+            <AlertTriangle className="h-4 w-4" /> PDF failed
+            {pdf.error && <span className="max-w-full truncate text-xs" title={pdf.error}>{pdf.error}</span>}
+            <button type="button" onClick={(e) => { e.stopPropagation(); checkPdf(); }} aria-label="Retry PDF compile" className="rounded border border-border-medium px-2 py-1 text-xs font-medium text-text-primary hover:bg-surface-hover">Retry</button>
+            <button type="button" onClick={downloadBundle} aria-label="Download completed steps as zip" className="rounded p-1 hover:bg-surface-hover"><Archive className="h-4 w-4" /></button>
+            <button type="button" onClick={remove} aria-label="Delete run" className="rounded p-1 hover:bg-surface-hover"><Trash2 className="h-4 w-4" /></button>
+          </span>
+        );
+      }
+      if (pdf.status !== 'ready') {
+        return (
+          <span className="mt-2 flex flex-wrap items-center gap-2 text-sm text-text-secondary">
+            <Spinner className="h-4 w-4" /> {doneLabel} — compiling PDF…
+            <button type="button" onClick={downloadBundle} aria-label="Download completed steps as zip" className="rounded p-1 hover:bg-surface-hover"><Archive className="h-4 w-4" /></button>
+            <button type="button" onClick={remove} aria-label="Delete run" className="rounded p-1 hover:bg-surface-hover"><Trash2 className="h-4 w-4" /></button>
+          </span>
+        );
+      }
       return (
         <span className="mt-2 flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
-          <Check className="h-4 w-4" /> Done (step {state.lastStepOk ?? state.currentStep})
-          <button type="button" onClick={download} aria-label="Download last step output" className="ml-1 rounded p-1 hover:bg-surface-hover"><Download className="h-4 w-4" /></button>
+          <Check className="h-4 w-4" /> {doneLabel}
+          <button type="button" onClick={downloadPdf} aria-label="Download PDF report" className="ml-1 rounded p-1 hover:bg-surface-hover"><Download className="h-4 w-4" /></button>
           <button type="button" onClick={downloadBundle} aria-label="Download completed steps as zip" className="rounded p-1 hover:bg-surface-hover"><Archive className="h-4 w-4" /></button>
           <button type="button" onClick={remove} aria-label="Delete run" className="rounded p-1 hover:bg-surface-hover"><Trash2 className="h-4 w-4" /></button>
         </span>

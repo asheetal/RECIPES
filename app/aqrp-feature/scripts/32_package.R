@@ -8,7 +8,6 @@ dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
 suppressPackageStartupMessages(library(jsonlite))
 raw <- paste(readLines(file("stdin")), collapse = "\n")
 spec <- jsonlite::fromJSON(raw, simplifyVector = FALSE)
-writeLines(spec$submission_paper_tex %||% "", file.path(out_dir, "submission_paper.tex"))
 writeLines(spec$supplementary_rdf_tex %||% "", file.path(out_dir, "supplementary_rdf.tex"))
 writeLines(jsonlite::toJSON(spec$aqrp_report, auto_unbox = TRUE, pretty = TRUE), file.path(out_dir, "aqrp_report.rdf"))
 if (nzchar(Sys.which("pdflatex"))) {

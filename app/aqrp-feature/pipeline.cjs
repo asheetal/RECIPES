@@ -338,17 +338,85 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   const OQ = '\u0060\u0060';
   const CQ = '\u0027\u0027';
 
-  // Pool DOI index
+  const __METHODOLOGY = {
+    "10.1177/1094428112452151": {
+      __key: "gioia2013seeking",
+      authors: ["Gioia, D. A.", "Corley, K. G.", "Hamilton, A. L."],
+      year: 2013,
+      title: "Seeking Qualitative Rigor in Inductive Research: Notes on the Gioia Methodology",
+      journal: "Organizational Research Methods",
+      volume: "16",
+      issue: "1",
+      pages: "15--31",
+      doi: "10.1177/1094428112452151"
+    },
+    "10.1191/1478088706qp063oa": {
+      __key: "braun2006using",
+      authors: ["Braun, V.", "Clarke, V."],
+      year: 2006,
+      title: "Using Thematic Analysis in Psychology",
+      journal: "Qualitative Research in Psychology",
+      volume: "3",
+      issue: "2",
+      pages: "77--101",
+      doi: "10.1191/1478088706qp063oa"
+    },
+    "10.5465/amr.2009.0486": {
+      __key: "corley2011building",
+      authors: ["Corley, K. G.", "Gioia, D. A."],
+      year: 2011,
+      title: "Building Theory About Theory Building: What Constitutes a Theoretical Contribution?",
+      journal: "Academy of Management Review",
+      volume: "36",
+      issue: "1",
+      pages: "12--32",
+      doi: "10.5465/amr.2009.0486"
+    },
+    "10.1177/1049732315617444": {
+      __key: "malterud2016sample",
+      authors: ["Malterud, K.", "Siersma, V. D.", "Guassora, A. D."],
+      year: 2016,
+      title: "Sample Size in Qualitative Interview Studies: Guided by Information Power",
+      journal: "Qualitative Health Research",
+      volume: "26",
+      issue: "13",
+      pages: "1753--1760",
+      doi: "10.1177/1049732315617444"
+    },
+    "10.4135/9781452230153": {
+      __key: "strauss1998basics",
+      authors: ["Strauss, A.", "Corbin, J."],
+      year: 1998,
+      title: "Basics of Qualitative Research: Techniques and Procedures for Developing Grounded Theory",
+      journal: "Sage Publications",
+      doi: "10.4135/9781452230153"
+    }
+  };
+
+  // Pool DOI & __key index
   const poolOrder = ['P01','P02','P03','P04','P05','P06','P07','P08','P09','P10','P11','P12','P13','P00'];
-  const doiToRec = {}, poolDOIs = [], poolByID = {};
+  const doiToRec = {}, keyToRec = {}, poolDOIs = [], poolByID = {};
+
+  // Register __METHODOLOGY records into lookups
+  for (const [d, mRec] of Object.entries(__METHODOLOGY)) {
+    doiToRec[d.toLowerCase()] = mRec;
+    if (mRec.__key) keyToRec[mRec.__key] = mRec;
+    poolDOIs.push(d);
+  }
+
   for (const k of poolOrder) {
     const pool = pools && pools[k];
     if (!pool) continue;
-    const recs = (pool.top_k || []).filter(r => r && r.doi);
+    const recs = (pool.top_k || []).filter(r => r && (r.doi || r.__key));
     poolByID[k] = recs;
     for (const rec of recs) {
-      const d = String(rec.doi);
-      if (!doiToRec[d]) { doiToRec[d] = rec; poolDOIs.push(d); }
+      if (rec.doi) {
+        const d = String(rec.doi).trim().toLowerCase();
+        if (!doiToRec[d]) { doiToRec[d] = rec; poolDOIs.push(d); }
+      }
+      if (rec.__key) {
+        keyToRec[String(rec.__key).trim()] = rec;
+      }
     }
   }
 
@@ -434,46 +502,14 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     return out;
   }
 
-  // Extract paper if present
-  let paper = p.submission_paper_tex || '';
-  const hasPaper = paper.length > 500 && paper.indexOf('\\begin{document}') >= 0;
-  let paperTitle = '', abstractText = '', paperRQ = '', paperLit = '', paperMethods = '', paperDiscussion = '';
+  // Native report sections from pipeline state
+  const displayTitle = (s26.model_draft && s26.model_draft.name) || (s12.chosen_framing && s12.chosen_framing.name) || 'Qualitative Analysis Report';
+  const abstractText = (s26.model_draft && s26.model_draft.summary) || (s12.chosen_framing && s12.chosen_framing.rationale) || '';
+  const paperRQ = s8.rq || '';
+  const paperLit = (s12.chosen_framing && s12.chosen_framing.rationale) || (Array.isArray(s10.candidate_lenses) ? s10.candidate_lenses.map(l => (l.name || '') + ': ' + (l.rationale || '')).join(' ') : '');
+  const paperMethods = 'This study employs reflexive qualitative analysis across a corpus of ' + (s1.n_elements || 'sampled') + ' records. Analysis followed systematic familiarization, open coding with a designated codebook (' + codebook.map(c => c.code || c.name).filter(Boolean).join(', ') + '), cross-case synthesis, and dimension aggregation.';
+  const paperDiscussion = (s26.model_draft && (s26.model_draft.description || (Array.isArray(s26.model_draft.propositions) ? s26.model_draft.propositions.join(' ') : ''))) || '';
   const paperFindings = [];
-  if (hasPaper) {
-    const beginDoc = paper.indexOf('\\begin{document}');
-    const endDoc = paper.lastIndexOf('\\end{document}');
-    let body = paper.slice(beginDoc + 16, endDoc);
-    const titleMatch = paper.match(/\\title\{([\s\S]*?)\}/);
-    paperTitle = titleMatch ? titleMatch[1].trim() : '';
-    const abstractMatch = body.match(/\\begin\{abstract\}([\s\S]*?)\\end\{abstract\}/);
-    abstractText = abstractMatch ? abstractMatch[1].trim() : '';
-    body = body.replace(/\\begin\{abstract\}[\s\S]*?\\end\{abstract\}/g, '');
-    body = body.replace(/\\title\{[\s\S]*?\}/g, '').replace(/\\author\{[\s\S]*?\}/g, '')
-               .replace(/\\date\{[\s\S]*?\}/g, '').replace(/\\maketitle/g, '');
-    body = body.replace(/\\begin\{thebibliography\}[\s\S]*?\\end\{thebibliography\}/g, '');
-    body = body.replace(/\\bibliographystyle\{[^}]*\}/g, '').replace(/\\bibliography\{[^}]*\}/g, '');
-    body = body.replace(/^[ \t]*\bKeywords?\s*:\s*[^\n]+\n?/gim, '');
-    const __fc = body.indexOf('\\clearpage');
-    if (__fc >= 0) body = body.slice(0, __fc);
-    body = body.replace(/\\begin\{singlespacing\}[\s\S]*?\\end\{singlespacing\}/g, '');
-    body = body.replace(/\\resizebox\{[^}]*\}\{[^}]*\}\{[\s\S]*?\\end\{tikzpicture\}%?\s*\}/g, '');
-    body = body.replace(/\\begin\{tikzpicture\}[\s\S]*?\\end\{tikzpicture\}/g, '');
-    body = body.replace(/\\vspace\{[^}]*\}\s*\n?\\noindent\\textit\{Keywords:\}[^\n]*\n?/g, '');
-    body = body.replace(/\\noindent\\textit\{Keywords:\}[^\n]*\n?/g, '');
-    body = body.trim();
-    function getSection(txt, pat) {
-      const re = new RegExp('\\\\section\\*?\\{([^}]*' + pat + '[^}]*)\\}([\\s\\S]*?)(?=\\\\section|\\\\subsection|$)', 'i');
-      const m = txt.match(re);
-      return m ? m[2].trim() : '';
-    }
-    paperRQ = getSection(body, 'research question|introduction');
-    paperLit = getSection(body, 'literature|prior work');
-    paperMethods = getSection(body, 'method');
-    paperDiscussion = getSection(body, 'discussion|conclusion');
-    const reSub = /\\subsection\*?\{([^}]+)\}([\s\S]*?)(?=\\subsection|\\section|$)/g;
-    let mm;
-    while ((mm = reSub.exec(body)) !== null) paperFindings.push({ title: mm[1].trim(), text: mm[2].trim() });
-  }
 
   // ── Build tex ──
     function __pickCitationByContext(context) {
@@ -492,100 +528,105 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     if (!text) return text;
     let out = String(text);
 
-    // Build surname+year → DOI map from pools
-    const authYearMap = {};
-    for (const d of poolDOIs) {
-      const rec = doiToRec[d];
-      if (!rec) continue;
+    // Build surname + year -> rec.__key map
+    const authYearToKey = {};
+    for (const rec of Object.values(keyToRec)) {
+      if (!rec || !rec.__key) continue;
       const y = rec.year;
       const authArr = Array.isArray(rec.authors) ? rec.authors : [String(rec.authors || '')];
       for (const a of authArr) {
         const parts = String(a).trim().split(/[\s,]+/).filter(Boolean);
         if (!parts.length) continue;
         const surname = parts[0].toLowerCase();
-        authYearMap[surname + String(y)] = d;
-        authYearMap[surname.replace(/[^a-z]/g, '') + String(y)] = d;
+        authYearToKey[surname + String(y)] = rec.__key;
+        authYearToKey[surname.replace(/[^a-z]/g, '') + String(y)] = rec.__key;
       }
     }
 
-    // Replace \citep{AuthorYear} or \citet{AuthorYear} with real DOI
-    out = out.replace(/\\cite([pt]?)\{([A-Za-z][A-Za-z]+[0-9]{4})\}/g, (mm, mode, key) => {
-      const m2 = key.match(/^([A-Z][A-Za-z]+)([0-9]{4})$/);
-      if (!m2) return mm;
-      const surname = m2[1].toLowerCase();
-      const year = m2[2];
-      const d = authYearMap[surname + year] || authYearMap[surname.replace(/[^a-z]/g,'') + year];
-      if (d) return '\\cite' + mode + '{' + d + '}';
-      return '\\cite' + mode + '{' + (poolDOIs[0] || '') + '}';
-    });
-
-    // Multi-key cites \citep{Key1,Key2}
-    out = out.replace(/\\cite([pt]?)\{([A-Za-z][A-Za-z]+[0-9]{4}(?:\s*,\s*[A-Za-z][A-Za-z]+[0-9]{4})+)\}/g, (mm, mode, keys) => {
-      const resolved = keys.split(/\s*,\s*/).map(k => {
-        const m2 = k.match(/^([A-Z][A-Za-z]+)([0-9]{4})$/);
-        if (!m2) return poolDOIs[0] || '';
-        const surname = m2[1].toLowerCase();
-        const year = m2[2];
-        return authYearMap[surname + year] || authYearMap[surname.replace(/[^a-z]/g,'') + year] || poolDOIs[0] || '';
+    out = out.replace(/\\cite([pt]?)\{([^}]+)\}/g, (mm, mode, keysRaw) => {
+      const resolved = keysRaw.split(/\s*,\s*/).map(k => {
+        const trimmed = k.trim();
+        if (keyToRec[trimmed]) return trimmed;
+        const lowerDoi = trimmed.toLowerCase();
+        if (doiToRec[lowerDoi] && doiToRec[lowerDoi].__key) return doiToRec[lowerDoi].__key;
+        const m = trimmed.match(/^([A-Za-z]+?)[_-]?([0-9]{4})/);
+        if (m) {
+          const surname = m[1].toLowerCase();
+          const year = m[2];
+          const hit = authYearToKey[surname + year] || authYearToKey[surname.replace(/[^a-z]/g, '') + year];
+          if (hit) return hit;
+        }
+        return trimmed;
       }).filter(Boolean);
       return '\\cite' + mode + '{' + resolved.join(',') + '}';
     });
 
-    // Original: literal (?) replacement
     out = out.replace(/\(\s*\?{1,3}\s*\)/g, (mm, off, full) => {
       const ctx = full.slice(Math.max(0, off - 250), Math.min(full.length, off + 250));
       const d = __pickCitationByContext(ctx);
-      return d ? '\\citep{' + d + '}' : '';
+      const rec = (d && doiToRec[String(d).toLowerCase()]) || null;
+      return rec && rec.__key ? '\\citep{' + rec.__key + '}' : '';
     });
 
     return out;
   }
-  function citeKey(doi) {
-    const s = String(doi || '');
-    if (/^[^,{}%#&~"'\s]+$/.test(s)) return s;
-    return 'ref_' + require('crypto').createHash('sha1').update(s).digest('hex').slice(0, 12);
-  }
+
   function escapeBibValue(s) {
-    return String(s || '').replace(/[%&]/g, m => '\\' + m);
+    return String(s || '').replace(/([%&#])/g, '\\$1');
   }
-  function buildBib(dois) {
-    const seen = new Set(); const out = [];
-    for (const doi of dois) {
-      const rec = (typeof doiToRec !== 'undefined' && doiToRec && doiToRec[doi]) || (typeof __METHODOLOGY !== 'undefined' && __METHODOLOGY && __METHODOLOGY[doi]) || null;
+
+  function buildBib(keysOrDois) {
+    const seen = new Set();
+    const out = [];
+
+    const candidates = [
+      ...keysOrDois,
+      ...Object.keys(keyToRec),
+      ...poolDOIs
+    ];
+
+    for (const item of candidates) {
+      const rec = keyToRec[item] || doiToRec[String(item).toLowerCase()] || null;
       if (!rec) continue;
       const key = rec.__key;
-      if (!key) continue;
-      if (seen.has(key)) continue;
+      if (!key || seen.has(key)) continue;
       seen.add(key);
-      const a = Array.isArray(rec.authors) ? rec.authors.join(' and ') : String(rec.authors || '');
-      const vol = rec.volume;
-      const num = rec.issue;
-      let pages = rec.pages;
-      if (!pages && rec.first_page != null && rec.last_page != null)
-        pages = String(rec.first_page) + '--' + String(rec.last_page);
-      else if (!pages && rec.first_page != null)
-        pages = String(rec.first_page);
+
+      const authors = Array.isArray(rec.authors) ? rec.authors.join(' and ') : String(rec.authors || '');
+      const vol = rec.volume != null ? String(rec.volume).trim() : '';
+      const num = (rec.issue != null ? String(rec.issue).trim() : '') || (rec.number != null ? String(rec.number).trim() : '');
+
+      let pages = rec.pages ? String(rec.pages).trim() : '';
+      if (!pages && rec.first_page != null && rec.last_page != null) {
+        pages = String(rec.first_page).trim() + '--' + String(rec.last_page).trim();
+      } else if (!pages && rec.first_page != null) {
+        pages = String(rec.first_page).trim();
+      }
+      if (/^\d+\s*-\s*\d+$/.test(pages)) {
+        pages = pages.replace(/\s*-\s*/, '--');
+      }
+
+      const cleanDoi = rec.doi ? String(rec.doi).trim().replace(/^https?:\/\/(?:dx\.)?doi\.org\//i, '') : '';
+
       const fields = [
-        '  author = {' + escapeBibValue(a) + '}',
+        '  author = {' + escapeBibValue(authors) + '}',
         '  year = {' + (rec.year || '') + '}',
         '  title = {{' + escapeBibValue(rec.title || '') + '}}',
-        '  journal = {' + escapeBibValue(rec.journal || '') + '}',
+        '  journal = {' + escapeBibValue(rec.journal || '') + '}'
       ];
-      if (vol != null && vol !== '') fields.push('  volume = {' + escapeBibValue(vol) + '}');
-      if (num != null && num !== '') fields.push('  number = {' + escapeBibValue(num) + '}');
+
+      if (vol) fields.push('  volume = {' + escapeBibValue(vol) + '}');
+      if (num) fields.push('  number = {' + escapeBibValue(num) + '}');
       if (pages) fields.push('  pages = {' + escapeBibValue(pages) + '}');
-      fields.push('  doi = {' + escapeBibValue(doi) + '}');
+      if (cleanDoi) fields.push('  doi = {' + escapeBibValue(cleanDoi) + '}');
+
       out.push('@article{' + key + ',\n' + fields.join(',\n') + '\n}');
     }
+
     return out.join('\n\n') + (out.length ? '\n' : '');
   }
-  function fixCiteKeys(tex) {
-    return String(tex || '').replace(/\\(cite[pt]?|autocite|parencite|textcite)\{([^}]+)\}/g, (m, cmd, keys) => {
-      return '\\' + cmd + '{' + keys.split(',').map(k => citeKey(k.trim())).join(',') + '}';
-    });
-  }
+
   const L = [];
-  const displayTitle = paperTitle || 'Qualitative Analysis Report';
 
   // Front matter (paper)
   if (paperRQ)      { L.push('\\section*{Research Question}'); L.push(fillMissingCites(paperRQ)); L.push(''); }
@@ -777,14 +818,6 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     if (a.length === 2) { const p2 = String(a[1]).trim().split(/[\\s,]+/).filter(Boolean); return lastAuthor(rec) + ' \\& ' + (p2[p2.length-1]||'Anon') + '(' + y + ')'; }
     return lastAuthor(rec) + ' et~al.(' + y + ')';
   }
-  const __METHODOLOGY = {
-    "10.1177/1094428112452151": { authors: ["Gioia, D. A.","Corley, K. G.","Hamilton, A. L."], year: 2013, title: "Seeking qualitative rigor in inductive research: Notes on the Gioia methodology", journal: "Organizational Research Methods" },
-    "10.1191/1478088706qp063oa": { authors: ["Braun, V.","Clarke, V."], year: 2006, title: "Using thematic analysis in psychology", journal: "Qualitative Research in Psychology" },
-    "10.5465/amr.2009.0486": { authors: ["Charmaz, K."], year: 2009, title: "Shifting the grounds: Constructivist grounded theory methods", journal: "Academy of Management Review" },
-    "10.1177/1049732315617444": { authors: ["Malterud, K.","Siersma, V. D.","Guassora, A. D."], year: 2016, title: "Sample size in qualitative interview studies: Guided by information power", journal: "Qualitative Health Research" },
-    "10.4135/9781452230153": { authors: ["Strauss, A.","Corbin, J."], year: 1998, title: "Basics of qualitative research: Techniques and procedures for developing grounded theory", journal: "Sage" }
-  };
-
   const __bodyRaw = L.join('\n');
   L.length = 0;
 
@@ -916,8 +949,8 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   L.push('\\end{longtable}');
   L.push('\\end{tiny}\\end{singlespacing}');
 
-  const __bodyJoined = fixCiteKeys(__bodyRaw);
-  const __appendixJoined = fixCiteKeys(L.join('\n'));
+  const __bodyJoined = fillMissingCites(__bodyRaw);
+  const __appendixJoined = fillMissingCites(L.join('\n'));
   const __citeDOIs = (function() {
     const s = new Set();
     if (typeof poolDOIs !== 'undefined') for (const d of poolDOIs) s.add(String(d));
@@ -934,7 +967,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     aqrp_report_body_tex: __bodyJoined,
     aqrp_appendices_tex: __appendixJoined,
     aqrp_report_bib: __bib,
-    aqrp_report_audit: { version: '1', runId: runId || null, assembled_at: new Date().toISOString(), rdf_count: all.length, records: all, has_paper_layer: hasPaper },
+    aqrp_report_audit: { version: '1', runId: runId || null, assembled_at: new Date().toISOString(), rdf_count: all.length, records: all, has_paper_layer: false },
     rdf_records: all,
   }};
 }

@@ -189,9 +189,33 @@ async function invoke(req, args) {
     let p;
     if (!payload) { p = {}; }
     else if (typeof payload === 'string') {
-      try { p = JSON.parse(payload); }
-      catch (__e) {
-        throw new Error(`step ${step} payload is a string but not valid JSON: ${__e.message}`);
+      let raw = payload.trim();
+      if (raw.startsWith('```')) {
+        raw = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+      }
+      try {
+        p = JSON.parse(raw);
+      } catch (__e) {
+        let parsed = false;
+        const posMatch = __e.message.match(/at position (\d+)/i);
+        if (posMatch) {
+          try {
+            p = JSON.parse(raw.slice(0, Number(posMatch[1])));
+            parsed = true;
+          } catch (_) {}
+        }
+        if (!parsed) {
+          const objMatch = raw.match(/^(\{[\s\S]*\}|\[[\s\S]*\])/);
+          if (objMatch) {
+            try {
+              p = JSON.parse(objMatch[1]);
+              parsed = true;
+            } catch (_) {}
+          }
+        }
+        if (!parsed) {
+          throw new Error(`step ${step} payload is a string but not valid JSON: ${__e.message}`);
+        }
       }
     }
     else { p = payload; }

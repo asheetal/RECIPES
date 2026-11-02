@@ -209,8 +209,8 @@ export default function AQRPTile({ projectId }: { projectId: string }) {
         <span className="mt-2 flex flex-wrap items-center gap-2 text-sm text-text-secondary">
           <Spinner className="h-4 w-4" /> Running step {runningStep}/{FINAL_STEP}{tally}
           {(state.lastStepOk ?? 0) > 0 && (
-            <button type="button" onClick={downloadBundle} aria-label="Download completed steps as zip" className="inline-flex items-center gap-1 rounded border border-border-medium px-2 py-1 text-xs font-medium text-text-primary hover:bg-surface-hover">
-              <Archive className="h-3 w-3" /> Zip
+            <button type="button" onClick={downloadBundle} aria-label="Download LaTeX bundle" className="inline-flex items-center gap-1 rounded border border-border-medium px-2 py-1 text-xs font-medium text-text-primary hover:bg-surface-hover">
+              <Archive className="h-3 w-3" /> LaTeX
             </button>
           )}
           <button
@@ -231,8 +231,8 @@ export default function AQRPTile({ projectId }: { projectId: string }) {
           <AlertTriangle className="h-4 w-4" /> Step {(state.lastStepOk ?? 0) + 1} failed
           {state.error && <span className="max-w-full truncate text-xs text-text-secondary" title={state.error}>{state.error}</span>}
           {(state.lastStepOk ?? 0) > 0 && (
-            <button type="button" onClick={downloadBundle} aria-label="Download completed steps as zip" className="inline-flex items-center gap-1 rounded border border-border-medium px-2 py-1 text-xs font-medium text-text-primary hover:bg-surface-hover">
-              <Archive className="h-3 w-3" /> Zip completed steps
+            <button type="button" onClick={downloadBundle} aria-label="Download LaTeX bundle" className="inline-flex items-center gap-1 rounded border border-border-medium px-2 py-1 text-xs font-medium text-text-primary hover:bg-surface-hover">
+              <Archive className="h-3 w-3" /> LaTeX bundle
             </button>
           )}
           <button type="button" onClick={remove} aria-label="Delete run" className="rounded p-1 hover:bg-surface-hover"><Trash2 className="h-4 w-4" /></button>
@@ -244,8 +244,8 @@ export default function AQRPTile({ projectId }: { projectId: string }) {
         <span className="mt-2 flex flex-wrap items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
           <AlertTriangle className="h-4 w-4" /> Stopped at step {state.lastStepOk ?? 0}
           {(state.lastStepOk ?? 0) > 0 && (
-            <button type="button" onClick={downloadBundle} aria-label="Download completed steps as zip" className="inline-flex items-center gap-1 rounded border border-border-medium px-2 py-1 text-xs font-medium text-text-primary hover:bg-surface-hover">
-              <Archive className="h-3 w-3" /> Zip completed steps
+            <button type="button" onClick={downloadBundle} aria-label="Download LaTeX bundle" className="inline-flex items-center gap-1 rounded border border-border-medium px-2 py-1 text-xs font-medium text-text-primary hover:bg-surface-hover">
+              <Archive className="h-3 w-3" /> LaTeX bundle
             </button>
           )}
           <button type="button" onClick={remove} aria-label="Delete run" className="rounded p-1 hover:bg-surface-hover"><Trash2 className="h-4 w-4" /></button>
@@ -260,7 +260,7 @@ export default function AQRPTile({ projectId }: { projectId: string }) {
             <AlertTriangle className="h-4 w-4" /> PDF failed
             {pdf.error && <span className="max-w-full truncate text-xs" title={pdf.error}>{pdf.error}</span>}
             <button type="button" onClick={(e) => { e.stopPropagation(); checkPdf(); }} aria-label="Retry PDF compile" className="rounded border border-border-medium px-2 py-1 text-xs font-medium text-text-primary hover:bg-surface-hover">Retry</button>
-            <button type="button" onClick={downloadBundle} aria-label="Download completed steps as zip" className="rounded p-1 hover:bg-surface-hover"><Archive className="h-4 w-4" /></button>
+            <button type="button" onClick={downloadBundle} aria-label="Download LaTeX bundle" className="rounded p-1 hover:bg-surface-hover"><Archive className="h-4 w-4" /></button>
             <button type="button" onClick={remove} aria-label="Delete run" className="rounded p-1 hover:bg-surface-hover"><Trash2 className="h-4 w-4" /></button>
           </span>
         );
@@ -269,7 +269,7 @@ export default function AQRPTile({ projectId }: { projectId: string }) {
         return (
           <span className="mt-2 flex flex-wrap items-center gap-2 text-sm text-text-secondary">
             <Spinner className="h-4 w-4" /> {doneLabel} — compiling PDF…
-            <button type="button" onClick={downloadBundle} aria-label="Download completed steps as zip" className="rounded p-1 hover:bg-surface-hover"><Archive className="h-4 w-4" /></button>
+            <button type="button" onClick={downloadBundle} aria-label="Download LaTeX bundle" className="rounded p-1 hover:bg-surface-hover"><Archive className="h-4 w-4" /></button>
             <button type="button" onClick={remove} aria-label="Delete run" className="rounded p-1 hover:bg-surface-hover"><Trash2 className="h-4 w-4" /></button>
           </span>
         );
@@ -278,7 +278,7 @@ export default function AQRPTile({ projectId }: { projectId: string }) {
         <span className="mt-2 flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
           <Check className="h-4 w-4" /> {doneLabel}
           <button type="button" onClick={downloadPdf} aria-label="Download PDF report" className="ml-1 rounded p-1 hover:bg-surface-hover"><Download className="h-4 w-4" /></button>
-          <button type="button" onClick={downloadBundle} aria-label="Download completed steps as zip" className="rounded p-1 hover:bg-surface-hover"><Archive className="h-4 w-4" /></button>
+          <button type="button" onClick={downloadBundle} aria-label="Download LaTeX bundle" className="rounded p-1 hover:bg-surface-hover"><Archive className="h-4 w-4" /></button>
           <button type="button" onClick={remove} aria-label="Delete run" className="rounded p-1 hover:bg-surface-hover"><Trash2 className="h-4 w-4" /></button>
         </span>
       );
@@ -288,7 +288,7 @@ export default function AQRPTile({ projectId }: { projectId: string }) {
         <span className="mt-2 flex items-center gap-2 text-sm text-text-secondary">
           Step {state.currentStep} complete
           <button type="button" onClick={download} aria-label="Download last step output" className="rounded p-1 hover:bg-surface-hover"><Download className="h-4 w-4" /></button>
-          <button type="button" onClick={downloadBundle} aria-label="Download completed steps as zip" className="rounded p-1 hover:bg-surface-hover"><Archive className="h-4 w-4" /></button>
+          <button type="button" onClick={downloadBundle} aria-label="Download LaTeX bundle" className="rounded p-1 hover:bg-surface-hover"><Archive className="h-4 w-4" /></button>
           <button type="button" onClick={remove} aria-label="Delete run" className="rounded p-1 hover:bg-surface-hover"><Trash2 className="h-4 w-4" /></button>
         </span>
       );

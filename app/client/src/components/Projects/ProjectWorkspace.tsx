@@ -13,7 +13,6 @@ import { useLocalize, useNewConvo } from '~/hooks';
 import { cn, clearMessagesCache } from '~/utils';
 import ProjectChatList from './ProjectChatList';
 import ProjectFiles from './ProjectFiles';
-import HelloWorldRecipe from './HelloWorldRecipe';
 import AutomatedSEMRecipe from './AutomatedSEMRecipe';
 import AQRPTile from './AQRPTile';
 import store from '~/store';
@@ -167,7 +166,6 @@ export default function ProjectWorkspace() {
           <div className="grid gap-3 sm:grid-cols-2">
             <AutomatedSEMRecipe projectId={project._id} />
             <AQRPTile projectId={project._id} />
-            <HelloWorldRecipe projectId={project._id} />
             <button
               type="button"
               onClick={startProjectChat}
@@ -184,7 +182,7 @@ export default function ProjectWorkspace() {
                   aria-hidden="true"
                 />
                 <span className="truncate text-base font-semibold text-text-primary">
-                  Conversations
+                  General research task
                 </span>
               </span>
               <span className="mt-2 line-clamp-2 text-sm text-text-secondary">

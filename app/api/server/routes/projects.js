@@ -16,8 +16,6 @@ const handlers = createProjectHandlers({
 router.use(requireJwtAuth);
 const projectFiles = require('/app/project-files-feature/project-files.cjs');
 projectFiles.registerRoutes(router);
-const helloWorld = require('/app/hello-world-feature/hello-world.cjs');
-helloWorld.registerRoutes(router, projectFiles.service());
 const aspSem = require('/app/asp-feature/automated-sem.cjs');
 aspSem.registerRoutes(router, projectFiles.service());
 const aqrp = require('/app/aqrp-feature/aqrp.cjs');

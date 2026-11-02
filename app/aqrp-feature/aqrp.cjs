@@ -297,103 +297,44 @@ router.get('/:projectId/aqrp/bundle', async (req, res, next) => {
       const s = await svc.scope(req, req.params.projectId);
       const st = await svc.getState(s);
       const JSZip = require('jszip');
-      const zip = new JSZip();
-      let count = 0;
-      const stepNums = Object.keys(st.steps || {}).map(Number).filter(n => Number.isInteger(n) && n >= 1).sort((a, b) => a - b);
-      // Pre-fetch PDF for step 32 via shared helper (uses cache or compiles)
-      let __pdf_b64 = null;
-      try {
-        const mongoose2 = require('mongoose');
-        const db2 = mongoose2.connection.db;
-        const runDoc2 = await db2.collection('aqrpruns').findOne({ runId: st.runId });
-        if (runDoc2) {
-          const r = await _ensureReportPdf(db2, runDoc2);
-          if (r && r.b64) __pdf_b64 = r.b64;
-        }
-      } catch (e) { console.error('[bundle] pdf prefetch: ' + (e && e.message ? e.message : e)); }
-      for (const n of stepNums) {
-        const out = await svc.getOutput(s, n);
-        if (out) {
-          zip.file(`__aqrp_step${n}_out.json`, JSON.stringify(out, null, 2));
-          if (n === 32) {
-            // ALWAYS write source fragments so offline compile is possible.
-            try {
-              const shell = require('fs').readFileSync('/app/aqrp-feature/latex/aqrp_report.tex', 'utf8');
-              zip.file('aqrp_report.tex', shell);
-            } catch (_) {}
-            if (typeof out.aqrp_report_title === 'string' && out.aqrp_report_title.length > 0)
-              zip.file('aqrp_report_title.tex', out.aqrp_report_title);
-            if (typeof out.aqrp_report_abstract === 'string' && out.aqrp_report_abstract.length > 0)
-              zip.file('aqrp_report_abstract.tex', out.aqrp_report_abstract);
-            if (typeof out.aqrp_report_body_tex === 'string' && out.aqrp_report_body_tex.length > 0)
-              zip.file('aqrp_report_body.tex', out.aqrp_report_body_tex);
-            if (typeof out.aqrp_appendices_tex === 'string' && out.aqrp_appendices_tex.length > 0)
-              zip.file('aqrp_appendices.tex', out.aqrp_appendices_tex);
-            if (typeof out.aqrp_report_bib === 'string' && out.aqrp_report_bib.length > 0)
-              zip.file('aqrp_report.bib', out.aqrp_report_bib);
+      // Bundle = LaTeX sources + build script. Nothing else. The zip is a
+      // deliverable the researcher rebuilds on their own laptop; step JSON,
+      // errors, audit, and PDF are not part of that deliverable.
+      const s32 = await svc.getOutput(s, 32);
+      if (!s32) return res.status(404).json({ error: 'no step 32 output' });
 
-            const pdf_b64 = __pdf_b64 || out.aqrp_report_pdf_b64 || null;
-            if (pdf_b64) {
-              zip.file('aqrp_report.pdf', Buffer.from(pdf_b64, 'base64'));
-            } else {
-              zip.file('_compile_failed.txt', 'PDF not produced for run ' + (st.runId || '') + '. Compile locally: pdflatex aqrp_report.tex, bibtex aqrp_report, pdflatex aqrp_report.tex, pdflatex aqrp_report.tex');
-            }
-            if (out.aqrp_report_audit) zip.file('aqrp_report_audit.json', JSON.stringify(out.aqrp_report_audit, null, 2));
-          }
-          count++;
-        }
-      }
-      const out4 = await svc.getOutput(s, 4);
-      if (!out4) {
-        const mongoose = require('mongoose');
-        const rowsRaw = await mongoose.connection.db.collection('aqrp_rows').find({ runId: st.runId, step: 4 }).toArray();
-        const rows = rowsRaw.sort((a, b) => Number(a.record_id) - Number(b.record_id));
-        if (rows.length) {
-          const cm = [];
-          const byRecord = new Map();
-          for (const r of rows) for (const pc of (r.perCoder || [])) {
-            cm.push({ record_id: r.record_id, coder_id: pc.coder_id, codes: pc.codes });
-            if (!byRecord.has(r.record_id)) byRecord.set(r.record_id, {});
-            byRecord.get(r.record_id)[pc.coder_id] = pc.codes;
-          }
-          const disagreements = [];
-          for (const [rid, coders] of byRecord) {
-            const sets = Object.values(coders).map(cs => JSON.stringify(cs.slice().sort()));
-            if (!sets.every(v => v === sets[0])) disagreements.push({ record_id: rid, coders });
-          }
-          zip.file('__aqrp_step4_partial.json', JSON.stringify({ status: 'OPEN_CODING_PARTIAL', records_done: rows.length, code_matrix: cm, disagreements }, null, 2));
-          count++;
-        }
-      }
-      if (!count) return res.status(404).json({ error: 'no step outputs to bundle' });
-      // Aggregate warnings from every closed step, whatever its number.
-      const __warnings = [];
-      for (const __k of Object.keys(st.steps || {})) {
-        const __n = Number(__k);
-        if (!Number.isInteger(__n) || __n < 1) continue;
-        const __out = (st.steps[__k] || {}).output || {};
-        if (Array.isArray(__out.warnings)) {
-          for (const __w of __out.warnings) __warnings.push(Object.assign({ step: __n }, __w));
-        }
-      }
-      const __byBlame = {}, __byKind = {};
-      for (const __w of __warnings) {
-        const __b = __w.blame || 'unknown';
-        const __kk = __w.kind || 'unknown';
-        __byBlame[__b] = (__byBlame[__b] || 0) + 1;
-        __byKind[__kk] = (__byKind[__kk] || 0) + 1;
-      }
-      zip.file('_errors.json', JSON.stringify({
-        runId: st.runId || null,
-        generated_at: new Date().toISOString(),
-        total: __warnings.length,
-        by_blame: __byBlame,
-        by_kind: __byKind,
-        warnings: __warnings
-      }, null, 2));
+      const zip = new JSZip();
+      try {
+        const shell = require('fs').readFileSync('/app/aqrp-feature/latex/aqrp_report.tex', 'utf8');
+        zip.file('aqrp_report.tex', shell);
+      } catch (_) { return res.status(500).json({ error: 'report shell missing' }); }
+      if (typeof s32.aqrp_report_title === 'string' && s32.aqrp_report_title.length > 0)
+        zip.file('aqrp_report_title.tex', s32.aqrp_report_title);
+      if (typeof s32.aqrp_report_abstract === 'string' && s32.aqrp_report_abstract.length > 0)
+        zip.file('aqrp_report_abstract.tex', s32.aqrp_report_abstract);
+      if (typeof s32.aqrp_report_body_tex === 'string' && s32.aqrp_report_body_tex.length > 0)
+        zip.file('aqrp_report_body.tex', s32.aqrp_report_body_tex);
+      if (typeof s32.aqrp_appendices_tex === 'string' && s32.aqrp_appendices_tex.length > 0)
+        zip.file('aqrp_appendices.tex', s32.aqrp_appendices_tex);
+      if (typeof s32.aqrp_report_bib === 'string' && s32.aqrp_report_bib.length > 0)
+        zip.file('aqrp_report.bib', s32.aqrp_report_bib);
+
+      const BUILD_SH = [
+        '#!/usr/bin/env bash',
+        'set -euo pipefail',
+        'cd "$(dirname "$0")"',
+        'pdflatex -interaction=nonstopmode aqrp_report.tex',
+        'bibtex aqrp_report',
+        'pdflatex -interaction=nonstopmode aqrp_report.tex',
+        'pdflatex -interaction=nonstopmode aqrp_report.tex',
+        'echo "PDF written to aqrp_report.pdf"',
+        ''
+      ].join('\n');
+      zip.file('build.sh', BUILD_SH, { unixPermissions: '755' });
+
       const buf = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
       res.set('Content-Type', 'application/zip');
-      res.set('Content-Disposition', `attachment; filename="aqrp_${st.runId || 'run'}_steps.zip"`);
+      res.set('Content-Disposition', `attachment; filename="aqrp_${st.runId || 'run'}_latex.zip"`);
       return res.send(buf);
     } catch (e) { next(e); }
   });

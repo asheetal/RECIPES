@@ -1793,13 +1793,9 @@ const workflowTools = require("/app/workflow-feature/tools.cjs");
 module.exports.loadAgentTools = workflowTools.wrapLoad(module.exports.loadAgentTools);
 module.exports.loadToolsForExecution = workflowTools.wrapExecution(module.exports.loadToolsForExecution);
 
-const helloWorldTool = require("/app/hello-world-feature/tool.cjs");
 
 const aspTool = require("/app/asp-feature/tool.cjs");
 const aqrpTool = require("/app/aqrp-feature/tool.cjs");
-module.exports.loadAgentTools = helloWorldTool.wrapLoad(module.exports.loadAgentTools);
-module.exports.loadToolsForExecution = helloWorldTool.wrapExecution(module.exports.loadToolsForExecution);
-
 module.exports.loadAgentTools = aspTool.wrapLoad(module.exports.loadAgentTools);
 module.exports.loadToolsForExecution = aspTool.wrapExecution(module.exports.loadToolsForExecution);
 module.exports.loadAgentTools = aqrpTool.wrapLoad(module.exports.loadAgentTools);

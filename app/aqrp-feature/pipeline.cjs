@@ -211,6 +211,37 @@ async function searchStep(N, { filePath, poolId, extraFields, status }) {
   const p = readJson(filePath);
   validateCitationPool(p[poolId], poolId);
   for (const f of (extraFields || [])) if (p[f] == null) throw new Error(`Step ${N}: payload.${f} required`);
+  // lit_map normalization (step 9): the pipeline owns the shape. Accept both
+  // shapes the surgeon has been observed to produce, normalize to canonical
+  // {label, works:[doi]} + gaps:[]. Schema remains strict on one shape so
+  // every downstream consumer has exactly one shape to handle. Integration,
+  // not schema-widening.
+  const lm = p.lit_map;
+  if (lm && Array.isArray(lm.clusters)) {
+    const topk = ((p[poolId] && p[poolId].top_k) || []);
+    const doiByKey = new Map();
+    for (const t of topk) if (t && t.__key && t.doi) doiByKey.set(String(t.__key), String(t.doi));
+    const doiSet = new Set(topk.map(t => t && t.doi).filter(Boolean));
+    p.lit_map = {
+      clusters: lm.clusters.map((c, i) => {
+        if (!c || typeof c !== 'object') throw new Error(`Step ${N}: lit_map.clusters[${i}] must be an object`);
+        if (typeof c.label === 'string' && Array.isArray(c.works)) {
+          for (const d of c.works) if (!doiSet.has(String(d))) throw new Error(`Step ${N}: lit_map.clusters[${i}].works references DOI "${d}" not in ${poolId}.top_k`);
+          return { label: c.label, works: c.works.map(String) };
+        }
+        if (typeof c.theme === 'string' && Array.isArray(c.sources)) {
+          const works = c.sources.map(k => {
+            const d = doiByKey.get(String(k));
+            if (!d) throw new Error(`Step ${N}: lit_map.clusters[${i}].sources references __key "${k}" not in ${poolId}.top_k (top_k has ${doiByKey.size} keyed records)`);
+            return d;
+          });
+          return { label: c.theme, works };
+        }
+        throw new Error(`Step ${N}: lit_map.clusters[${i}] must be {label, works:[doi]} or {theme, sources:[__key]} — got keys ${Object.keys(c).join(',')}`);
+      }),
+      gaps: Array.isArray(lm.gaps) ? lm.gaps.map(String) : []
+    };
+  }
   return { output: { ...p, status } };
 }
 async function surgeonStep(N, { filePath, requiredFields, rdfIds, allowedPools, pools, status }) {

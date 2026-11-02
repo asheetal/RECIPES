@@ -23,7 +23,7 @@ STEP 6 (surgeon): From code_matrix, disagreements, P02, rank salient hunches (sa
 STEP 7 (surgeon->tool): From salience_ranking search the literature for RQ framings. aqrp_step_run({step:7, payload:{P03}}).
 STEP 8 (surgeon): From salience_ranking and P03 formulate a research question (rq). Emit RDF R8 (pool P03). aqrp_step_run({step:8, payload:{rq, rdf_records:[R8]}}).
 
-STEP 9 (surgeon->tool): From rq search the literature to map prior work. aqrp_step_run({step:9, payload:{lit_map, P04}}).
+STEP 9 (surgeon->tool): From rq search the literature to map prior work. lit_map MUST have exactly this shape: {clusters:[{label:string, works:[string]}], gaps:[string]}. Each clusters[].works entry is a DOI (10. prefix) of a paper you promoted into P04.top_k; each clusters[].label is a short thematic label; gaps is a list of strings naming what prior work leaves open. aqrp_step_run({step:9, payload:{lit_map, P04}}).
 STEP 10 (surgeon): From rq, lit_map, P04 propose at least 3 candidate theoretical lenses (candidate_lenses). Emit RDF R10 (pool_id='P04', citation_status='pool_selected', gut_rationale=null). R10.citations_used MUST be a subset of the DOIs in P04.top_k[].doi — do NOT cite any DOI that you did not promote into P04.top_k at step 9, even if it appeared in search results. R10 must include all RDF fields: {rdf_id:'R10', stage:'lensing', type:'SURGEON', options (>=2 strings), chosen (one of options), rationale, citations_used (subset of P04.top_k DOIs), pool_id:'P04', citation_status:'pool_selected', gut_rationale:null}. aqrp_step_run({step:10, payload:{candidate_lenses, rdf_records:[R10]}}).
 
 STEP 11 (surgeon->tool): From candidate_lenses search the literature for each lens. aqrp_step_run({step:11, payload:{P05}}).

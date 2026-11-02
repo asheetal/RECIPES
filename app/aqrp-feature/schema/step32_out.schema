@@ -1,24 +1,82 @@
-{ "$schema":"http://json-schema.org/draft-07/schema#", "$id":"aqrp://step32_out",
-  "title":"AQRP step 32 output — final deliverable",
-  "type":"object",
-  "required":["status","aqrp_report_title","aqrp_report_body_tex","aqrp_appendices_tex","aqrp_report_bib","aqrp_report_audit","rdf_records"],
-  "properties":{
-    "status":{"const":"PACKAGED"},
-    "aqrp_report_title":{"type":"string","minLength":1},
-    "aqrp_report_abstract":{"type":"string"},
-    "aqrp_report_body_tex":{"type":"string","minLength":1},
-    "aqrp_appendices_tex":{"type":"string"},
-    "aqrp_report_bib":{"type":"string"},
-    "aqrp_report_audit":{"type":"object",
-      "required":["version","runId","assembled_at","rdf_count","records"],
-      "properties":{
-        "version":{"type":"string"},
-        "runId":{"type":["string","null"],"pattern":"^[a-f0-9]{16}$"},
-        "assembled_at":{"type":"string","format":"date-time"},
-        "rdf_count":{"type":"integer","minimum":0},
-        "records":{"type":"array","items":{"$ref":"aqrp://shared/rdf_record"}},
-        "has_paper_layer":{"type":"boolean"}},
-      "additionalProperties":true},
-    "rdf_records":{"type":"array","items":{"$ref":"aqrp://shared/rdf_record"}}
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "aqrp://step32_out",
+  "title": "AQRP step 32 output — final deliverable",
+  "type": "object",
+  "required": [
+    "status",
+    "aqrp_report_title",
+    "aqrp_report_body_tex",
+    "aqrp_appendices_tex",
+    "aqrp_report_bib",
+    "aqrp_report_audit",
+    "rdf_records"
+  ],
+  "properties": {
+    "status": {
+      "const": "PACKAGED"
+    },
+    "aqrp_report_title": {
+      "type": "string"
+    },
+    "aqrp_report_abstract": {
+      "type": "string"
+    },
+    "aqrp_report_body_tex": {
+      "type": "string"
+    },
+    "aqrp_appendices_tex": {
+      "type": "string"
+    },
+    "aqrp_report_bib": {
+      "type": "string"
+    },
+    "aqrp_report_audit": {
+      "type": "object",
+      "required": [
+        "version",
+        "runId",
+        "assembled_at",
+        "rdf_count",
+        "records"
+      ],
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "runId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{16}$"
+        },
+        "assembled_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "rdf_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "records": {
+          "type": "array",
+          "items": {
+            "$ref": "aqrp://shared/rdf_record"
+          }
+        },
+        "has_paper_layer": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    },
+    "rdf_records": {
+      "type": "array",
+      "items": {
+        "$ref": "aqrp://shared/rdf_record"
+      }
+    }
   },
-  "additionalProperties":true }
+  "additionalProperties": true
+}

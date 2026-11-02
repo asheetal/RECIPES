@@ -1,26 +1,84 @@
-{ "$schema":"http://json-schema.org/draft-07/schema#", "$id":"aqrp://step16_17",
-  "title":"AQRP step 16 (panel) output = step 17 input",
-  "type":"object",
-  "required":["status","panel_result","within_case_matrix","within_case_disagreements"],
-  "properties":{
-    "status":{"const":"WITHIN_CASE_COMPLETE"},
-    "panel_result":{"$ref":"aqrp://shared/panel_result"},
-    "within_case_matrix":{"type":"array","items":{
-      "type":"object","required":["record_id","coder_id","codes"],
-      "properties":{
-        "record_id":{"type":"string","minLength":1},
-        "coder_id":{"type":"string","minLength":1},
-        "codes":{"type":"array","minItems":1,"items":{"type":"string","minLength":1}},
-        "quote":{"type":"string"},
-        "narrative":{"type":"string"}},
-      "additionalProperties":true}},
-    "within_case_disagreements":{"type":"array","items":{
-      "type":"object","required":["record_id","coders"],
-      "properties":{
-        "record_id":{"type":"string","minLength":1},
-        "coders":{"type":"object","additionalProperties":{"type":"array","items":{"type":"string"}}}},
-      "additionalProperties":true}}
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "aqrp://step16_17",
+  "title": "AQRP step 16 (panel) output = step 17 input",
+  "type": "object",
+  "required": [
+    "status",
+    "panel_result",
+    "within_case_matrix",
+    "within_case_disagreements"
+  ],
+  "properties": {
+    "status": {
+      "const": "WITHIN_CASE_COMPLETE"
+    },
+    "panel_result": {
+      "$ref": "aqrp://shared/panel_result"
+    },
+    "within_case_matrix": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "record_id"
+        ],
+        "properties": {
+          "record_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "coder_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "codes": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "quote": {
+            "type": "string"
+          },
+          "narrative": {
+            "type": "string"
+          },
+          "changes_dimension": {
+            "type": "string"
+          },
+          "why": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "within_case_disagreements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "record_id",
+          "coders"
+        ],
+        "properties": {
+          "record_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "coders": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "v246.2.32 may emit {coder_id:[string]} or {coder_id:{narrative,...}}; both accepted."
+          }
+        },
+        "additionalProperties": true
+      }
+    }
   },
-  "additionalProperties":true,
-  "$comment":"Producer: pipeline.cjs panelStepGeneric(16, {matrixField:'within_case_matrix', disField:'within_case_disagreements', status:'WITHIN_CASE_COMPLETE'}). Upstream fields pass through verbatim."
+  "additionalProperties": true,
+  "$comment": "Producer: pipeline.cjs panelStepGeneric(16, {matrixField:'within_case_matrix', disField:'within_case_disagreements', status:'WITHIN_CASE_COMPLETE'}). Upstream fields pass through verbatim."
 }

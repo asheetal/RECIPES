@@ -71,12 +71,7 @@
           },
           "coders": {
             "type": "object",
-            "additionalProperties": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
+            "additionalProperties": true
           }
         },
         "additionalProperties": true

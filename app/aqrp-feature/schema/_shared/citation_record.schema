@@ -38,6 +38,40 @@
       "type": "string",
       "minLength": 1,
       "description": "Produced by the search layer (workflow-feature/search-mode/router.cjs keyForOpenAlex, via withKeys). LaTeX-safe. The surgeon copies it verbatim; missing __key is a fatal search-layer bug."
+    },
+    "volume": {
+      "type": [
+        "string",
+        "integer",
+        "null"
+      ]
+    },
+    "issue": {
+      "type": [
+        "string",
+        "integer",
+        "null"
+      ]
+    },
+    "first_page": {
+      "type": [
+        "string",
+        "integer",
+        "null"
+      ]
+    },
+    "last_page": {
+      "type": [
+        "string",
+        "integer",
+        "null"
+      ]
+    },
+    "pages": {
+      "type": [
+        "string",
+        "null"
+      ]
     }
   },
   "additionalProperties": true

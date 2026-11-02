@@ -548,7 +548,24 @@ async function step32({ filePath, pools, allRdfs, runId }) {
       if (seen.has(key)) continue;
       seen.add(key);
       const a = Array.isArray(rec.authors) ? rec.authors.join(' and ') : String(rec.authors || '');
-      out.push('@article{' + key + ',\n  author = {' + escapeBibValue(a) + '},\n  year = {' + (rec.year || '') + '},\n  title = {' + escapeBibValue(rec.title || '') + '},\n  journal = {' + escapeBibValue(rec.journal || '') + '},\n  doi = {' + escapeBibValue(doi) + '}\n}');
+      const vol = rec.volume;
+      const num = rec.issue;
+      let pages = rec.pages;
+      if (!pages && rec.first_page != null && rec.last_page != null)
+        pages = String(rec.first_page) + '--' + String(rec.last_page);
+      else if (!pages && rec.first_page != null)
+        pages = String(rec.first_page);
+      const fields = [
+        '  author = {' + escapeBibValue(a) + '}',
+        '  year = {' + (rec.year || '') + '}',
+        '  title = {{' + escapeBibValue(rec.title || '') + '}}',
+        '  journal = {' + escapeBibValue(rec.journal || '') + '}',
+      ];
+      if (vol != null && vol !== '') fields.push('  volume = {' + escapeBibValue(vol) + '}');
+      if (num != null && num !== '') fields.push('  number = {' + escapeBibValue(num) + '}');
+      if (pages) fields.push('  pages = {' + escapeBibValue(pages) + '}');
+      fields.push('  doi = {' + escapeBibValue(doi) + '}');
+      out.push('@article{' + key + ',\n' + fields.join(',\n') + '\n}');
     }
     return out.join('\n\n') + (out.length ? '\n' : '');
   }
@@ -658,11 +675,25 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     L.push('  box/.style={draw, rounded corners=2pt, text width=4cm, minimum height=0.9cm, align=center, font=\\small, inner sep=4pt, anchor=center},');
     L.push('  arr/.style={->, >=stealth, thick}');
     L.push(']');
+    // Circle layout for n>=3 — straight lines between any two vertices are
+    // then chords of a convex polygon and never pass through a third box.
+    // Straight horizontal row only for n=2.
+    const __n = nodeList.length;
+    let __pos;
+    if (__n === 2) {
+      __pos = [[-2.5, 0], [2.5, 0]];
+    } else {
+      const R = Math.max(3.5, 1.2 * __n);
+      __pos = nodeList.map((_, i) => {
+        const angle = Math.PI / 2 - (2 * Math.PI * i) / __n;
+        return [R * Math.cos(angle), R * Math.sin(angle)];
+      });
+    }
     for (let i = 0; i < nodeList.length; i++) {
       const n = nodeList[i];
       let lbl = n.label;
-      if (lbl.length > 28) { const parts = lbl.split(/\\s+/); const mid = Math.ceil(parts.length/2); lbl = parts.slice(0,mid).join(' ') + '\\\\' + parts.slice(mid).join(' '); }
-      L.push('  \\node[box] (' + n.id + ') at (' + (i * 5 - (nodeList.length - 1) * 5 / 2).toFixed(2) + ', 0) {' + lbl + '};');
+      if (lbl.length > 28) { const parts = lbl.split(/\s+/); const mid = Math.ceil(parts.length/2); lbl = parts.slice(0,mid).join(' ') + '\\\\' + parts.slice(mid).join(' '); }
+      L.push('  \\node[box] (' + n.id + ') at (' + __pos[i][0].toFixed(2) + ', ' + __pos[i][1].toFixed(2) + ') {' + lbl + '};');
     }
     const nodeIdSet = new Set(nodeList.map(n => n.id));
     for (const e of edgeList) {

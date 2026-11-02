@@ -112,13 +112,18 @@ async function invoke(req, args) {
       }
       const tmp = path.join(os.tmpdir(), `aqrp-step${step}-${Date.now()}.json`);
       fs.writeFileSync(tmp, JSON.stringify(p4));
-      let expectedRecordIds = null;
-      if (step === 4) {
+      // Every panel step (4, 16, 17, 22) gets the ground-truth record set,
+      // not just step 4. Without it, foldPanelEnvelope falls into its
+      // 'coders agree with each other' branch and a partial corpus that
+      // all three coders cover identically passes silently. Same class of
+      // bug as the 67172e7e995d9992 step-4 failure; fixed at the same time.
+      const expectedRecordIds = await (async () => {
         const s1 = await stateSvc.getStepOutput(s, 1) || {};
-        expectedRecordIds = Array.isArray(s1.record_ids) ? s1.record_ids : (Number.isInteger(s1.n_elements) ? Array.from({ length: s1.n_elements }, (_, i) => String(i)) : []);
+        let ids = Array.isArray(s1.record_ids) ? s1.record_ids : (Number.isInteger(s1.n_elements) ? Array.from({ length: s1.n_elements }, (_, i) => String(i)) : []);
         const maxBatch = await stateSvc.getMaxBatchRecords();
-        if (Array.isArray(expectedRecordIds) && expectedRecordIds.length > maxBatch) expectedRecordIds = expectedRecordIds.slice(0, maxBatch);
-      }
+        if (Array.isArray(ids) && ids.length > maxBatch) ids = ids.slice(0, maxBatch);
+        return ids;
+      })();
       let result;
       try { result = await pipeline.runStep({ step, filePath: tmp, expectedRecordIds }); }
       finally { try { fs.unlinkSync(tmp); } catch (_) {} }

@@ -900,4 +900,17 @@ async function runStep({ step, filePath, expectedRecordIds, pools, allRdfs, runI
   throw new Error(`step ${step} not implemented`);
 }
 async function readStep() { return null; }
-module.exports = { runStep, readStep, FINAL_STEP };
+async function _runStepWithSchema(args) {
+  const out = await runStep(args);
+  const step = Number(args && args.step);
+  try {
+    require('./schema-loader.cjs').validateBoundary(step, out && out.output);
+  } catch (e) {
+    const wrapped = new Error('[aqrp boundary ' + step + '] ' + e.message);
+    wrapped.step = step;
+    wrapped.schema = e;
+    throw wrapped;
+  }
+  return out;
+}
+module.exports = { runStep: _runStepWithSchema, _runStep: runStep, readStep, FINAL_STEP };

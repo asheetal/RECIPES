@@ -1,26 +1,88 @@
-{ "$schema":"http://json-schema.org/draft-07/schema#", "$id":"aqrp://step22_23",
-  "title":"AQRP step 22 (panel) output = step 23 input",
-  "type":"object",
-  "required":["status","panel_result","negative_case_matrix","negative_case_disagreements"],
-  "properties":{
-    "status":{"const":"NEGATIVE_CASES_COMPLETE"},
-    "panel_result":{"$ref":"aqrp://shared/panel_result"},
-    "negative_case_matrix":{"type":"array","items":{
-      "type":"object","required":["record_id","coder_id","codes"],
-      "properties":{
-        "record_id":{"type":"string","minLength":1},
-        "coder_id":{"type":"string","minLength":1},
-        "codes":{"type":"array","minItems":1,"items":{"type":"string","minLength":1}},
-        "quote":{"type":"string"},
-        "narrative":{"type":"string"}},
-      "additionalProperties":true}},
-    "negative_case_disagreements":{"type":"array","items":{
-      "type":"object","required":["record_id","coders"],
-      "properties":{
-        "record_id":{"type":"string","minLength":1},
-        "coders":{"type":"object","additionalProperties":{"type":"array","items":{"type":"string"}}}},
-      "additionalProperties":true}}
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "aqrp://step22_23",
+  "title": "AQRP step 22 (panel) output = step 23 input",
+  "type": "object",
+  "required": [
+    "status",
+    "panel_result",
+    "negative_case_matrix",
+    "negative_case_disagreements"
+  ],
+  "properties": {
+    "status": {
+      "const": "NEGATIVE_CASES_COMPLETE"
+    },
+    "panel_result": {
+      "$ref": "aqrp://shared/panel_result"
+    },
+    "negative_case_matrix": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "record_id"
+        ],
+        "properties": {
+          "record_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "coder_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "codes": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "quote": {
+            "type": "string"
+          },
+          "narrative": {
+            "type": "string"
+          },
+          "changes_dimension": {
+            "type": "string"
+          },
+          "why": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "negative_case_disagreements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "record_id",
+          "coders"
+        ],
+        "properties": {
+          "record_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "coders": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "additionalProperties": true
+      }
+    }
   },
-  "additionalProperties":true,
-  "$comment":"Producer: pipeline.cjs panelStepGeneric(22, {matrixField:'negative_case_matrix', disField:'negative_case_disagreements', status:'NEGATIVE_CASES_COMPLETE'}). Upstream fields pass through verbatim."
+  "additionalProperties": true,
+  "$comment": "Producer: pipeline.cjs panelStepGeneric(22, {matrixField:'negative_case_matrix', disField:'negative_case_disagreements', status:'NEGATIVE_CASES_COMPLETE'}). Upstream fields pass through verbatim."
 }

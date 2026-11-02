@@ -316,61 +316,29 @@ router.get('/:projectId/aqrp/bundle', async (req, res, next) => {
         if (out) {
           zip.file(`__aqrp_step${n}_out.json`, JSON.stringify(out, null, 2));
           if (n === 32) {
-            let pdf_b64 = __pdf_b64 || out.aqrp_report_pdf_b64 || null;
-            if (!pdf_b64 && out.aqrp_report_tex) {
-              try {
-                const http = require('http');
-                pdf_b64 = await new Promise((resolve, reject) => {
-                  const payload = JSON.stringify({ tex: out.aqrp_report_tex, run_id: st.runId || '' });
-                  const req = http.request({
-                    hostname: 'asp-runner', port: 8091, path: '/compile-tex', method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) },
-                    timeout: 90000
-                  }, res => {
-                    let body = '';
-                    res.on('data', c => body += c);
-                    res.on('end', () => {
-                      try {
-                        const j = JSON.parse(body);
-                        if (j.ok && j.pdf_b64) resolve(j.pdf_b64);
-                        else reject(new Error('runner: ' + JSON.stringify(j).slice(0, 300)));
-                      } catch (e) { reject(new Error('runner bad json: ' + body.slice(0, 200))); }
-                    });
-                  });
-                  req.on('error', reject);
-                  req.on('timeout', () => { req.destroy(new Error('compile timeout')); });
-                  req.write(payload); req.end();
-                });
-                try {
-                  const mongoose = require('mongoose');
-                  const db = mongoose.connection.db;
-                  const runDoc = await db.collection('aqrpruns').findOne({ runId: st.runId });
-                  if (runDoc) {
-                    await db.collection('aqrpruns').updateOne(
-                      { _id: runDoc._id },
-                      { $set: {
-                          'steps.32.output.aqrp_report_pdf_b64': pdf_b64,
-                          'steps.32.output.aqrp_report_pdf_source': 'asp-runner-' + new Date().toISOString()
-                      }}
-                    );
-                  }
-                } catch (_) {}
-              } catch (e) {
-                console.error('[bundle] asp-runner compile failed: ' + (e && e.message ? e.message : e));
-              }
-            }
+            // ALWAYS write source fragments so offline compile is possible.
+            try {
+              const shell = require('fs').readFileSync('/app/aqrp-feature/latex/aqrp_report.tex', 'utf8');
+              zip.file('aqrp_report.tex', shell);
+            } catch (_) {}
+            if (typeof out.aqrp_report_title === 'string' && out.aqrp_report_title.length > 0)
+              zip.file('aqrp_report_title.tex', out.aqrp_report_title);
+            if (typeof out.aqrp_report_abstract === 'string' && out.aqrp_report_abstract.length > 0)
+              zip.file('aqrp_report_abstract.tex', out.aqrp_report_abstract);
+            if (typeof out.aqrp_report_body_tex === 'string' && out.aqrp_report_body_tex.length > 0)
+              zip.file('aqrp_report_body.tex', out.aqrp_report_body_tex);
+            if (typeof out.aqrp_appendices_tex === 'string' && out.aqrp_appendices_tex.length > 0)
+              zip.file('aqrp_appendices.tex', out.aqrp_appendices_tex);
+            if (typeof out.aqrp_report_bib === 'string' && out.aqrp_report_bib.length > 0)
+              zip.file('aqrp_report.bib', out.aqrp_report_bib);
+
+            const pdf_b64 = __pdf_b64 || out.aqrp_report_pdf_b64 || null;
             if (pdf_b64) {
               zip.file('aqrp_report.pdf', Buffer.from(pdf_b64, 'base64'));
-              if (out.aqrp_report_audit) zip.file('aqrp_report_audit.json', JSON.stringify(out.aqrp_report_audit, null, 2));
             } else {
-              if (typeof out.aqrp_report_tex === 'string' && out.aqrp_report_tex.length > 0) zip.file('aqrp_report.tex', out.aqrp_report_tex);
-              zip.file('_compile_failed.txt', 'asp-runner compile failed for run ' + (st.runId || '') + '; check docker logs asp-runner');
-              if (out.aqrp_report_audit) zip.file('aqrp_report_audit.json', JSON.stringify(out.aqrp_report_audit, null, 2));
-            
-              zip.file('submission_paper.tex', out.submission_paper_tex);
-              if (out.supplementary_rdf_tex) zip.file('supplementary_rdf.tex', out.supplementary_rdf_tex);
-              if (out.aqrp_report) zip.file('aqrp_report.rdf', JSON.stringify(out.aqrp_report, null, 2));
+              zip.file('_compile_failed.txt', 'PDF not produced for run ' + (st.runId || '') + '. Compile locally: pdflatex aqrp_report.tex, bibtex aqrp_report, pdflatex aqrp_report.tex, pdflatex aqrp_report.tex');
             }
+            if (out.aqrp_report_audit) zip.file('aqrp_report_audit.json', JSON.stringify(out.aqrp_report_audit, null, 2));
           }
           count++;
         }

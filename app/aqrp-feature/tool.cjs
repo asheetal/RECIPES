@@ -3,16 +3,70 @@ const NAME = 'aqrp_step_run';
 const { FINAL_STEP } = require('./steps.cjs');
 const PANEL_STEPS = new Set([4, 16, 17, 22]);
 const { z } = require('zod');
-const { zodToJsonSchema } = require('zod-to-json-schema');
-const STEP_SCHEMA = z.object({
+
+const baseProperties = {
   plan: z.any().optional(),
-  step: z.coerce.number().int(),
   file_id: z.string().optional(),
   fileId: z.string().optional(),
   projectFileId: z.string().optional(),
-  payload: z.record(z.any()).optional()
-}).strict().refine((v) => v.step === 1 || v.step === 13 || (v.payload && Object.keys(v.payload).length > 0), { message: 'payload required for steps 2-12, 14-32 (steps 1 and 13 are tool-only, no payload)' });
-const { $schema: _step$schema$, ...STEP_PARAMETERS } = zodToJsonSchema(STEP_SCHEMA);
+};
+
+const ToolStepSchema = z.object({
+  ...baseProperties,
+  step: z.union([z.literal(1), z.literal(13)]),
+  payload: z.record(z.any()).optional(),
+}).strict();
+
+const CognitiveStepSchema = z.object({
+  ...baseProperties,
+  step: z.number().int().refine((n) => (n >= 2 && n <= 12) || (n >= 14 && n <= FINAL_STEP), {
+    message: `step must be 2..12 or 14..${FINAL_STEP}`,
+  }),
+  payload: z.record(z.any()).refine((p) => p && typeof p === 'object' && Object.keys(p).length > 0, {
+    message: 'payload must be a non-empty object',
+  }),
+}).strict();
+
+const STEP_SCHEMA = z.union([ToolStepSchema, CognitiveStepSchema]);
+
+const STEP_PARAMETERS = {
+  type: 'object',
+  properties: {
+    plan: { type: 'object', description: 'Execution plan' },
+    step: {
+      type: 'integer',
+      minimum: 1,
+      maximum: FINAL_STEP,
+      description: 'Pipeline step number 1..32',
+    },
+    file_id: { type: 'string', description: 'Corpus file ID (required for step 1)' },
+    fileId: { type: 'string' },
+    projectFileId: { type: 'string' },
+    payload: {
+      type: 'object',
+      description: 'Step payload. Strictly required for steps 2..12 and 14..32 per schema/*.schema contracts.',
+    },
+  },
+  required: ['step'],
+  oneOf: [
+    {
+      description: 'Tool-only steps: 1 and 13',
+      properties: {
+        step: { enum: [1, 13] },
+      },
+    },
+    {
+      description: 'Cognitive steps: steps 2-12 and 14-32 strictly require payload',
+      properties: {
+        step: {
+          not: { enum: [1, 13] },
+        },
+      },
+      required: ['payload'],
+    },
+  ],
+  additionalProperties: false,
+};
 
 const def = {
   name: NAME,

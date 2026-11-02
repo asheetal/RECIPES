@@ -134,9 +134,16 @@ async function invoke(req, args) {
 
       let p4;
       if (step === 22) {
-        if (!payload) throw new Error('payload required for step 22');
-        p4 = typeof payload === 'string' ? JSON.parse(payload) : payload;
-        if (!p4 || typeof p4 !== 'object') throw new Error('step 22 payload must be an object');
+        if (typeof payload === 'string') {
+          try { p4 = JSON.parse(payload); }
+          catch (_) { p4 = env ? {} : null; }
+        } else {
+          p4 = payload || (env ? {} : null);
+        }
+        if (!p4 || typeof p4 !== 'object') {
+          if (env) p4 = {};
+          else throw new Error('step 22 payload must be an object');
+        }
         if (env) {
           p4.panel_result = env;
           gateway.audit(req, 'LLM_SURGERY', 'panel_envelope_source', { step: 22, source: 'assembler-override' });

@@ -21,7 +21,9 @@
       "items": {
         "type": "object",
         "required": [
-          "record_id"
+          "record_id",
+          "coder_id",
+          "codes"
         ],
         "properties": {
           "record_id": {
@@ -71,8 +73,12 @@
           },
           "coders": {
             "type": "object",
-            "additionalProperties": true,
-            "description": "v246.2.32 may emit {coder_id:[string]} or {coder_id:{narrative,...}}; both accepted."
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
           }
         },
         "additionalProperties": true

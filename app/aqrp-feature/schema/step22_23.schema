@@ -21,7 +21,9 @@
       "items": {
         "type": "object",
         "required": [
-          "record_id"
+          "record_id",
+          "coder_id",
+          "codes"
         ],
         "properties": {
           "record_id": {
@@ -71,7 +73,12 @@
           },
           "coders": {
             "type": "object",
-            "additionalProperties": true
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
           }
         },
         "additionalProperties": true

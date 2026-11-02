@@ -1,11 +1,44 @@
-{ "$schema":"http://json-schema.org/draft-07/schema#", "$id":"aqrp://shared/citation_record",
-  "type":"object",
-  "required":["authors","year","title","journal","doi"],
-  "properties":{
-    "authors":{"type":"array","minItems":1,"items":{"type":"string","minLength":1}},
-    "year":{"type":"integer"},
-    "title":{"type":"string","minLength":1},
-    "journal":{"type":"string","minLength":1},
-    "doi":{"type":"string","pattern":"^10\\."}
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "aqrp://shared/citation_record",
+  "type": "object",
+  "required": [
+    "authors",
+    "year",
+    "title",
+    "journal",
+    "doi",
+    "__key"
+  ],
+  "properties": {
+    "authors": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "year": {
+      "type": "integer"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "journal": {
+      "type": "string",
+      "minLength": 1
+    },
+    "doi": {
+      "type": "string",
+      "pattern": "^10\\."
+    },
+    "__key": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Produced by the search layer (workflow-feature/search-mode/router.cjs keyForOpenAlex, via withKeys). LaTeX-safe. The surgeon copies it verbatim; missing __key is a fatal search-layer bug."
+    }
   },
-  "additionalProperties":true }
+  "additionalProperties": true
+}

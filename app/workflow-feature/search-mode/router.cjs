@@ -94,7 +94,12 @@ function withKeys(result,backend){
  if(!list)return result;
  const out=list.map(rec=>{
   if(!rec||typeof rec!=='object')return rec;
-  if(typeof rec.__key==='string'&&KEY_RE.test(rec.__key))return rec;
+  // Always recompute from record content. A pre-set __key must not survive:
+  // upstream tools and the LLM were observed emitting 'lastnameYYYYword'
+  // slugs that match KEY_RE but lack the deterministic hash, breaking the
+  // cite/bib contract. Example from run f691c7e55bf42250:
+  //   stored   taeihagh2025governance
+  //   computed taeihagh-2025-governance-a901bd648ba1
   return {...rec,__key:keyOf(rec)};
  });
  if(isArr)return out;

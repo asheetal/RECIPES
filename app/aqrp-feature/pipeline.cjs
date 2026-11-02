@@ -26,7 +26,11 @@ function validateRdfRecord(rdf, at, allowedPools, pools) {
   if (rdf.citation_status === 'pool_selected' && rdf.pool_id !== 'P00' && pools && pools[rdf.pool_id]) {
     const poolDois = new Set((pools[rdf.pool_id].top_k || []).map(t => String(t.doi || '').toLowerCase()));
     const bad = rdf.citations_used.filter(d => !poolDois.has(String(d).toLowerCase()));
-    if (bad.length) throw new Error(at + '.citations_used contains DOI(s) not in ' + rdf.pool_id + ': ' + bad.slice(0,3).join(', '));
+    if (bad.length) {
+      const valid = ((pools[rdf.pool_id] && pools[rdf.pool_id].top_k) || []).map(t => t && t.doi).filter(Boolean);
+      throw new Error(at + '.citations_used contains DOI(s) not in ' + rdf.pool_id + ': ' + bad.slice(0,3).join(', ')
+        + ' — valid DOIs in ' + rdf.pool_id + ': ' + valid.slice(0,10).join(', ') + (valid.length > 10 ? ' (and ' + (valid.length - 10) + ' more)' : ''));
+    }
   }
 }
 function validateCitationPool(P, poolId) {

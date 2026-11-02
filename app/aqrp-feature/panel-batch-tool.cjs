@@ -2,7 +2,7 @@
 const NAME = 'llm_assistant_panel_batch';
 const { z } = require('zod');
 const { zodToJsonSchema } = require('zod-to-json-schema');
-const PANEL_SCHEMA = z.object({ plan: z.any().optional(), query: z.string(), schema: z.union([z.record(z.any()), z.string()]), records: z.union([z.array(z.any()), z.string()]).optional(), file_id: z.string().optional(), fileId: z.string().optional(), projectFileId: z.string().optional() }).strict();
+const JSON_SCHEMA_DEF = z.object({ type: z.literal("object"), properties: z.record(z.any()), required: z.array(z.string()).optional() }).passthrough(); const PANEL_SCHEMA = z.object({ plan: z.any().optional(), query: z.string(), schema: JSON_SCHEMA_DEF, records: z.union([z.array(z.any()), z.string()]).optional(), file_id: z.string().optional(), fileId: z.string().optional(), projectFileId: z.string().optional() }).strict();
 const { $schema: _panel$schema$, ...PANEL_PARAMETERS } = zodToJsonSchema(PANEL_SCHEMA);
 
 const def = {

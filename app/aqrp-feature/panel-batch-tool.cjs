@@ -8,7 +8,7 @@ const { $schema: _panel$schema$, ...PANEL_PARAMETERS } = zodToJsonSchema(PANEL_S
 const def = {
   name: NAME,
   description:
-    'Advisory multi-agent panel over records. Submit {query, schema, records} or {query, schema, file_id}; schema MUST be a JSON Schema object with keys type, properties, and required (type value must be the string object) — NOT a JSON string, NOT a plain object without type/properties; with file_id it reads every record of that JSON corpus. Returns {panel, n, responses}: n complete sets, each with coder_id and rows, rows spanning the input records in order. Recipe-agnostic. Not a search, research, bash, or computation tool.',
+    'Advisory multi-agent panel over records. Within an AQRP run, submit {query, schema} only — the batch reads every record of the run corpus (run.fileId is authoritative; any records you pass are ignored). Outside a run, submit {query, schema, records} or {query, schema, file_id}. schema MUST be a JSON Schema object with keys type, properties, and required (type value must be the string object) — NOT a JSON string, NOT a plain object without type/properties. Returns {panel, n, responses}: n complete sets, each with coder_id and rows, rows spanning the input records in order. Recipe-agnostic. Not a search, research, bash, or computation tool.',
   parameters: PANEL_PARAMETERS,
 };
 async function resolveProjectId(req) {
@@ -27,21 +27,32 @@ async function invoke(req, args) {
     let schema = args.schema;
     let records = args.records;
     let fileId = args.file_id || args.fileId || args.projectFileId;
-    // auto-fileId from run: if no file_id and no records provided, use the current run's fileId
-    // (the only valid corpus for this scope — integration fallback for surgeon omissions).
-    if (!fileId && (!Array.isArray(args.records) || !args.records.length)) {
-      try {
-        const __db = require('mongoose').connection.db;
-        const __pid = await resolveProjectId(req);
-        if (__pid) {
-          const __run = await __db.collection('aqrpruns').findOne(
-            { user: String(req.user.id || req.user._id), tenant: String(req.user.tenantId || ''), projectId: __pid },
-            { sort: { startedAt: -1 } }
-          );
-          if (__run && __run.fileId) fileId = __run.fileId;
+    // Within an AQRP run, run.fileId is the authoritative corpus. The surgeon
+    // must not be the courier for record selection: it submits {query, schema}
+    // only, and the batch reads every record of the run's corpus. If the surgeon
+    // still passes records, they are discarded and the discard is audited.
+    // Outside a run (no run resolves), caller input is honoured as before.
+    try {
+      const __db = require('mongoose').connection.db;
+      const __pid = await resolveProjectId(req);
+      if (__pid) {
+        const __run = await __db.collection('aqrpruns').findOne(
+          { user: String(req.user.id || req.user._id), tenant: String(req.user.tenantId || ''), projectId: __pid },
+          { sort: { startedAt: -1 } }
+        );
+        if (__run && __run.fileId) {
+          if (Array.isArray(records) && records.length > 0) {
+            gateway.audit(req, 'LLM_SURGERY', 'batch_ignored_records', {
+              passed_n: records.length,
+              reason: 'run.fileId is authoritative within a run'
+            });
+            console.log('[panel-batch] run.fileId present; discarding ' + records.length + ' caller-passed records');
+            records = undefined;
+          }
+          fileId = __run.fileId;
         }
-      } catch (_) {}
-    }
+      }
+    } catch (_) {}
     if ((!Array.isArray(records) || !records.length) && fileId) {
       const projectId = await resolveProjectId(req);
       if (!projectId) throw new Error('project scope required to read file_id');

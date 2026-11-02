@@ -78,7 +78,7 @@ function foldPanelEnvelope(pr, opts) {
       perCoder.get(row.coder_id).add(String(row.record_id));
     }
     for (const [coder, set] of perCoder) {
-      if (set.size !== expected.size) throw new Error('coder ' + coder + ' covers ' + set.size + ' of ' + expected.size + ' expected records');
+      if (set.size !== expected.size) throw new Error('coder ' + coder + ' covers ' + set.size + ' of ' + expected.size + ' expected records — llm_assistant_panel_batch returned a partial corpus for this run; the batch must read every record of run.fileId');
       for (const id of expected) if (!set.has(id)) throw new Error('coder ' + coder + ' is missing record_id ' + id);
     }
   } else {

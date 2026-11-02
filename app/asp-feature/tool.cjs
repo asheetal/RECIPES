@@ -491,7 +491,7 @@ async function invoke(req, args) {
       const prior = await pipeline.readStep({ runId: currentState.runId, step: step - 1 });
       const merged = mergePassthrough(step, prior, payload);
       if (step === 12) backfillRetrievalClaims(prior, merged.claims);
-      const schemaErr = validatePayloadSchema(step, merged, require('zod').z);
+      const schemaErr = validatePayloadSchema(step, payload, require('zod').z);
       if (schemaErr) throw new Error(schemaErr);
       validateCognitive(step, merged);
       if (step === 7) validateStep7(merged);

@@ -506,11 +506,12 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   function buildBib(dois) {
     const seen = new Set(); const out = [];
     for (const doi of dois) {
-      const key = citeKey(doi);
-      if (seen.has(key)) continue;
-      seen.add(key);
       const rec = (typeof doiToRec !== 'undefined' && doiToRec && doiToRec[doi]) || (typeof __METHODOLOGY !== 'undefined' && __METHODOLOGY && __METHODOLOGY[doi]) || null;
       if (!rec) continue;
+      const key = rec.__key;
+      if (!key) continue;
+      if (seen.has(key)) continue;
+      seen.add(key);
       const a = Array.isArray(rec.authors) ? rec.authors.join(' and ') : String(rec.authors || '');
       out.push('@article{' + key + ',\n  author = {' + escapeBibValue(a) + '},\n  year = {' + (rec.year || '') + '},\n  title = {' + escapeBibValue(rec.title || '') + '},\n  journal = {' + escapeBibValue(rec.journal || '') + '},\n  doi = {' + escapeBibValue(doi) + '}\n}');
     }
@@ -522,7 +523,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     });
   }
   const L = [];
-  const displayTitle = paperTitle || 'Qualitative Analysis of AI Futures';
+  const displayTitle = paperTitle || 'Qualitative Analysis Report';
 
   // Front matter (paper)
   if (paperRQ)      { L.push('\\section*{Research Question}'); L.push(fillMissingCites(paperRQ)); L.push(''); }

@@ -4,7 +4,9 @@ const PROMPT = `SEARCH_MODE: academic. AQRP is a stepwise qualitative pipeline. 
 payload is a NATIVE JSON object — do NOT pass it as a stringified JSON string. Emit payload:{...} directly inside aqrp_step_run arguments, NOT as a quoted string.
 
 RDF RECORD = {rdf_id, stage, type:'SURGEON', options (>=2 strings), chosen (one of options), rationale, citations_used (DOIs that MUST appear in the declared pool_id's top_k — cross-pool citations are forbidden except in R3a where P00 permits methodology DOIs 10.1177/1094428112452151, 10.1191/1478088706qp063oa, 10.5465/amr.2009.0486), pool_id, citation_status ('pool_selected'|'partial'|'none_gut_feeling'), gut_rationale (string or null; required when none_gut_feeling)}.
-POOL = {pool_id, query, n_returned, top_k:[{authors (string array), year (int), title, journal, doi ('10.'-prefixed)}], ranking_rule:'0.6*relevance + 0.3*log(1+citations) + 0.1*recency'}.
+POOL = {pool_id, query, n_returned, top_k:[{authors (string array), year (int), title, journal, doi ('10.'-prefixed), __key (string)}], ranking_rule:'0.6*relevance + 0.3*log(1+citations) + 0.1*recency'}.
+
+CITATION KEYS: Every record returned by the search tool carries a __key field. When you copy a record into P01/P02/P03/P04/P05/P06/P07/P08/P09/P10/P11/P12/P13.top_k, preserve __key unchanged. In submission_paper_tex, every \citep{...} and \citet{...} must use the record's __key verbatim — do NOT use author-year, DOI, or any other identifier as a cite key.
 
 STEP 1 (tool): aqrp_step_run({step:1, file_id:"<attached file_id>"}).
 

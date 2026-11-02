@@ -20,6 +20,16 @@ def healthy():
         except Exception:pass
         time.sleep(2)
     raise RuntimeError('LibreChat did not become healthy')
+SRC=pathlib.Path('/home/sheetal/librechat-src')
+def gitcheck():
+    def g(*a):
+        try:
+            return subprocess.run(['git','-C',str(SRC),*a],check=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True).stdout.strip()
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError('git check failed ('+' '.join(a)+'): '+(e.stderr or '').strip())
+    head=g('rev-parse','HEAD');live=g('rev-parse','live^{commit}')
+    if head!=live:raise RuntimeError('git HEAD '+head+' != live tag '+live+': commit and force-move live (git tag -f live) before deploying')
+    print('Git: HEAD == live ('+head+')')
 def check():
     for name,expected in baseline().items():
         live=mounts(name)
@@ -34,7 +44,7 @@ def check():
 
 def upgrade():
     # UI patches must keep the previous image: no image upgrades or database migrations.
-    check();old=inspect('librechat');oldimage=old['Image']
+    gitcheck();check();old=inspect('librechat');oldimage=old['Image']
     cfg=json.loads(capture(['docker','compose','config','--format','json']))
     image=cfg['services']['api'].get('image')
     if not image or json.loads(capture(['docker','image','inspect',image]))[0]['Id']!=oldimage:

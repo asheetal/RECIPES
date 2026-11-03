@@ -1,6 +1,9 @@
 "use strict";
 const { FINAL_STEP } = require("./steps.cjs");
-const METHODS_NORMS = new Set(['10.1177/1094428112452151','10.1191/1478088706qp063oa','10.5465/amr.2009.0486']);
+const METHODS_NORMS = new Set([
+  'gioia2013seeking','braun2006using','corley2011building','malterud2016sample','strauss1998basics',
+  '10.1177/1094428112452151','10.1191/1478088706qp063oa','10.5465/amr.2009.0486'
+]);
 
 function readJson(filePath) {
   const fs = require("node:fs");
@@ -34,12 +37,17 @@ function validateRdfRecord(rdf, at, allowedPools, pools) {
   if (!st.includes(rdf.citation_status)) throw new Error(at + '.citation_status must be one of ' + st.join(','));
   if (rdf.citation_status === 'none_gut_feeling' && !rdf.gut_rationale) throw new Error(at + '.gut_rationale required when none_gut_feeling');
   if (rdf.citation_status === 'pool_selected' && rdf.pool_id !== 'P00' && pools && pools[rdf.pool_id]) {
-    const poolDois = new Set((pools[rdf.pool_id].top_k || []).map(t => String(t.doi || '').toLowerCase()));
-    const bad = rdf.citations_used.filter(d => !poolDois.has(String(d).toLowerCase()));
+    const topk = pools[rdf.pool_id].top_k || [];
+    const poolKeys = new Set(topk.map(t => String(t.__key || '').trim()).filter(Boolean));
+    const poolDois = new Set(topk.map(t => String(t.doi || '').toLowerCase()).filter(Boolean));
+    const bad = rdf.citations_used.filter(k => {
+      const s = String(k || '').trim();
+      return !poolKeys.has(s) && !poolDois.has(s.toLowerCase());
+    });
     if (bad.length) {
-      const valid = ((pools[rdf.pool_id] && pools[rdf.pool_id].top_k) || []).map(t => t && t.doi).filter(Boolean);
-      throw new Error(at + '.citations_used contains DOI(s) not in ' + rdf.pool_id + ': ' + bad.slice(0,3).join(', ')
-        + ' — valid DOIs in ' + rdf.pool_id + ': ' + valid.slice(0,10).join(', ') + (valid.length > 10 ? ' (and ' + (valid.length - 10) + ' more)' : ''));
+      const valid = Array.from(poolKeys).length ? Array.from(poolKeys) : Array.from(poolDois);
+      throw new Error(at + '.citations_used contains key(s) not in ' + rdf.pool_id + ': ' + bad.slice(0,3).join(', ')
+        + ' — valid keys in ' + rdf.pool_id + ': ' + valid.slice(0,10).join(', '));
     }
   }
 }
@@ -506,11 +514,65 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   }
 
   // Native report sections from pipeline state
-  const displayTitle = (s26.model_draft && s26.model_draft.name) || (s12.chosen_framing && s12.chosen_framing.name) || 'Qualitative Analysis Report';
-  const abstractText = (s26.model_draft && s26.model_draft.summary) || (s12.chosen_framing && s12.chosen_framing.rationale) || '';
-  const paperRQ = s8.rq || '';
-  const paperLit = (s12.chosen_framing && s12.chosen_framing.rationale) || (Array.isArray(s10.candidate_lenses) ? s10.candidate_lenses.map(l => (l.name || '') + ': ' + (l.rationale || '')).join(' ') : '');
-  const paperMethods = 'This study employs reflexive qualitative analysis across a corpus of ' + (s1.n_elements || 'sampled') + ' records. Analysis followed systematic familiarization, open coding with a designated codebook (' + codebook.map(c => c.code || c.name).filter(Boolean).join(', ') + '), cross-case synthesis, and dimension aggregation.';
+  let displayTitle = (s26.model_draft && s26.model_draft.name) || '';
+  if (!displayTitle && typeof s12.chosen_framing === 'string') {
+    const colIdx = s12.chosen_framing.indexOf(':');
+    displayTitle = colIdx > 0 ? s12.chosen_framing.slice(0, colIdx).trim() : s12.chosen_framing.slice(0, 80).trim();
+  } else if (!displayTitle && s12.chosen_framing && s12.chosen_framing.name) {
+    displayTitle = s12.chosen_framing.name;
+  }
+  if (!displayTitle) displayTitle = 'Autonomous Qualitative Research Pipeline Report';
+
+  // Format Abstract Text
+  let abstractText = (s26.model_draft && s26.model_draft.summary) || '';
+  if (!abstractText && typeof s12.chosen_framing === 'string') {
+    abstractText = s12.chosen_framing;
+    if (s26.model_draft && s26.model_draft.tension) {
+      abstractText += ' Central tension: ' + s26.model_draft.tension + '.';
+    }
+  } else if (!abstractText && s12.chosen_framing && s12.chosen_framing.rationale) {
+    abstractText = s12.chosen_framing.rationale;
+  }
+  if (!abstractText) abstractText = 'This report presents a structured qualitative synthesis of the corpus using reflexive inductive analysis and rigorous researcher degrees of freedom tracking.';
+
+  // Format RQ
+  let paperRQ = '';
+  if (Array.isArray(s8.rq)) {
+    paperRQ = s8.rq.map(item => {
+      if (typeof item === 'string') return item;
+      let text = '\\textbf{Primary RQ:} ' + (item.main || '');
+      if (Array.isArray(item.sub) && item.sub.length) {
+        text += '\\begin{itemize}\\setlength{\\itemsep}{2pt}' + item.sub.map(s => '\\item ' + s).join('') + '\\end{itemize}';
+      }
+      return text;
+    }).join('\\par\\vspace{0.5em}');
+  } else if (typeof s8.rq === 'string') {
+    paperRQ = s8.rq;
+  }
+
+  // Format Literature Review with actual __key citations
+  let paperLit = '';
+  if (typeof s12.chosen_framing === 'string') {
+    paperLit = s12.chosen_framing + '\\par\\vspace{0.8em}';
+  }
+  if (Array.isArray(s10.candidate_lenses) && s10.candidate_lenses.length) {
+    paperLit += '\\noindent\\textbf{Theoretical Lenses Evaluated:}\\begin{itemize}\\setlength{\\itemsep}{3pt}';
+    paperLit += s10.candidate_lenses.map(l => {
+      const lens = l.lens || l.name || '';
+      const fit = l.fit || l.rationale || '';
+      return '\\item \\textbf{' + lens + '}: ' + fit;
+    }).join('');
+    paperLit += '\\end{itemize}';
+  }
+  const litKeys = Object.keys(keyToRec).filter(k => !k.startsWith('gioia') && !k.startsWith('braun') && !k.startsWith('corley') && !k.startsWith('strauss') && !k.startsWith('malterud'));
+  if (litKeys.length) {
+    paperLit += '\\par\\vspace{0.6em}\\noindent Theoretical framing builds upon recent scholarship in sociotechnical imaginaries and algorithmic governance \\citep{' + litKeys.slice(0, 3).join(',') + '}.';
+  }
+
+  // Ground Methods with canonical __key citations
+  const methodKeys = Object.keys(keyToRec).filter(k => k.startsWith('gioia') || k.startsWith('braun') || k.startsWith('corley'));
+  const methodCite = methodKeys.length ? ' \\citep{' + methodKeys.slice(0, 2).join(',') + '}' : '';
+  const paperMethods = 'This study employs reflexive qualitative analysis across a corpus of ' + (s1.n_elements || 'sampled') + ' records' + methodCite + '. Analysis followed systematic familiarization, open coding with a designated codebook (' + codebook.map(c => c.code || c.name).filter(Boolean).join(', ') + '), cross-case synthesis, and dimension aggregation.';
   const paperDiscussion = (s26.model_draft && (s26.model_draft.description || (Array.isArray(s26.model_draft.propositions) ? s26.model_draft.propositions.join(' ') : ''))) || '';
   const paperFindings = [];
 
@@ -582,11 +644,8 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     const seen = new Set();
     const out = [];
 
-    const candidates = [
-      ...keysOrDois,
-      ...Object.keys(keyToRec),
-      ...poolDOIs
-    ];
+    // Strict 1:1 mapping: only build BibTeX for keys actually cited in the text
+    const candidates = Array.from(new Set(keysOrDois || []));
 
     for (const item of candidates) {
       const rec = keyToRec[item] || doiToRec[String(item).toLowerCase()] || null;
@@ -956,10 +1015,17 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   const __appendixJoined = fillMissingCites(L.join('\n'));
   const __citeDOIs = (function() {
     const s = new Set();
-    if (typeof poolDOIs !== 'undefined') for (const d of poolDOIs) s.add(String(d));
-    const m = __bodyJoined.matchAll(/\\(?:cite[pt]?|autocite|parencite|textcite)\{([^}]+)\}/g);
-    for (const match of m) for (const k of match[1].split(',')) s.add(k.trim());
-    for (const r of all) for (const d of (r.citations_used || [])) s.add(String(d));
+    const fullText = __bodyJoined + '\n' + __appendixJoined;
+    const m = fullText.matchAll(/\\(?:cite[pt]?|autocite|parencite|textcite)\{([^}]+)\}/g);
+    for (const match of m) {
+      for (const k of match[1].split(',')) {
+        const trimmed = k.trim();
+        if (keyToRec[trimmed]) s.add(trimmed);
+        else if (doiToRec[trimmed.toLowerCase()] && doiToRec[trimmed.toLowerCase()].__key) {
+          s.add(doiToRec[trimmed.toLowerCase()].__key);
+        }
+      }
+    }
     return [...s];
   })();
   const __bib = buildBib(__citeDOIs);

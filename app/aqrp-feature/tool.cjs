@@ -97,7 +97,7 @@ const STEP_CONTRACT_SUMMARY = Object.entries(STEP_CONTRACTS)
 
 const def = {
   name: NAME,
-  description: `AQRP step dispatcher. Run one step per call, in order. Returns {status:'step_complete', step, output}. IMPORTANT: payload is required for every step except step 1 and step 13. Every step MUST strictly match its contract: ${STEP_CONTRACT_SUMMARY}. Every RDF record in rdf_records MUST have { rdf_id, pool_id, stage, type: 'SURGEON', options: [>=2], chosen, rationale, citations_used: [doi], citation_status: 'pool_selected'|'partial'|'none_gut_feeling', gut_rationale: null }. PLAN RULES: The plan JSON MUST be passed under the top-level plan key, never spread at root.`,
+  description: `AQRP step dispatcher. Run one step per call, in order. Returns {status:'step_complete', step, output}. IMPORTANT: payload is required for every step except step 1 and step 13. Every step MUST strictly match its contract: ${STEP_CONTRACT_SUMMARY}. Every RDF record in rdf_records MUST have { rdf_id, pool_id, stage, type: 'SURGEON', options: [>=2], chosen, rationale, citations_used: [__key], citation_status: 'pool_selected'|'partial'|'none_gut_feeling', gut_rationale: null }. PLAN RULES: The plan JSON MUST be passed under the top-level plan key, never spread at root.`,
   parameters: STEP_PARAMETERS,
 };
 async function resolveProjectId(req) {

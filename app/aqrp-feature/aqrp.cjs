@@ -309,14 +309,11 @@ router.get('/:projectId/aqrp/bundle', async (req, res, next) => {
         const shell = require('fs').readFileSync('/app/aqrp-feature/latex/aqrp_report.tex', 'utf8');
         zip.file('aqrp_report.tex', shell);
       } catch (_) { return res.status(500).json({ error: 'report shell missing' }); }
-      if (typeof s32.aqrp_report_title === 'string' && s32.aqrp_report_title.length > 0)
-        zip.file('aqrp_report_title.tex', s32.aqrp_report_title);
-      if (typeof s32.aqrp_report_abstract === 'string' && s32.aqrp_report_abstract.length > 0)
-        zip.file('aqrp_report_abstract.tex', s32.aqrp_report_abstract);
+      zip.file('aqrp_report_title.tex', String(s32.aqrp_report_title || 'Qualitative Analysis Report'));
+      zip.file('aqrp_report_abstract.tex', String(s32.aqrp_report_abstract || 'No abstract provided.'));
       if (typeof s32.aqrp_report_body_tex === 'string' && s32.aqrp_report_body_tex.length > 0)
         zip.file('aqrp_report_body.tex', s32.aqrp_report_body_tex);
-      if (typeof s32.aqrp_appendices_tex === 'string' && s32.aqrp_appendices_tex.length > 0)
-        zip.file('aqrp_appendices.tex', s32.aqrp_appendices_tex);
+      zip.file('aqrp_appendices.tex', String(s32.aqrp_appendices_tex || ''));
       if (typeof s32.aqrp_report_bib === 'string' && s32.aqrp_report_bib.length > 0)
         zip.file('aqrp_report.bib', s32.aqrp_report_bib);
 

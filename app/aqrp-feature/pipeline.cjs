@@ -574,7 +574,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   // Ground Methods with canonical __key citations
   const methodKeys = Object.keys(keyToRec).filter(k => k.startsWith('gioia') || k.startsWith('braun') || k.startsWith('corley'));
   const methodCite = methodKeys.length ? ' \\citep{' + methodKeys.slice(0, 2).join(',') + '}' : '';
-  const paperMethods = 'This study employs reflexive qualitative analysis across a corpus of ' + (s1.n_elements || 'sampled') + ' records' + methodCite + '. Analysis followed systematic familiarization, open coding with a designated codebook (' + codebook.map(c => c.code || c.name).filter(Boolean).join(', ') + '), cross-case synthesis, and dimension aggregation.';
+  const paperMethods = 'This study employs reflexive qualitative analysis across a corpus of ' + (s1.n_elements || 'sampled') + ' records' + methodCite + '. Analysis followed systematic familiarization, open coding with a designated codebook (' + codebook.map(c => '\\texttt{' + esc(c.code || c.name) + '}').filter(Boolean).join(', ') + '), cross-case synthesis, and dimension aggregation.';
   const paperDiscussion = (s26.model_draft && (s26.model_draft.description || (Array.isArray(s26.model_draft.propositions) ? s26.model_draft.propositions.join(' ') : ''))) || '';
   const paperFindings = [];
 
@@ -1031,7 +1031,82 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     return [...s];
   })();
   const __bib = buildBib(__citeDOIs);
+
+  // ── Auto-compile PDF via asp-runner at recipe completion ──
+  let __pdfB64 = null;
+  let __pdfSource = null;
+  try {
+    const http = require("http");
+    const path = require("path");
+    let shell = "";
+    const shellCandidates = [
+      "/app/aqrp-feature/latex/aqrp_report.tex",
+      path.join(__dirname, "latex/aqrp_report.tex"),
+      path.join(process.cwd(), "app/aqrp-feature/latex/aqrp_report.tex")
+    ];
+    for (const p of shellCandidates) {
+      try {
+        if (fs.existsSync(p)) { shell = fs.readFileSync(p, "utf8"); if (shell) break; }
+      } catch (e) {}
+    }
+
+    if (shell) {
+      const files = {
+        "aqrp_report.tex": shell,
+        "aqrp_report_title.tex": displayTitle,
+        "aqrp_report_abstract.tex": abstractText || "No abstract.",
+        "aqrp_report_body.tex": __bodyJoined,
+        "aqrp_appendices.tex": __appendixJoined,
+        "aqrp_report.bib": __bib
+      };
+      const compilePayload = JSON.stringify({
+        files,
+        main: "aqrp_report.tex",
+        bib_backend: "bibtex",
+        run_id: runId || ""
+      });
+
+      const compileRes = await new Promise((resolve, reject) => {
+        const req = http.request({
+          hostname: "asp-runner",
+          port: 8091,
+          path: "/compile-tex",
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Content-Length": Buffer.byteLength(compilePayload)
+          },
+          timeout: 300000
+        }, res => {
+          let b = "";
+          res.on("data", c => b += c);
+          res.on("end", () => {
+            try { resolve(JSON.parse(b)); }
+            catch (err) { reject(new Error("compile-tex non-json output: " + b.slice(0, 120))); }
+          });
+        });
+        req.on("error", reject);
+        req.on("timeout", () => req.destroy(new Error("compile-tex timeout")));
+        req.write(compilePayload);
+        req.end();
+      });
+
+      if (compileRes && compileRes.ok && compileRes.pdf_b64) {
+        __pdfB64 = compileRes.pdf_b64;
+        __pdfSource = "auto-step32-" + new Date().toISOString();
+      } else {
+        console.error("[step32] auto-compile failed:", compileRes && (compileRes.stage || compileRes.error || compileRes.log_tail));
+      }
+    } else {
+      console.error("[step32] latex template shell not found");
+    }
+  } catch (err) {
+    console.error("[step32] auto-compile threw:", err.message);
+  }
+
   return { output: {
+    aqrp_report_pdf_b64: __pdfB64,
+    aqrp_report_pdf_source: __pdfSource,
     status: 'PACKAGED',
     aqrp_report_title: displayTitle,
     aqrp_report_abstract: abstractText || '',

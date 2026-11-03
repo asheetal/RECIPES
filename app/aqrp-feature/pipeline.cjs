@@ -60,6 +60,8 @@ function validateCitationPool(P, poolId) {
   if (typeof P.ranking_rule !== 'string' || !P.ranking_rule.trim()) throw new Error(`payload.${poolId}.ranking_rule required`);
   for (let i = 0; i < P.top_k.length; i++) {
     const t = P.top_k[i]; const at = `payload.${poolId}.top_k[${i}]`;
+    if (typeof t.__key !== "string" || !t.__key.trim()) throw new Error(at + ".__key required (authoritative search-layer key missing)");
+    if (!/-[0-9a-f]{12}$/.test(t.__key.trim())) throw new Error(at + ".__key \"" + t.__key + "\" invalid: must retain authoritative search-layer key with 12-hex hash");
     if (!Array.isArray(t.authors) || t.authors.length === 0 || !t.authors.every(a => typeof a === 'string' && a.trim())) throw new Error(at + '.authors must be non-empty string array');
     if (!Number.isInteger(t.year)) throw new Error(at + '.year must be integer');
     if (typeof t.title !== 'string' || !t.title.trim()) throw new Error(at + '.title required');

@@ -1,6 +1,7 @@
 const readline=require("readline");
 const assert=require("assert");
 const {search}=require('./openalex-search.cjs');
+const {__keys:{withKeys}}=require('../workflow-feature/search-mode/router.cjs');
 const tool={
   name:"research_search",
   description:"Search academic papers using OpenAlex only. "+
@@ -25,7 +26,7 @@ async function dispatch(m) {
     if(m.params?.name!==tool.name) throw Error("Unknown tool.");
     try {
       return {content:[{
-        type:"text",text:JSON.stringify(await search(m.params.arguments||{}))
+        type:"text",text:JSON.stringify(withKeys(await search(m.params.arguments||{}),'openalex'))
       }]};
     } catch(e) {
       return {isError:true,content:[{type:"text",text:e.message}]};

@@ -423,6 +423,9 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   // Step data
   const s1  = (steps['1']  && steps['1'].output)  || {};
   const s4  = (steps['4']  && steps['4'].output)  || {};
+  const s8  = (steps['8']  && steps['8'].output)  || {};
+  const s10 = (steps['10'] && steps['10'].output) || {};
+  const s12 = (steps['12'] && steps['12'].output) || {};
   const s15 = (steps['15'] && steps['15'].output) || {};
   const s16 = (steps['16'] && steps['16'].output) || {};
   const s19 = (steps['19'] && steps['19'].output) || {};

@@ -151,6 +151,21 @@ async function step1({ filePath }) {
 async function step2({ filePath }) {
   const p = readJson(filePath);
   validateCitationPool(p.P01, 'P01');
+
+  // Normalize topics: accept alternative keys, extract labels from objects, and clamp length
+  let raw = p.topics || p.research_topics || p.subtopics || p.topic_list;
+  if (typeof raw === "string") {
+    raw = raw.split(/[\n,;]+/).map(s => s.trim()).filter(Boolean);
+  }
+  if (Array.isArray(raw)) {
+    p.topics = raw.map(t => {
+      if (typeof t === "string") return t.trim();
+      if (t && typeof t === "object") return (t.topic || t.name || t.title || t.description || JSON.stringify(t)).trim();
+      return String(t || "").trim();
+    }).filter(Boolean);
+    if (p.topics.length > 5) p.topics = p.topics.slice(0, 5);
+  }
+
   if (!Array.isArray(p.topics) || p.topics.length < 2 || p.topics.length > 5) throw new Error('Step 2: topics must be array of 2-5 non-empty strings');
   if (!p.topics.every(t => typeof t === 'string' && t.trim())) throw new Error('Step 2: topics must be array of 2-5 non-empty strings');
   return { output: { ...p, status: 'TOPICS_IDENTIFIED' } };

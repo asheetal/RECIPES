@@ -543,11 +543,13 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   if (!abstractText) abstractText = 'This report presents a structured qualitative synthesis of the corpus using reflexive inductive analysis and rigorous researcher degrees of freedom tracking.';
 
   // Format RQ
+  const r8Rec = (all || []).find(r => r && (r.rdf_id === 'R8' || r.rdf_id === 'R08'));
   let paperRQ = '';
   if (Array.isArray(s8.rq)) {
     paperRQ = s8.rq.map(item => {
       if (typeof item === 'string') return item;
-      let text = '\\textbf{Primary RQ:} ' + (item.main || '');
+      const qText = item.main || item.primary_rq || item.question || item.rq || item.research_question || item.text || (r8Rec && r8Rec.chosen) || '';
+      let text = '\\textbf{Primary RQ:} ' + qText;
       if (Array.isArray(item.sub) && item.sub.length) {
         text += '\\begin{itemize}\\setlength{\\itemsep}{2pt}' + item.sub.map(s => '\\item ' + s).join('') + '\\end{itemize}';
       }
@@ -558,9 +560,13 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   }
 
   // Format Literature Review with actual __key citations
+  const r10Rec = (all || []).find(r => r && (r.rdf_id === "R10" || r.rdf_id === "R12"));
+  const framingRationale = (r10Rec && r10Rec.rationale) ? (r10Rec.rationale + '\\par\\vspace{0.6em}') : '';
   let paperLit = '';
-  if (typeof s12.chosen_framing === 'string') {
-    paperLit = s12.chosen_framing + '\\par\\vspace{0.8em}';
+  if (typeof s12.chosen_framing === 'string' && s12.chosen_framing.trim()) {
+    paperLit = '\\noindent\\textbf{Theoretical Stance:} ' + s12.chosen_framing + '\\par\\vspace{0.6em}' + framingRationale;
+  } else if (framingRationale) {
+    paperLit = framingRationale;
   }
   if (Array.isArray(s10.candidate_lenses) && s10.candidate_lenses.length) {
     paperLit += '\\noindent\\textbf{Theoretical Lenses Evaluated:}\\begin{itemize}\\setlength{\\itemsep}{3pt}';
@@ -579,7 +585,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   // Ground Methods with canonical __key citations
   const methodKeys = Object.keys(keyToRec).filter(k => k.startsWith('gioia') || k.startsWith('braun') || k.startsWith('corley'));
   const methodCite = methodKeys.length ? ' \\citep{' + methodKeys.slice(0, 2).join(',') + '}' : '';
-  const paperMethods = 'This study employs reflexive qualitative analysis across a corpus of ' + (s1.n_elements || 'sampled') + ' records' + methodCite + '. Analysis followed systematic familiarization, open coding with a designated codebook (' + codebook.map(c => '\\texttt{' + esc(c.code || c.name) + '}').filter(Boolean).join(', ') + '), cross-case synthesis, and dimension aggregation.';
+  const paperMethods = 'This study employs systematic qualitative codebook analysis (Gioia, Corley, & Hamilton, 2013) across a corpus of ' + (s1.n_elements || 'sampled') + ' records' + methodCite + '. Analysis followed systematic familiarization, open coding with a designated codebook (' + codebook.map(c => '\\texttt{' + esc(c.code || c.name) + '}').filter(Boolean).join(', ') + '), cross-case synthesis, and dimension aggregation.';
   const paperDiscussion = (s26.model_draft && (s26.model_draft.description || (Array.isArray(s26.model_draft.propositions) ? s26.model_draft.propositions.join(' ') : ''))) || '';
   const paperFindings = [];
 
@@ -1035,7 +1041,21 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     }
     return [...s];
   })();
-  const __bib = buildBib(__citeDOIs);
+  // Incorporate all pool and ledger citations into bibliography
+  const __allPoolKeys = [];
+  for (const poolRecs of Object.values(poolByID || {})) {
+    for (const r of (poolRecs || [])) {
+      if (r.__key) __allPoolKeys.push(r.__key);
+      else if (r.doi) __allPoolKeys.push(r.doi);
+    }
+  }
+  for (const r of (all || [])) {
+    if (Array.isArray(r.citations_used)) {
+      __allPoolKeys.push(...r.citations_used);
+    }
+  }
+  const __combinedDOIs = Array.from(new Set([...(__citeDOIs || []), ...__allPoolKeys]));
+  const __bib = buildBib(__combinedDOIs);
 
   // ── Auto-compile PDF via asp-runner at recipe completion ──
   let __pdfB64 = null;

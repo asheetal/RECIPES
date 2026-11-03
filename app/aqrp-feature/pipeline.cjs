@@ -187,8 +187,13 @@ async function step4({ filePath, expectedRecordIds, runId }) {
   if (!pr) throw new Error('Step 4: panel_result required');
   const folded = foldPanelEnvelope(pr, { matrixField: 'code_matrix', disField: 'disagreements', expectedSet: expectedRecordIds });
   const SENT = [' about ',' spanning ','claims','claim ','describe','prediction','normative vs','descriptive claim','ambiguity ','ambiguous '];
+  const SCHEMA_TOKENS = new Set(['object', 'record_id', 'codes', 'quote', 'quotes', 'type', 'properties', 'string', 'array', 'boolean', 'integer', 'items', 'description']);
   const codeOk = (c) => {
-    if (!c) return false; if (c.length > 40) return false; if (c.split(/\s+/).length > 6) return false;
+    if (!c) return false;
+    const lower = String(c).toLowerCase().trim();
+    if (SCHEMA_TOKENS.has(lower)) return false;
+    if (c.length > 40) return false;
+    if (c.split(/\s+/).length > 6) return false;
     const padded = ' ' + c + ' ';
     for (const m of SENT) if (padded.includes(m)) return false;
     return true;
@@ -915,7 +920,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   // A.2 Codebook (FIXED: .code, .applies_when, .example)
   if (codebook.length) {
     L.push('\\subsection*{A.2 Codebook}');
-    L.push('{\\fontsize{7pt}{8.4pt}\\selectfont\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.13\\textwidth} >{\\raggedright\\arraybackslash}p{0.28\\textwidth} >{\\raggedright\\arraybackslash}p{0.20\\textwidth} >{\\raggedright\\arraybackslash}X@{}}');
+    L.push('{\\fontsize{7pt}{8.4pt}\\selectfont\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.18\\textwidth} >{\\raggedright\\arraybackslash}p{0.25\\textwidth} >{\\raggedright\\arraybackslash}p{0.19\\textwidth} >{\\raggedright\\arraybackslash}X@{}}');
     L.push('\\toprule\\textbf{Code} & \\textbf{Definition} & \\textbf{Applies when} & \\textbf{Example from corpus}\\\\\\midrule');
     for (const cb of codebook) {
       const code = cb.code || cb.name || cb.label || '?';
@@ -944,7 +949,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     L.push('\\subsection*{A.4 Novelty Assessment (R21)}');
     L.push('{\\fontsize{7pt}{8.4pt}\\selectfont\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.28\\textwidth} >{\\raggedright\\arraybackslash}p{0.12\\textwidth} >{\\raggedright\\arraybackslash}X@{}}');
     L.push('\\toprule\\textbf{Theme} & \\textbf{Action} & \\textbf{Rationale}\\\\\\midrule');
-    for (const n of noveltyMap) L.push('{' + esc(n.theme || '') + '} & ' + esc(n.action || '') + ' & ' + esc(n.rationale || '') + ' \\\\');
+    for (const n of noveltyMap) L.push('{' + esc(n.theme || '') + '} & ' + esc(n.action || '') + ' & ' + esc(n.rationale || n.novelty || '') + ' \\\\');
     L.push('\\bottomrule\\end{tabularx}\\par}');
     L.push('');
   }
@@ -989,7 +994,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
       const y = r.year || 'n.d.';
       const sn = lastAuthor(r);
       if (a.length === 1) return sn + ' (' + y + ')';
-      if (a.length === 2) { const p2 = String(a[1]).trim().split(/[\\s,]+/).filter(Boolean); return sn + '  & ' + (p2[p2.length-1]||'Anon') + ' (' + y + ')'; }
+      if (a.length === 2) { const p2 = String(a[1]).trim().split(/[\\s,]+/).filter(Boolean); return sn + '  and ' + (p2[p2.length-1]||'Anon') + ' (' + y + ')'; }
       return sn + ' et~al. (' + y + ')';
     }).join('; ');
   }
@@ -1005,7 +1010,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   L.push('\\section*{Appendix C: Researcher Degrees of Freedom Ledger}');
   L.push('\\noindent\\textit{Pool IDs (P00--P13) name the literature searches the pipeline performed. P01 = corpus scope; P02--P12 = step-specific searches; P13 = reporting conventions. P00 is reserved for methodology citations. The top two papers per pool appear inline in the Support column; full bibliography in References.}\\par\\vspace{0.6em}');
   L.push('\\begin{singlespacing}\\begin{tiny}\\setlength{\\tabcolsep}{1.5pt}');
-  L.push('\\begin{longtable}{@{}>{\\raggedright\\arraybackslash}p{0.06\\linewidth} >{\\raggedright\\arraybackslash}p{0.09\\linewidth} >{\\raggedright\\arraybackslash}p{0.13\\linewidth} >{\\raggedright\\arraybackslash}p{0.14\\linewidth} >{\\raggedright\\arraybackslash}p{0.32\\linewidth} >{\\raggedright\\arraybackslash}p{0.15\\linewidth}@{}}');
+  L.push('\\begin{longtable}{@{}>{\\raggedright\\arraybackslash}p{0.05\\linewidth} >{\\raggedright\\arraybackslash}p{0.06\\linewidth} >{\\raggedright\\arraybackslash}p{0.14\\linewidth} >{\\raggedright\\arraybackslash}p{0.16\\linewidth} >{\\raggedright\\arraybackslash}p{0.35\\linewidth} >{\\raggedright\\arraybackslash}p{0.24\\linewidth}@{}}');
   L.push('\\toprule\\textbf{Step} & \\textbf{RDF} & \\textbf{Choice} & \\textbf{Forks} & \\textbf{Rationale} & \\textbf{Support} \\\\\\midrule\\endfirsthead');
   L.push('\\toprule\\textbf{Step} & \\textbf{RDF} & \\textbf{Choice} & \\textbf{Forks} & \\textbf{Rationale} & \\textbf{Support} \\\\\\midrule\\endhead');
   L.push('\\bottomrule\\endfoot');

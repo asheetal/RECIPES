@@ -71,11 +71,13 @@ function _extractCodesFromRow(row) {
   // Fallback: extract all short string-valued fields as codes
   // Skip known metadata fields
   const META = new Set(['record_id', 'id', 'quote', 'quotes', 'memo', 'rationale',
-                        'explanation', 'reasoning', 'confidence', 'notes', 'coder_id']);
+                        'explanation', 'reasoning', 'confidence', 'notes', 'coder_id',
+                        'type', 'properties', 'items', 'description', 'required', '$schema']);
+  const SCHEMA_TOKENS = new Set(['object', 'string', 'array', 'number', 'boolean', 'integer', 'record_id', 'codes', 'quote']);
   const codes = [];
   for (const [k, v] of Object.entries(row)) {
     if (META.has(k)) continue;
-    if (typeof v === 'string' && v && v.length <= 80 && !/[\n\r]/.test(v)) {
+    if (typeof v === 'string' && v && v.length <= 80 && !/[\n\r]/.test(v) && !SCHEMA_TOKENS.has(v.toLowerCase().trim())) {
       codes.push(v);
     } else if (typeof v === 'number' && Number.isFinite(v)) {
       codes.push(String(v));

@@ -56,9 +56,48 @@ const STEP_PARAMETERS = {
   additionalProperties: false,
 };
 
+const STEP_CONTRACTS = {
+  1: '{ file_id: string }',
+  2: '{ payload: { topics: string[], P01: CitationPool } }',
+  3: '{ payload: { coding_brief: { code_for: string[], ignore: [], flag: [], granularity: string }, notes: string (>=600 chars), rdf_records: [R3(pool:P01), R3a(pool:P00)] } }',
+  4: '{ payload: { panel_result: { panel, n, responses } } }',
+  5: '{ payload: { P02: CitationPool } }',
+  6: '{ payload: { salience_ranking: array, memos: array, rdf_records: [R6(pool:P02)] } }',
+  7: '{ payload: { P03: CitationPool } }',
+  8: '{ payload: { rq: array, rdf_records: [R8(pool:P03)] } }',
+  9: '{ payload: { lit_map: { clusters, gaps }, P04: CitationPool } }',
+  10: '{ payload: { candidate_lenses: array, rdf_records: [R10(pool:P04)] } }',
+  11: '{ payload: { P05: CitationPool } }',
+  12: '{ payload: { chosen_framing: string, framing_comparison: array, rdf_records: [R12(pool:P05)] } }',
+  13: 'no payload required (auto-assembled from step 4 state)',
+  14: '{ payload: { P06: CitationPool } }',
+  15: '{ payload: { codebook: array, rdf_records: [R15(pool:P06)] } }',
+  16: '{ payload: { panel_result: { panel, n, responses } } }',
+  17: '{ payload: { panel_result: { panel, n, responses } } }',
+  18: '{ payload: { P07: CitationPool } }',
+  19: '{ payload: { themes_k: array, rdf_records: [R19(pool:P07)] } }',
+  20: '{ payload: { P08: CitationPool } }',
+  21: '{ payload: { novelty_map: array, rdf_records: [R21(pool:P08)] } }',
+  22: '{ payload: { panel_result: { panel, n, responses } } }',
+  23: '{ payload: { P09: CitationPool } }',
+  24: '{ payload: { dimensions: array, rdf_records: [R24(pool:P09)] } }',
+  25: '{ payload: { P10: CitationPool } }',
+  26: '{ payload: { model_draft: string, rdf_records: [R26(pool:P10)] } }',
+  27: '{ payload: { P11: CitationPool } }',
+  28: '{ payload: { diagram_script_params: object, rdf_records: [R28(pool:P11)] } }',
+  29: '{ payload: { P12: CitationPool } }',
+  30: '{ payload: { sufficiency: object, rdf_records: [R30(pool:P12)] } }',
+  31: '{ payload: { P13: CitationPool } }',
+  32: '{ payload: { rdf_records: [R32(pool:P13)] } }',
+};
+
+const STEP_CONTRACT_SUMMARY = Object.entries(STEP_CONTRACTS)
+  .map(([s, c]) => `Step ${s}: ${c}`)
+  .join('; ');
+
 const def = {
   name: NAME,
-  description: `AQRP step dispatcher. Run one step per call, in order. Step 1 input: {file_id}. Panel steps (4, 16, 17, 22) input: {payload:{panel_result:{panel,n,responses}}}. All other steps input: {payload:{...step-specific fields, rdf_records when SURGEON}}. Step 32 input: {payload:{rdf_records:[R32]}}. Returns {status:'step_complete', step, output}. IMPORTANT: payload is required for every step except step 1. RDF-bearing steps (3,6,8,10,12,15,19,21,24,26,28,30,32) MUST include payload.rdf_records array with at least one record in the standard RDF shape. Step 32 must include exactly one R32 record (rdf_id:'R32', pool_id:'P13'). PLAN AND PAYLOAD RULES: (1) the plan JSON MUST be passed as the value of the top-level plan key, never spread at the top level; do not put changed/current/outputs/steps at the top level. (2) payload is a top-level key required for every step except step 1; step 2 needs payload={topics:[...], P01:{...}}.`,
+  description: `AQRP step dispatcher. Run one step per call, in order. Returns {status:'step_complete', step, output}. IMPORTANT: payload is required for every step except step 1 and step 13. Every step MUST strictly match its contract: ${STEP_CONTRACT_SUMMARY}. Every RDF record in rdf_records MUST have { rdf_id, pool_id, stage, type: 'SURGEON', options: [>=2], chosen, rationale, citations_used: [doi], citation_status: 'pool_selected'|'partial'|'none_gut_feeling', gut_rationale: null }. PLAN RULES: The plan JSON MUST be passed under the top-level plan key, never spread at root.`,
   parameters: STEP_PARAMETERS,
 };
 async function resolveProjectId(req) {

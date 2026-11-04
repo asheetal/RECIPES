@@ -1,19 +1,137 @@
-{ "$schema":"http://json-schema.org/draft-07/schema#", "$id":"aqrp://step19_20",
-  "title":"AQRP step 19 (surgeon) output = step 20 input",
-  "type":"object",
-  "required":["status", "themes_k", "rdf_records"],
-  "properties":{
-    "status": {"const": "THEMES_COMPLETE"},
-    "themes_k": {"not": {"type": "null"}},
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "aqrp://step19_20",
+  "title": "AQRP step 19 (surgeon) output = step 20 input",
+  "type": "object",
+  "required": [
+    "status",
+    "themes_k",
+    "rdf_records"
+  ],
+  "properties": {
+    "status": {
+      "const": "THEMES_COMPLETE"
+    },
+    "themes_k": {
+      "type": "object",
+      "required": [
+        "k5",
+        "k7",
+        "k9"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "k5": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "records",
+              "evidence"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "records": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "evidence": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "k7": {
+          "type": "array",
+          "minItems": 7,
+          "maxItems": 7,
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "records",
+              "evidence"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "records": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "evidence": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "k9": {
+          "type": "array",
+          "minItems": 9,
+          "maxItems": 9,
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "records",
+              "evidence"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "records": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "evidence": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      }
+    },
     "rdf_records": {
       "type": "array",
-      "contains": {"type": "object", "required": ["rdf_id", "pool_id"],
-                     "properties": {"rdf_id": {"const": "R19"},
-                                    "pool_id": {"const": "P07"}}},
-      "items": {"$ref": "aqrp://shared/rdf_record"}
+      "contains": {
+        "type": "object",
+        "required": [
+          "rdf_id",
+          "pool_id"
+        ],
+        "properties": {
+          "rdf_id": {
+            "const": "R19"
+          },
+          "pool_id": {
+            "const": "P07"
+          }
+        }
+      },
+      "items": {
+        "$ref": "aqrp://shared/rdf_record"
+      }
     },
-    "P07": {"$ref": "aqrp://shared/citation_pool"}
+    "P07": {
+      "$ref": "aqrp://shared/citation_pool"
+    }
   },
-  "additionalProperties":true,
-  "$comment":"Producer: pipeline.cjs surgeonStep(19, {requiredFields:[themes_k], rdfIds:['R19'], allowedPools:['P07'], status:'THEMES_COMPLETE'}). Exactly one RDF (R19) at this boundary; upstream fields pass through verbatim."
+  "additionalProperties": true,
+  "$comment": "Producer: pipeline.cjs surgeonStep(19, {requiredFields:[themes_k], rdfIds:['R19'], allowedPools:['P07'], status:'THEMES_COMPLETE'}). Exactly one RDF (R19) at this boundary; upstream fields pass through verbatim."
 }

@@ -1,19 +1,73 @@
-{ "$schema":"http://json-schema.org/draft-07/schema#", "$id":"aqrp://step21_22",
-  "title":"AQRP step 21 (surgeon) output = step 22 input",
-  "type":"object",
-  "required":["status", "novelty_map", "rdf_records"],
-  "properties":{
-    "status": {"const": "NOVELTY_COMPLETE"},
-    "novelty_map": {"not": {"type": "null"}},
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "aqrp://step21_22",
+  "title": "AQRP step 21 (surgeon) output = step 22 input",
+  "type": "object",
+  "required": [
+    "status",
+    "novelty_map",
+    "rdf_records"
+  ],
+  "properties": {
+    "status": {
+      "const": "NOVELTY_COMPLETE"
+    },
+    "novelty_map": {
+      "type": "array",
+      "minItems": 5,
+      "items": {
+        "type": "object",
+        "required": [
+          "theme",
+          "decision",
+          "rationale"
+        ],
+        "properties": {
+          "theme": {
+            "type": "string",
+            "minLength": 1
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "retain",
+              "reframe",
+              "drop"
+            ]
+          },
+          "rationale": {
+            "type": "string",
+            "minLength": 10
+          }
+        },
+        "additionalProperties": false
+      }
+    },
     "rdf_records": {
       "type": "array",
-      "contains": {"type": "object", "required": ["rdf_id", "pool_id"],
-                     "properties": {"rdf_id": {"const": "R21"},
-                                    "pool_id": {"const": "P08"}}},
-      "items": {"$ref": "aqrp://shared/rdf_record"}
+      "contains": {
+        "type": "object",
+        "required": [
+          "rdf_id",
+          "pool_id"
+        ],
+        "properties": {
+          "rdf_id": {
+            "const": "R21"
+          },
+          "pool_id": {
+            "const": "P08"
+          }
+        }
+      },
+      "items": {
+        "$ref": "aqrp://shared/rdf_record"
+      }
     },
-    "P08": {"$ref": "aqrp://shared/citation_pool"}
+    "P08": {
+      "$ref": "aqrp://shared/citation_pool"
+    }
   },
-  "additionalProperties":true,
-  "$comment":"Producer: pipeline.cjs surgeonStep(21, {requiredFields:[novelty_map], rdfIds:['R21'], allowedPools:['P08'], status:'NOVELTY_COMPLETE'}). Exactly one RDF (R21) at this boundary; upstream fields pass through verbatim."
+  "additionalProperties": true,
+  "$comment": "Producer: pipeline.cjs surgeonStep(21, {requiredFields:['novelty_map'], rdfIds:['R21'], allowedPools:['P08'], status:'NOVELTY_COMPLETE'}). Exactly one RDF (R21) at this boundary; upstream fields pass through verbatim."
 }

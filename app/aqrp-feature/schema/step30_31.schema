@@ -1,19 +1,82 @@
-{ "$schema":"http://json-schema.org/draft-07/schema#", "$id":"aqrp://step30_31",
-  "title":"AQRP step 30 (surgeon) output = step 31 input",
-  "type":"object",
-  "required":["status", "sufficiency", "rdf_records"],
-  "properties":{
-    "status": {"const": "SUFFICIENCY_COMPLETE"},
-    "sufficiency": {"not": {"type": "null"}},
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "aqrp://step30_31",
+  "title": "AQRP step 30 (surgeon) output = step 31 input",
+  "type": "object",
+  "required": [
+    "status",
+    "sufficiency",
+    "rdf_records"
+  ],
+  "properties": {
+    "status": {
+      "const": "SUFFICIENCY_COMPLETE"
+    },
+    "sufficiency": {
+      "type": "object",
+      "required": [
+        "decision",
+        "rationale",
+        "saturation_estimate"
+      ],
+      "properties": {
+        "decision": {
+          "type": "string",
+          "enum": [
+            "stop",
+            "continue"
+          ]
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 10
+        },
+        "saturation_estimate": {
+          "type": "object",
+          "required": [
+            "record_index_at_which_novel_codes_stopped",
+            "evidence"
+          ],
+          "properties": {
+            "record_index_at_which_novel_codes_stopped": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "evidence": {
+              "type": "string",
+              "minLength": 5
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
     "rdf_records": {
       "type": "array",
-      "contains": {"type": "object", "required": ["rdf_id", "pool_id"],
-                     "properties": {"rdf_id": {"const": "R30"},
-                                    "pool_id": {"const": "P12"}}},
-      "items": {"$ref": "aqrp://shared/rdf_record"}
+      "contains": {
+        "type": "object",
+        "required": [
+          "rdf_id",
+          "pool_id"
+        ],
+        "properties": {
+          "rdf_id": {
+            "const": "R30"
+          },
+          "pool_id": {
+            "const": "P12"
+          }
+        }
+      },
+      "items": {
+        "$ref": "aqrp://shared/rdf_record"
+      }
     },
-    "P12": {"$ref": "aqrp://shared/citation_pool"}
+    "P12": {
+      "$ref": "aqrp://shared/citation_pool"
+    }
   },
-  "additionalProperties":true,
-  "$comment":"Producer: pipeline.cjs surgeonStep(30, {requiredFields:[sufficiency], rdfIds:['R30'], allowedPools:['P12'], status:'SUFFICIENCY_COMPLETE'}). Exactly one RDF (R30) at this boundary; upstream fields pass through verbatim."
+  "additionalProperties": true,
+  "$comment": "Producer: pipeline.cjs surgeonStep(30, {requiredFields:['sufficiency'], rdfIds:['R30'], allowedPools:['P12'], status:'SUFFICIENCY_COMPLETE'}). Exactly one RDF (R30) at this boundary; upstream fields pass through verbatim."
 }

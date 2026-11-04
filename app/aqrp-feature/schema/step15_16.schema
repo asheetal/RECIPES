@@ -1,19 +1,74 @@
-{ "$schema":"http://json-schema.org/draft-07/schema#", "$id":"aqrp://step15_16",
-  "title":"AQRP step 15 (surgeon) output = step 16 input",
-  "type":"object",
-  "required":["status", "codebook", "rdf_records"],
-  "properties":{
-    "status": {"const": "CODEBOOK_COMPLETE"},
-    "codebook": {"not": {"type": "null"}},
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "aqrp://step15_16",
+  "title": "AQRP step 15 (surgeon) output = step 16 input",
+  "type": "object",
+  "required": [
+    "status",
+    "codebook",
+    "rdf_records"
+  ],
+  "properties": {
+    "status": {
+      "const": "CODEBOOK_COMPLETE"
+    },
+    "codebook": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "code",
+          "definition",
+          "applies_when",
+          "example"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1
+          },
+          "definition": {
+            "type": "string",
+            "minLength": 5
+          },
+          "applies_when": {
+            "type": "string",
+            "minLength": 5
+          },
+          "example": {
+            "type": "string",
+            "minLength": 5
+          }
+        },
+        "additionalProperties": false
+      }
+    },
     "rdf_records": {
       "type": "array",
-      "contains": {"type": "object", "required": ["rdf_id", "pool_id"],
-                     "properties": {"rdf_id": {"const": "R15"},
-                                    "pool_id": {"const": "P06"}}},
-      "items": {"$ref": "aqrp://shared/rdf_record"}
+      "contains": {
+        "type": "object",
+        "required": [
+          "rdf_id",
+          "pool_id"
+        ],
+        "properties": {
+          "rdf_id": {
+            "const": "R15"
+          },
+          "pool_id": {
+            "const": "P06"
+          }
+        }
+      },
+      "items": {
+        "$ref": "aqrp://shared/rdf_record"
+      }
     },
-    "P06": {"$ref": "aqrp://shared/citation_pool"}
+    "P06": {
+      "$ref": "aqrp://shared/citation_pool"
+    }
   },
-  "additionalProperties":true,
-  "$comment":"Producer: pipeline.cjs surgeonStep(15, {requiredFields:[codebook], rdfIds:['R15'], allowedPools:['P06'], status:'CODEBOOK_COMPLETE'}). Exactly one RDF (R15) at this boundary; upstream fields pass through verbatim."
+  "additionalProperties": true,
+  "$comment": "Producer: pipeline.cjs surgeonStep(15, {requiredFields:['codebook'], rdfIds:['R15'], allowedPools:['P06'], status:'CODEBOOK_COMPLETE'}). Exactly one RDF (R15) at this boundary; upstream fields pass through verbatim."
 }

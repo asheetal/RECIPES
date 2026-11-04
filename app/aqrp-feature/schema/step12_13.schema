@@ -1,20 +1,80 @@
-{ "$schema":"http://json-schema.org/draft-07/schema#", "$id":"aqrp://step12_13",
-  "title":"AQRP step 12 (surgeon) output = step 13 input",
-  "type":"object",
-  "required":["status", "chosen_framing", "framing_comparison", "rdf_records"],
-  "properties":{
-    "status": {"const": "FRAMING_SELECTED"},
-    "chosen_framing": {"not": {"type": "null"}},
-    "framing_comparison": {"not": {"type": "null"}},
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "aqrp://step12_13",
+  "title": "AQRP step 12 (surgeon) output = step 13 input",
+  "type": "object",
+  "required": [
+    "status",
+    "chosen_framing",
+    "framing_comparison",
+    "rdf_records"
+  ],
+  "properties": {
+    "status": {
+      "const": "FRAMING_SELECTED"
+    },
+    "chosen_framing": {
+      "type": "string",
+      "minLength": 5
+    },
+    "framing_comparison": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "object",
+        "required": [
+          "lens",
+          "coverage",
+          "novelty",
+          "negative_case_fit",
+          "total_score"
+        ],
+        "properties": {
+          "lens": {
+            "type": "string",
+            "minLength": 1
+          },
+          "coverage": {
+            "type": "number"
+          },
+          "novelty": {
+            "type": "number"
+          },
+          "negative_case_fit": {
+            "type": "number"
+          },
+          "total_score": {
+            "type": "number"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
     "rdf_records": {
       "type": "array",
-      "contains": {"type": "object", "required": ["rdf_id", "pool_id"],
-                     "properties": {"rdf_id": {"const": "R12"},
-                                    "pool_id": {"const": "P05"}}},
-      "items": {"$ref": "aqrp://shared/rdf_record"}
+      "contains": {
+        "type": "object",
+        "required": [
+          "rdf_id",
+          "pool_id"
+        ],
+        "properties": {
+          "rdf_id": {
+            "const": "R12"
+          },
+          "pool_id": {
+            "const": "P05"
+          }
+        }
+      },
+      "items": {
+        "$ref": "aqrp://shared/rdf_record"
+      }
     },
-    "P05": {"$ref": "aqrp://shared/citation_pool"}
+    "P05": {
+      "$ref": "aqrp://shared/citation_pool"
+    }
   },
-  "additionalProperties":true,
-  "$comment":"Producer: pipeline.cjs surgeonStep(12, {requiredFields:[chosen_framing,'framing_comparison'], rdfIds:['R12'], allowedPools:['P05'], status:'FRAMING_SELECTED'}). Exactly one RDF (R12) at this boundary; upstream fields pass through verbatim."
+  "additionalProperties": true,
+  "$comment": "Producer: pipeline.cjs surgeonStep(12, {requiredFields:['chosen_framing','framing_comparison'], rdfIds:['R12'], allowedPools:['P05'], status:'FRAMING_SELECTED'}). Exactly one RDF (R12) at this boundary; upstream fields pass through verbatim."
 }

@@ -1078,6 +1078,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   try {
     const http = require("http");
     const path = require("path");
+    const fs = require("node:fs");
     let shell = "";
     const shellCandidates = [
       "/app/aqrp-feature/latex/aqrp_report.tex",

@@ -153,7 +153,7 @@ Send payload containing ONLY: (a) fields this step computes fresh, (b) new claim
 STAGE NAME PINS: decision_log[].stage_name must be exactly one of: step 2 -> 'Semantic Schema & Sheet Layout Resolver'; step 3 -> 'Theoretical Taxonomy & Role Tagging'; step 5 -> 'Candidate Yield & Substantive Threshold Arbiter'; step 7 -> 'Abductive Theoretical Tension & Prior-Art Review'; step 10 -> 'Model Topology Arbiter'; step 12 -> 'APA-7 Empirical Results & Synthesis Engine'. Do not invent new stage names.
 RULES:
 - Call asp_step_run once per iteration, in order 1..13.
-- If ANY asp_step_run call returns an error, STOP immediately. Report the exact error string verbatim. Do NOT retry. Do NOT modify the payload. Do NOT skip the step. A retry is a recipe bug, not a recovery mechanism.
+- If asp_step_run returns a non-recoverable runner error, STOP immediately. If it returns a recoverable validation or schema error, fix the payload formatting and retry within your iteration budget.
 - Do not run steps out of order; downstream steps need prior artifacts.
 - Cognitive payloads must include ALL required top-level keys; partial payloads will be rejected.
 - claims[], retrieval_log[], decision_log[] must be preserved verbatim from prior step and appended to (never replaced).

@@ -52,11 +52,11 @@ function registerRoutes(router, projectFilesService) {
       const jwt = require('jsonwebtoken');
       const mongoose = require('mongoose');
       const db = mongoose.connection.db;
-      const conversationId = new mongoose.Types.ObjectId().toString();
+      const conversationId = require('crypto').randomUUID();
       const now = new Date();
       const recipe = require('/app/recipes/automated_sem.cjs');
       await db.collection('conversations').insertOne({ conversationId, title: recipe.name, user: s.user, tenant: s.tenant, chatProjectId: s.projectId, recipeId: recipe.recipeId, recipeName: recipe.name, createdAt: now, updatedAt: now });
-      await db.collection('messages').insertOne({ messageId: new mongoose.Types.ObjectId().toString(), conversationId, user: s.user, isCreatedByUser: true, sender: 'User', text: recipe.prompt, createdAt: now, updatedAt: now });
+      await db.collection('messages').insertOne({ messageId: require('crypto').randomUUID(), conversationId, user: s.user, isCreatedByUser: true, sender: 'User', text: recipe.prompt, createdAt: now, updatedAt: now });
       const token = jwt.sign({ id: s.user }, process.env.JWT_SECRET, { expiresIn: '10m' });
       const base = `http://127.0.0.1:${process.env.PORT || 3080}`;
       console.error('[ASP] dispatching to chat', conversationId);

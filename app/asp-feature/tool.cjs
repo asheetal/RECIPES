@@ -486,11 +486,22 @@ async function invoke(req, args) {
       let payload = args.payload;
       if (typeof payload === 'string') { try { payload = JSON.parse(payload); } catch (_) {} }
       if (typeof payload === 'string') {
-        try { payload = JSON.parse(payload); }
-        catch (e) {
-          const m = /position (\d+)/.exec(e.message) || /char (\d+)/.exec(e.message) || /column (\d+)/.exec(e.message);
-          const at = m ? ` at char ${m[1]}` : '';
-          throw new Error(`payload string is not valid JSON${at}. Re-emit as valid JSON (object or JSON-encoded object).`);
+        try {
+          payload = JSON.parse(payload);
+        } catch (_) {
+          try {
+            const sanitized = payload.replace(/[\u0000-\u001F]+/g, (match) => {
+              if (match === "\n") return "\\n";
+              if (match === "\r") return "\\r";
+              if (match === "\t") return "\\t";
+              return "";
+            });
+            payload = JSON.parse(sanitized);
+          } catch (e) {
+            const m = /position (\d+)/.exec(e.message) || /char (\d+)/.exec(e.message) || /column (\d+)/.exec(e.message);
+            const at = m ? ` at char ${m[1]}` : '';
+            throw new Error(`payload string is not valid JSON${at}. Re-emit as valid JSON (object or JSON-encoded object).`);
+          }
         }
       }
       if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw new Error('payload must be a JSON object or a JSON-encoded object string for cognitive steps');

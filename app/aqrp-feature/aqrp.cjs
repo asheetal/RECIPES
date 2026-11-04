@@ -95,7 +95,7 @@ function registerRoutes(router, projectFilesService) {
       const jwt = require('jsonwebtoken');
       const mongoose = require('mongoose');
       const db = mongoose.connection.db;
-      const conversationId = new mongoose.Types.ObjectId().toString();
+      const conversationId = require('crypto').randomUUID();
       try {
         const __st = await svc.getState(s);
         if (__st && __st.runId) {
@@ -105,7 +105,7 @@ function registerRoutes(router, projectFilesService) {
       const now = new Date();
       const recipe = require('/app/recipes/aqrp.cjs');
       await db.collection('conversations').insertOne({ conversationId, title: recipe.name, user: s.user, tenant: s.tenant, chatProjectId: s.projectId, recipeId: recipe.recipeId, recipeName: recipe.name, createdAt: now, updatedAt: now });
-      await db.collection('messages').insertOne({ messageId: new mongoose.Types.ObjectId().toString(), conversationId, user: s.user, isCreatedByUser: true, sender: 'User', text: recipe.prompt, createdAt: now, updatedAt: now });
+      await db.collection('messages').insertOne({ messageId: require('crypto').randomUUID(), conversationId, user: s.user, isCreatedByUser: true, sender: 'User', text: recipe.prompt, createdAt: now, updatedAt: now });
       const token = jwt.sign({ id: s.user }, process.env.JWT_SECRET, { expiresIn: '10m' });
       const base = `http://127.0.0.1:${process.env.PORT || 3080}`;
       console.error('[AQRP] dispatching to chat', conversationId);
@@ -142,7 +142,7 @@ function registerRoutes(router, projectFilesService) {
       const recipe = require('/app/recipes/aqrp.cjs');
       const token = jwt.sign({ id: s.user }, process.env.JWT_SECRET, { expiresIn: '10m' });
       const base = `http://127.0.0.1:${process.env.PORT || 3080}`;
-      await db.collection('messages').insertOne({ messageId: new mongoose.Types.ObjectId().toString(), conversationId: conversation.conversationId, user: s.user, isCreatedByUser: true, sender: 'User', text: `Run step ${nextStep}.`, createdAt: new Date(), updatedAt: new Date() });
+      await db.collection('messages').insertOne({ messageId: require('crypto').randomUUID(), conversationId: conversation.conversationId, user: s.user, isCreatedByUser: true, sender: 'User', text: `Run step ${nextStep}.`, createdAt: new Date(), updatedAt: new Date() });
       fetch(`${base}/api/agents/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'User-Agent': req.headers['user-agent'] || 'LibreChat/0.8.7' },

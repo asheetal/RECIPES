@@ -3,8 +3,9 @@
 // schema-loader.cjs — AQRP runtime boundary validation (v237)
 // Loads app/aqrp-feature/schema/*.schema with ajv and validates
 // the output of each pipeline step against its boundary contract.
-// A violation throws; pipeline.runStep lets it propagate; the
-// surgeon sees the error and routes to OPD.
+// Also introspects master schemas to provide dynamic contracts
+// for tool declarations (tool.cjs) and prompt generation (recipes/aqrp.cjs),
+// ensuring a single source of truth across the pipeline.
 // ============================================================
 const fs = require('node:fs');
 const path = require('node:path');
@@ -30,7 +31,37 @@ const SHARED = [
   '_shared/warning.schema'
 ];
 
-const state = { ajv: null, validators: {}, loadErrors: {}, loadedAt: null };
+const POOL_MAP = {
+  2: 'P01', 5: 'P02', 7: 'P03', 9: 'P04', 11: 'P05', 14: 'P06',
+  18: 'P07', 20: 'P08', 23: 'P09', 25: 'P10', 27: 'P11', 29: 'P12', 31: 'P13'
+};
+
+const RDF_MAP = {
+  3: '[R3(pool:P01), R3a(pool:P00)]',
+  6: '[R6(pool:P02)]',
+  8: '[R8(pool:P03)]',
+  10: '[R10(pool:P04)]',
+  12: '[R12(pool:P05)]',
+  15: '[R15(pool:P06)]',
+  19: '[R19(pool:P07)]',
+  21: '[R21(pool:P08)]',
+  24: '[R24(pool:P09)]',
+  26: '[R26(pool:P10)]',
+  28: '[R28(pool:P11)]',
+  30: '[R30(pool:P12)]',
+  32: '[R32(pool:P13)]'
+};
+
+const INTERNAL_FIELDS = new Set([
+  'status', 'warnings', 'bytes', 'json_type',
+  'aqrp_report_title', 'aqrp_report_body_tex', 'aqrp_appendices_tex', 'aqrp_report_bib', 'aqrp_report_audit',
+  'within_case_matrix', 'within_case_disagreements',
+  'cross_case_matrix', 'cross_case_disagreements',
+  'negative_case_matrix', 'negative_case_disagreements',
+  'code_matrix', 'disagreements', 'merge_candidates'
+]);
+
+const state = { ajv: null, validators: {}, rawSchemas: {}, loadErrors: {}, loadedAt: null };
 
 function readSchema(rel) {
   return JSON.parse(fs.readFileSync(path.join(SCHEMA_DIR, rel), 'utf8'));
@@ -54,7 +85,11 @@ function init() {
 
   for (const [k, file] of Object.entries(BOUNDARY)) {
     const step = Number(k);
-    try { state.validators[step] = ajv.compile(readSchema(file)); }
+    try {
+      const raw = readSchema(file);
+      state.rawSchemas[step] = raw;
+      state.validators[step] = ajv.compile(raw);
+    }
     catch (e) {
       state.loadErrors[step] = e;
       console.error('[schema-loader] step ' + step + ': cannot compile ' + file + ': ' + e.message);
@@ -83,6 +118,98 @@ function validateBoundary(afterStep, output) {
   }
 }
 
+function formatTypeSignature(s, propName) {
+  if (!s) return 'any';
+  if (s.$ref) {
+    if (s.$ref.includes('citation_pool')) return 'CitationPool';
+    if (s.$ref.includes('panel_result')) return '{ panel, n, responses }';
+    if (s.$ref.includes('rdf_record')) return 'RdfRecord';
+    return s.$ref.replace(/^.*\/|\.schema#?$/g, '');
+  }
+  if (Array.isArray(s.enum)) {
+    return s.enum.map(v => JSON.stringify(v)).join('|');
+  }
+  if (s.type === 'array') {
+    if (!s.items) return 'array';
+    if (s.items.$ref && s.items.$ref.includes('rdf_record')) return '[RdfRecord]';
+    return `${formatTypeSignature(s.items)}[]`;
+  }
+  if (s.type === 'object') {
+    if (s.properties) {
+      const parts = Object.entries(s.properties).map(([k, v]) => `${k}:${formatTypeSignature(v, k)}`);
+      return `{${parts.join(', ')}}`;
+    }
+    return 'object';
+  }
+  if (s.type === 'integer') return 'int';
+  if (s.type === 'number') return 'number';
+  if (s.type === 'string') return 'string';
+  if (s.type === 'boolean') return 'boolean';
+  return 'any';
+}
+
+function getStepContract(step) {
+  step = Number(step);
+  if (step === 1) return '{ file_id: string }';
+  if (step === 13) return 'no payload required (auto-assembled from step 4 state)';
+  if (step === 4 || step === 16 || step === 17) return '{ payload: { panel_result: { panel, n, responses } } }';
+  if (step === 22) return '{ payload: { panel_result: { panel, n, responses }, negative_case_resolution: [] } }';
+  if (step === 32) return `{ payload: { submission_paper_tex: string, rdf_records: ${RDF_MAP[32]} } }`;
+
+  init();
+  const raw = state.rawSchemas[step] || readSchema(BOUNDARY[step]);
+  if (!raw || !raw.properties) return '{ payload: object }';
+
+  const props = raw.properties;
+  const parts = [];
+
+  for (const [k, s] of Object.entries(props)) {
+    if (INTERNAL_FIELDS.has(k)) continue;
+    if (k === 'rdf_records') {
+      parts.push(`rdf_records: ${RDF_MAP[step] || '[RdfRecord]'}`);
+    } else if (k === 'notes' && s.minLength && s.minLength >= 600) {
+      parts.push(`notes: string (>=${s.minLength} chars)`);
+    } else {
+      parts.push(`${k}: ${formatTypeSignature(s, k)}`);
+    }
+  }
+
+  return `{ payload: { ${parts.join(', ')} } }`;
+}
+
+function getAllContracts() {
+  const contracts = {};
+  for (let s = 1; s <= 32; s++) {
+    contracts[s] = getStepContract(s);
+  }
+  return contracts;
+}
+
+function getStepInvocationSignature(step) {
+  step = Number(step);
+  if (step === 1) return '{step:1, file_id:"<attached file_id>"}';
+  if (step === 13) return '{step:13}';
+  if (step === 4 || step === 16 || step === 17) return `{step:${step}, payload:{panel_result}}`;
+  if (step === 22) return '{step:22, payload:{panel_result, negative_case_resolution}}';
+  if (step === 32) return '{step:32, payload:{submission_paper_tex, rdf_records:[R32]}}';
+
+  init();
+  const raw = state.rawSchemas[step] || readSchema(BOUNDARY[step]);
+  const fields = [];
+  if (raw && raw.properties) {
+    for (const k of Object.keys(raw.properties)) {
+      if (INTERNAL_FIELDS.has(k)) continue;
+      if (k === 'rdf_records') {
+        const rName = step === 3 ? 'R3,R3a' : `R${step}`;
+        fields.push(`rdf_records:[${rName}]`);
+      } else {
+        fields.push(k);
+      }
+    }
+  }
+  return `{step:${step}, payload:{${fields.join(', ')}}}`;
+}
+
 function describe() {
   init();
   return {
@@ -93,4 +220,11 @@ function describe() {
   };
 }
 
-module.exports = { validateBoundary, describe, BOUNDARY };
+module.exports = {
+  validateBoundary,
+  describe,
+  BOUNDARY,
+  getStepContract,
+  getAllContracts,
+  getStepInvocationSignature
+};

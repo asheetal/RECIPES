@@ -56,40 +56,8 @@ const STEP_PARAMETERS = {
   additionalProperties: false,
 };
 
-const STEP_CONTRACTS = {
-  1: '{ file_id: string }',
-  2: '{ payload: { topics: string[], P01: CitationPool } }',
-  3: '{ payload: { coding_brief: { code_for: string[], ignore: [], flag: [], granularity: string }, notes: string (>=600 chars), rdf_records: [R3(pool:P01), R3a(pool:P00)] } }',
-  4: '{ payload: { panel_result: { panel, n, responses } } }',
-  5: '{ payload: { P02: CitationPool } }',
-  6: '{ payload: { salience_ranking: [{hunch:string, rank:int, evidence:string}], memos: [{hunch:string, memo:string}], rdf_records: [R6(pool:P02)] } }',
-  7: '{ payload: { P03: CitationPool } }',
-  8: '{ payload: { rq: [{main:string, sub:string[]}], rdf_records: [R8(pool:P03)] } }',
-  9: '{ payload: { lit_map: { clusters, gaps }, P04: CitationPool } }',
-  10: '{ payload: { candidate_lenses: [{lens:string, fit:string}], rdf_records: [R10(pool:P04)] } }',
-  11: '{ payload: { P05: CitationPool } }',
-  12: '{ payload: { chosen_framing: string, framing_comparison: [{lens:string, coverage:number, novelty:number, negative_case_fit:number, total_score:number}], rdf_records: [R12(pool:P05)] } }',
-  13: 'no payload required (auto-assembled from step 4 state)',
-  14: '{ payload: { P06: CitationPool } }',
-  15: '{ payload: { codebook: [{code:string, definition:string, applies_when:string, example:string}], rdf_records: [R15(pool:P06)] } }',
-  16: '{ payload: { panel_result: { panel, n, responses } } }',
-  17: '{ payload: { panel_result: { panel, n, responses } } }',
-  18: '{ payload: { P07: CitationPool } }',
-  19: '{ payload: { themes_k: {k5:[], k7:[], k9:[]}, rdf_records: [R19(pool:P07)] } }',
-  20: '{ payload: { P08: CitationPool } }',
-  21: '{ payload: { novelty_map: [{theme:string, decision:"retain"|"reframe"|"drop", rationale:string}], rdf_records: [R21(pool:P08)] } }',
-  22: '{ payload: { panel_result: { panel, n, responses }, negative_case_resolution: [] } }',
-  23: '{ payload: { P09: CitationPool } }',
-  24: '{ payload: { dimensions: array, rdf_records: [R24(pool:P09)] } }',
-  25: '{ payload: { P10: CitationPool } }',
-  26: '{ payload: { model_draft: {name:string, summary:string, tension:string, phases:string[], arrows:string[], propositions:string[], evidence:[], alternative_readings:[]}, rdf_records: [R26(pool:P10)] } }',
-  27: '{ payload: { P11: CitationPool } }',
-  28: '{ payload: { diagram_script_params: {nodes:string[], labels:string[], paths:[{from:string,to:string}], layout:string}, rdf_records: [R28(pool:P11)] } }',
-  29: '{ payload: { P12: CitationPool } }',
-  30: '{ payload: { sufficiency: {decision:"stop"|"continue", rationale:string, saturation_estimate:{record_index_at_which_novel_codes_stopped:int, evidence:string}}, rdf_records: [R30(pool:P12)] } }',
-  31: '{ payload: { P13: CitationPool } }',
-  32: '{ payload: { submission_paper_tex: string, rdf_records: [R32(pool:P13)] } }',
-};
+const schemaLoader = require('./schema-loader.cjs');
+const STEP_CONTRACTS = schemaLoader.getAllContracts();
 
 const STEP_CONTRACT_SUMMARY = Object.entries(STEP_CONTRACTS)
   .map(([s, c]) => `Step ${s}: ${c}`)

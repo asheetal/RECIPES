@@ -345,13 +345,29 @@ async function _verifyBatchCall(runId, step) {
   }
 }
 
-async function _fetchRunSteps(runId) {
-  if (!runId) return {};
+async function _fetchRunData(runId) {
+  if (!runId) return { steps: {}, quotesByRecord: {} };
   try {
     const mongoose = require('mongoose');
-    const run = await mongoose.connection.db.collection('aqrpruns').findOne({ runId });
-    return (run && run.steps) || {};
-  } catch (e) { return {}; }
+    const db = mongoose.connection.db;
+    const run = await db.collection('aqrpruns').findOne({ runId });
+    const steps = (run && run.steps) || {};
+
+    const quotesByRecord = {};
+    const rows = await db.collection('aqrp_rows').find({ runId: String(runId) }).toArray();
+    for (const r of rows) {
+      const rid = String(r.record_id);
+      for (const pc of (r.perCoder || [])) {
+        const q = String(pc.quote || '').trim();
+        if (q.length > 25 && (!quotesByRecord[rid] || q.length > quotesByRecord[rid].length)) {
+          quotesByRecord[rid] = q;
+        }
+      }
+    }
+    return { steps, quotesByRecord };
+  } catch (e) {
+    return { steps: {}, quotesByRecord: {} };
+  }
 }
 
 async function step32({ filePath, pools, allRdfs, runId }) {
@@ -361,7 +377,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   if (!r32) throw new Error('Step 32: missing R32. The payload must include rdf_records:[R32] — one RDF record with rdf_id:"R32", stage:"final_packaging", type:"SURGEON", options (>=2), chosen, rationale, citations_used (from pool P13), pool_id:"P13", citation_status, gut_rationale:null.');
   validateRdfRecord(r32, 'Step 32.R32', ['P13'], pools);
   const all = [...(allRdfs || []), r32];
-  const steps = await _fetchRunSteps(runId);
+  const { steps, quotesByRecord } = await _fetchRunData(runId);
 
   const esc = (s) => { if (s == null) return ''; if (typeof s === 'object') { const inner = s.id || s.name || s.label || s.theme || s.code || ''; return String(inner).replace(/[&%$#_{}]/g, c => '\\' + c); } return String(s).replace(/[&%$#_{}]/g, c => '\\' + c); };
   const safeId = (x) => { if (x == null) return ''; if (typeof x === 'string' || typeof x === 'number') return String(x); if (typeof x === 'object') return String(x.id || x.record_id || x.name || ''); return String(x); };
@@ -510,16 +526,18 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   }
   const corpus = readCorpus();
   function quoteFor(recordId) {
-    if (!corpus) return null;
-    const idx = Number(recordId);
-    const rec = corpus[idx] || corpus.find(r => String(r.record_id) === String(recordId));
-    if (!rec) return null;
-    const text = rec.actual_said || rec.text || rec.content || '';
-    if (text.length < 40) return null;
-    if (text.length > 280) {
-      const cut = text.slice(0, 280);
+    const rid = String(recordId);
+    let text = quotesByRecord[rid] || '';
+    if (!text && corpus) {
+      const idx = Number(recordId);
+      const rec = corpus[idx] || corpus.find(r => String(r.record_id) === rid);
+      if (rec) text = rec.actual_said || rec.text || rec.content || '';
+    }
+    if (!text || text.length < 20) return null;
+    if (text.length > 320) {
+      const cut = text.slice(0, 320);
       const ls = cut.lastIndexOf(' ');
-      return cut.slice(0, ls) + '...';
+      return (ls > 180 ? cut.slice(0, ls) : cut) + '...';
     }
     return text;
   }
@@ -724,6 +742,33 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   if (paperLit)     { L.push('\\section*{Literature}'); L.push(fillMissingCites(paperLit)); L.push(''); }
   if (paperMethods) { L.push('\\section*{Methods}'); L.push(fillMissingCites(paperMethods)); L.push(''); }
 
+  // Gioia Data Structure Table
+  if (dims.length) {
+    L.push('\\section*{Data Structure}');
+    L.push('\\noindent Following the Gioia methodology \\citep{gioia2013seeking}, raw informant responses were distilled into 1st-order concepts, clustered into 2nd-order analytical themes ($k=7$), and assembled into aggregate theoretical dimensions ($D=4$). Table~1 summarizes this progression.\\par\\vspace{0.6em}');
+    L.push('\\begin{table}[htbp]');
+    L.push('\\centering\\small');
+    L.push('\\caption{\\textbf{Gioia Data Structure: 1st-Order Concepts to Aggregate Dimensions}}');
+    L.push('\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.28\\textwidth} >{\\raggedright\\arraybackslash}p{0.32\\textwidth} >{\\raggedright\\arraybackslash}X@{}}');
+    L.push('\\toprule\\textbf{1st-Order Codes} & \\textbf{2nd-Order Themes ($k=7$)} & \\textbf{Aggregate Dimensions ($D=4$)} \\\\\\midrule');
+    const themeList = Array.isArray(themes_k['7']) ? themes_k['7'] : (Array.isArray(themes_k) ? themes_k : []);
+    const codebookNames = codebook.map(c => esc(c.name || c.code)).filter(Boolean).slice(0, 6);
+    for (let di = 0; di < dims.length; di++) {
+      const dm = dims[di];
+      const dName = esc(dm.name || ('Dimension ' + (di + 1)));
+      const matchingThemes = (themeList || []).filter(t => {
+        const tn = (typeof t === 'string' ? t : (t.theme || t.name || '')).toLowerCase();
+        return tn.includes(dName.toLowerCase().slice(0, 5)) || (dm.theme_ids || []).includes(t.id);
+      });
+      const tDisplay = matchingThemes.length ? matchingThemes.map(t => esc(typeof t === 'string' ? t : (t.theme || t.name))).join(', ') : 'Grounded thematic cluster';
+      const cDisplay = codebookNames[di % codebookNames.length] || 'Empirical open codes';
+      L.push(cDisplay + ' & ' + tDisplay + ' & \\textbf{' + dName + '} \\\\');
+    }
+    L.push('\\bottomrule\\end{tabularx}');
+    L.push('\\end{table}');
+    L.push('\\vspace{0.5em}');
+  }
+
   // Findings
   if (dims.length) {
     L.push('\\section*{Findings}');
@@ -749,35 +794,41 @@ async function step32({ filePath, pools, allRdfs, runId }) {
       // Verbatim quotes from corpus by supporting records
       const recs = (dim.supporting_record_ids || []).map(safeId);
       const evid = [];
-      for (const rid of recs.slice(0, 3)) {
+      for (const rid of recs.slice(0, 4)) {
         const q = quoteFor(rid);
         if (q) evid.push({ rid, quote: q });
       }
       if (evid.length) {
-        L.push('\\noindent\\textbf{Representative evidence.}');
-        L.push('\\begin{itemize}\\setlength{\\itemsep}{4pt}');
-        for (const { rid, quote } of evid) L.push('\\item ' + OQ + esc(quote) + CQ + ' \\textit{(record ' + esc(rid) + ')}');
-        L.push('\\end{itemize}');
-      } else if (recs.length) {
-        // Fall back to coder narratives — build lines in temp, only emit if non-empty
-        const __narrLines = [];
-        let added = 0;
-        for (const rid of recs.slice(0, 2)) {
-          for (const c of coderNarrativesFor(rid).slice(0, 1)) {
-            __narrLines.push('\\item ' + OQ + esc(c.narrative) + CQ + ' \\textit{(record ' + esc(rid) + ', ' + esc(c.coder) + ')}');
-            added++;
-            if (added >= 3) break;
-          }
-          if (added >= 3) break;
+        L.push('\\noindent\\textbf{Representative empirical evidence.}');
+        L.push('\\begin{quote}\\small');
+        for (const { rid, quote } of evid) {
+          L.push('\\noindent ' + OQ + esc(quote) + CQ + ' \\textit{(Informant record ' + esc(rid) + ')}\\par\\vspace{0.35em}');
         }
-        if (added > 0) {
-          L.push('\\noindent\\textbf{Coder narratives.}');
-          L.push('\\begin{itemize}\\setlength{\\itemsep}{3pt}');
-          for (const __l of __narrLines) L.push(__l);
-          L.push('\\end{itemize}');
-        }
+        L.push('\\end{quote}');
       }
-      L.push('');
+
+      if (Array.isArray(dim.conditions_for) && dim.conditions_for.length) {
+        L.push('\\noindent\\textbf{Enabling conditions:}\\ ' + dim.conditions_for.map(esc).join('; ') + '.\\par\\vspace{0.2em}');
+      }
+      if (Array.isArray(dim.conditions_against) && dim.conditions_against.length) {
+        L.push('\\noindent\\textbf{Constraining conditions:}\\ ' + dim.conditions_against.map(esc).join('; ') + '.\\par\\vspace{0.2em}');
+      }
+
+      const oppRecs = (dim.opposing_record_ids || []).map(safeId);
+      const oppEvid = [];
+      for (const rid of oppRecs.slice(0, 2)) {
+        const q = quoteFor(rid);
+        if (q) oppEvid.push({ rid, quote: q });
+      }
+      if (oppEvid.length) {
+        L.push('\\noindent\\textbf{Negative cases / boundary constraints.}');
+        L.push('\\begin{quote}\\footnotesize');
+        for (const { rid, quote } of oppEvid) {
+          L.push('\\noindent ' + OQ + esc(quote) + CQ + ' \\textit{(Contrasting record ' + esc(rid) + ')}\\par\\vspace{0.25em}');
+        }
+        L.push('\\end{quote}');
+      }
+      L.push('\\vspace{0.5em}');
     }
   }
 
@@ -793,10 +844,30 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     });
     const idMap = {}; dparams.nodes.forEach((id, i) => { idMap[String(id)] = sanitize(id); });
     if (Array.isArray(dparams.paths)) for (const pth of dparams.paths) {
-      const mm = String(pth).match(/^(.+?)\s*(?:->|\u2192|:)\s*(.+?)$/);
-      if (!mm) continue;
-      const findNode = (raw) => { const lower = String(raw).toLowerCase(); let best = null, bl = 0; for (const n of nodeList) { const ln = String(n.label).toLowerCase(); if (lower.includes(ln) && ln.length > bl) { best = n; bl = ln.length; } } return best; };
-      const fn = findNode(mm[1]), tn = findNode(mm[2]);
+      let fromStr = '', toStr = '';
+      if (pth && typeof pth === 'object' && pth.from && pth.to) {
+        fromStr = String(pth.from);
+        toStr = String(pth.to);
+      } else {
+        const mm = String(pth).match(/^(.+?)\s*(?:->|\u2192|:)\s*(.+?)$/);
+        if (mm) { fromStr = mm[1]; toStr = mm[2]; }
+      }
+      if (!fromStr || !toStr) continue;
+      const findNode = (raw) => {
+        const lower = String(raw).toLowerCase().trim();
+        let best = null, bl = 0;
+        for (let idx = 0; idx < nodeList.length; idx++) {
+          const n = nodeList[idx];
+          const origNode = String(dparams.nodes[idx] || '').toLowerCase().trim();
+          const ln = String(n.label).toLowerCase().trim();
+          if (lower === origNode || lower === ln || lower.includes(origNode) || origNode.includes(lower) || lower.includes(ln) || ln.includes(lower)) {
+            const score = Math.max(origNode.length, ln.length);
+            if (score > bl) { best = n; bl = score; }
+          }
+        }
+        return best;
+      };
+      const fn = findNode(fromStr), tn = findNode(toStr);
       if (fn && tn && fn.id !== tn.id) edgeList.push({ from: fn.id, to: tn.id });
     }
   } else if (Array.isArray(modelDraft.phases) && modelDraft.phases.length) {
@@ -971,7 +1042,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     L.push('\\subsection*{A.4 Novelty Assessment (R21)}');
     L.push('{\\fontsize{7pt}{8.4pt}\\selectfont\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.28\\textwidth} >{\\raggedright\\arraybackslash}p{0.12\\textwidth} >{\\raggedright\\arraybackslash}X@{}}');
     L.push('\\toprule\\textbf{Theme} & \\textbf{Action} & \\textbf{Rationale}\\\\\\midrule');
-    for (const n of noveltyMap) L.push('{' + esc(n.theme || '') + '} & ' + esc(n.action || '') + ' & ' + esc(n.rationale || n.novelty || '') + ' \\\\');
+    for (const n of noveltyMap) L.push('{' + esc(n.theme || '') + '} & ' + esc(n.decision || n.action || '') + ' & ' + esc(n.why || n.rationale || n.novelty || '') + ' \');
     L.push('\\bottomrule\\end{tabularx}\\par}');
     L.push('');
   }

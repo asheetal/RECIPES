@@ -46,7 +46,21 @@ STEP 21 (surgeon): From themes_k, P08 evaluate novelty per theme (retain / refra
 STEP 22 (surgeon->coder): Call llm_assistant_panel_batch with schema {type:'object', properties:{record_id:{type:'string'}, narrative:{type:'string'}, changes_dimension:{type:'string', enum:['yes','no','downgrade']}, why:{type:'string'}}, required:['record_id','narrative','changes_dimension','why']} and query asking for each record 0-9 to be evaluated against the five themes; if the record contradicts or fails to fit a theme, changes_dimension='yes' (theme needs adding), 'downgrade' (theme needs weakening), or 'no' (no change to theme). narrative explains the record's framing in 40-80 words; why explains the negative-case call. Do NOT pass the step-16 {record_id,narrative,codes} schema — step 22 records a dimension change per negative case, not codes. After the panel returns, forward its panel_result unchanged as payload.panel_result. Then also produce payload.negative_case_resolution as an array of {record_id, changes_dimension, why} summaries drawn from the panel rows. aqrp_step_run({step:22, payload:{panel_result, negative_case_resolution}}).
 
 STEP 23 (surgeon->tool): FIRST, call search() with an academic query on theoretical aggregation and boundary conditions. SECOND, build P09 from the fresh results. Do NOT reuse prior pools. aqrp_step_run({step:23, payload:{P09}}).
-STEP 24 (surgeon): From themes_k, negative_case_log, P09 aggregate into 2-4 dimensions. Each dimension MUST have: name, mechanism, tension, conditions_for (array of at least 2 strings describing when the mechanism holds), conditions_against (array of at least 1 string describing when it fails or reverses), relationships (array of {from:dimension_name, to:dimension_name, nature:string}), supporting_record_ids (array), opposing_record_ids (array). Emit RDF R24 (pool P09). R24.citations_used MUST be a subset of the DOIs in P09.top_k[].doi — do NOT cite any DOI that you did not promote into P09.top_k at step 23, even if it appeared in search results. aqrp_step_run({step:24, payload:{dimensions, rdf_records:[R24]}}).
+STEP 24 (surgeon): From themes_k, negative_case_log, P09 aggregate into 2-4 dimensions.
+The dimensions array MUST follow this exact structural skeleton:
+dimensions: [
+  {
+    name: "Dimension Name",
+    mechanism: "...",
+    tension: "...",
+    conditions_for: ["...", "..."],
+    conditions_against: ["..."],
+    relationships: [{from: "...", to: "...", nature: "..."}],
+    supporting_record_ids: ["..."],
+    opposing_record_ids: ["..."]
+  }
+]
+Do NOT close the dimensions array until ALL dimensions (2-4) have been emitted. Each dimension MUST have: name, mechanism, tension, conditions_for (array of at least 2 strings describing when the mechanism holds), conditions_against (array of at least 1 string describing when it fails or reverses), relationships (array of {from:dimension_name, to:dimension_name, nature:string}), supporting_record_ids (array), opposing_record_ids (array). Emit RDF R24 (pool P09). R24.citations_used MUST be a subset of the DOIs in P09.top_k[].doi — do NOT cite any DOI that you did not promote into P09.top_k at step 23, even if it appeared in search results. aqrp_step_run({step:24, payload:{dimensions, rdf_records:[R24]}}).
 
 STEP 25 (surgeon->tool): FIRST, call search() with an academic query on process models in your theoretical domain. SECOND, build P10 from the fresh results. Do NOT reuse prior pools. aqrp_step_run({step:25, payload:{P10}}).
 STEP 26 (surgeon): From dimensions and P10 draft a grounded model as model_draft. model_draft MUST have: arrows (array of strings), phases (array of strings), tension (string), evidence (array of {arrow:string, supporting_record_ids:array, quotes:array}), alternative_readings (array of {reading:string, why_rejected:string}). Emit RDF R26 (pool P10). R26.citations_used MUST be a subset of the DOIs in P10.top_k[].doi — do NOT cite any DOI that you did not promote into P10.top_k at step 25, even if it appeared in search results. aqrp_step_run({step:26, payload:{model_draft, rdf_records:[R26]}}).

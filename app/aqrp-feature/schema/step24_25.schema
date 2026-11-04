@@ -1,19 +1,121 @@
-{ "$schema":"http://json-schema.org/draft-07/schema#", "$id":"aqrp://step24_25",
-  "title":"AQRP step 24 (surgeon) output = step 25 input",
-  "type":"object",
-  "required":["status", "dimensions", "rdf_records"],
-  "properties":{
-    "status": {"const": "DIMENSIONS_COMPLETE"},
-    "dimensions": {"not": {"type": "null"}},
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "aqrp://step24_25",
+  "title": "AQRP step 24 (surgeon) output = step 25 input",
+  "type": "object",
+  "required": [
+    "status",
+    "dimensions",
+    "rdf_records"
+  ],
+  "properties": {
+    "status": {
+      "const": "DIMENSIONS_COMPLETE"
+    },
+    "dimensions": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "mechanism",
+          "tension",
+          "conditions_for",
+          "conditions_against",
+          "relationships",
+          "supporting_record_ids",
+          "opposing_record_ids"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "mechanism": {
+            "type": "string"
+          },
+          "tension": {
+            "type": "string"
+          },
+          "conditions_for": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 2
+          },
+          "conditions_against": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
+          },
+          "relationships": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "from",
+                "to",
+                "nature"
+              ],
+              "properties": {
+                "from": {
+                  "type": "string"
+                },
+                "to": {
+                  "type": "string"
+                },
+                "nature": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "supporting_record_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "opposing_record_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
     "rdf_records": {
       "type": "array",
-      "contains": {"type": "object", "required": ["rdf_id", "pool_id"],
-                     "properties": {"rdf_id": {"const": "R24"},
-                                    "pool_id": {"const": "P09"}}},
-      "items": {"$ref": "aqrp://shared/rdf_record"}
+      "contains": {
+        "type": "object",
+        "required": [
+          "rdf_id",
+          "pool_id"
+        ],
+        "properties": {
+          "rdf_id": {
+            "const": "R24"
+          },
+          "pool_id": {
+            "const": "P09"
+          }
+        }
+      },
+      "items": {
+        "$ref": "aqrp://shared/rdf_record"
+      }
     },
-    "P09": {"$ref": "aqrp://shared/citation_pool"}
+    "P09": {
+      "$ref": "aqrp://shared/citation_pool"
+    }
   },
-  "additionalProperties":true,
-  "$comment":"Producer: pipeline.cjs surgeonStep(24, {requiredFields:[dimensions], rdfIds:['R24'], allowedPools:['P09'], status:'DIMENSIONS_COMPLETE'}). Exactly one RDF (R24) at this boundary; upstream fields pass through verbatim."
+  "additionalProperties": true,
+  "$comment": "Producer: pipeline.cjs surgeonStep(24, {requiredFields:[dimensions], rdfIds:['R24'], allowedPools:['P09'], status:'DIMENSIONS_COMPLETE'}). Exactly one RDF (R24) at this boundary; upstream fields pass through verbatim."
 }

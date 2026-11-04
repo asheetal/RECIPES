@@ -235,26 +235,7 @@ async function invoke(req, args) {
       try {
         p = JSON.parse(raw);
       } catch (__e) {
-        let parsed = false;
-        const posMatch = __e.message.match(/at position (\d+)/i);
-        if (posMatch) {
-          try {
-            p = JSON.parse(raw.slice(0, Number(posMatch[1])));
-            parsed = true;
-          } catch (_) {}
-        }
-        if (!parsed) {
-          const objMatch = raw.match(/^(\{[\s\S]*\}|\[[\s\S]*\])/);
-          if (objMatch) {
-            try {
-              p = JSON.parse(objMatch[1]);
-              parsed = true;
-            } catch (_) {}
-          }
-        }
-        if (!parsed) {
-          throw new Error(`step ${step} payload is a string but not valid JSON: ${__e.message}`);
-        }
+        throw new Error(`step ${step} payload is a string but not valid JSON: ${__e.message}`);
       }
     }
     else { p = payload; }

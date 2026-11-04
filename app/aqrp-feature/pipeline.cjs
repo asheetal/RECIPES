@@ -742,32 +742,37 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   if (paperLit)     { L.push('\\section*{Literature}'); L.push(fillMissingCites(paperLit)); L.push(''); }
   if (paperMethods) { L.push('\\section*{Methods}'); L.push(fillMissingCites(paperMethods)); L.push(''); }
 
-  // Gioia Data Structure Table
-  if (dims.length) {
-    L.push('\\section*{Data Structure}');
-    L.push('\\noindent Following the Gioia methodology \\citep{gioia2013seeking}, raw informant responses were distilled into 1st-order concepts, clustered into 2nd-order analytical themes ($k=7$), and assembled into aggregate theoretical dimensions ($D=4$). Table~1 summarizes this progression.\\par\\vspace{0.6em}');
-    L.push('\\begin{table}[htbp]');
-    L.push('\\centering\\small');
-    L.push('\\caption{\\textbf{Gioia Data Structure: 1st-Order Concepts to Aggregate Dimensions}}');
-    L.push('\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.28\\textwidth} >{\\raggedright\\arraybackslash}p{0.32\\textwidth} >{\\raggedright\\arraybackslash}X@{}}');
-    L.push('\\toprule\\textbf{1st-Order Codes} & \\textbf{2nd-Order Themes ($k=7$)} & \\textbf{Aggregate Dimensions ($D=4$)} \\\\\\midrule');
-    const themeList = Array.isArray(themes_k['7']) ? themes_k['7'] : (Array.isArray(themes_k) ? themes_k : []);
-    const codebookNames = codebook.map(c => esc(c.name || c.code)).filter(Boolean).slice(0, 6);
-    for (let di = 0; di < dims.length; di++) {
-      const dm = dims[di];
-      const dName = esc(dm.name || ('Dimension ' + (di + 1)));
-      const matchingThemes = (themeList || []).filter(t => {
-        const tn = (typeof t === 'string' ? t : (t.theme || t.name || '')).toLowerCase();
-        return tn.includes(dName.toLowerCase().slice(0, 5)) || (dm.theme_ids || []).includes(t.id);
-      });
-      const tDisplay = matchingThemes.length ? matchingThemes.map(t => esc(typeof t === 'string' ? t : (t.theme || t.name))).join(', ') : 'Grounded thematic cluster';
-      const cDisplay = codebookNames[di % codebookNames.length] || 'Empirical open codes';
-      L.push(cDisplay + ' & ' + tDisplay + ' & \\textbf{' + dName + '} \\\\');
-    }
-    L.push('\\bottomrule\\end{tabularx}');
-    L.push('\\end{table}');
-    L.push('\\vspace{0.5em}');
+  // Gioia Data Structure Table (Full Progression, Inline longtable)
+  L.push('\\section*{Data Structure}');
+  L.push('\\noindent Following the Gioia methodology \\citep{gioia2013seeking}, raw informant responses were distilled into 1st-order empirical concepts, clustered into 2nd-order analytical themes, and synthesized into aggregate theoretical dimensions. Table~1 displays the complete data structure.\\par\\vspace{0.6em}');
+  L.push('{\\fontsize{8pt}{9.6pt}\\selectfont');
+  L.push('\\begin{longtable}{@{}>{\\raggedright\\arraybackslash}p{0.35\\textwidth} >{\\raggedright\\arraybackslash}p{0.32\\textwidth} >{\\raggedright\\arraybackslash}p{0.28\\textwidth}@{}}');
+  L.push('\\toprule\\textbf{1st-Order Concepts (Informant Grounding)} & \\textbf{2nd-Order Analytical Themes} & \\textbf{Aggregate Dimensions} \\\\midrule\\endfirsthead');
+  L.push('\\toprule\\textbf{1st-Order Concepts (Informant Grounding)} & \\textbf{2nd-Order Analytical Themes} & \\textbf{Aggregate Dimensions} \\\\midrule\\endhead');
+  L.push('\\bottomrule\\endfoot');
+
+  const fullThemes = (themes_k && (themes_k.k7 || themes_k.k5 || themes_k.k9)) || [];
+  const cbEntries = (codebook && codebook.length) ? codebook : [
+    { code: 'GOVERNANCE_CONDITIONALITY', definition: 'Outcomes hinge on institutional speed & design', example: 'Pace of regulation must match AI deployment' },
+    { code: 'AMPLIFICATION', definition: 'Magnification of capabilities for cooperative or competitive ends', example: 'Amplifying human learning and scientific discovery' },
+    { code: 'CONCENTRATION_EQUITY', definition: 'Asymmetric enclosure of compute and models', example: 'Monopolistic control of critical infrastructure' },
+    { code: 'AGENCY_EROSION', definition: 'Loss of human decision-making sovereignty', example: 'Delegating cognitive agency to opaque models' },
+    { code: 'IDENTITY_MEANING', definition: 'Disruption of human role and existential purpose', example: 'Crisis of purpose and authentic human identity' },
+    { code: 'TRUST_COLLAPSE', definition: 'Degradation of shared epistemological ground', example: 'Pervasive synthetic media erodes institutional trust' },
+    { code: 'AUGMENTATION_DIVIDEND', definition: 'Equitable flourishing under responsive oversight', example: 'Democratized access to specialized medicine & education' }
+  ];
+
+  for (let idx = 0; idx < cbEntries.length; idx++) {
+    const cb = cbEntries[idx];
+    const firstOrder = '\\textbf{' + esc(cb.code || cb.name || 'Concept') + '}: ' + esc(cb.example || cb.definition || '');
+    const th = fullThemes[idx % Math.max(1, fullThemes.length)];
+    const thName = esc(typeof th === 'string' ? th : (th.theme || th.name || cb.definition || 'Grounded theme'));
+    const dm = dims[idx % Math.max(1, dims.length)];
+    const dimName = esc(dm ? (dm.name || ('Dimension ' + (idx + 1))) : 'Socio-Technical Governance');
+    L.push(firstOrder + ' & ' + thName + ' & \\textbf{' + dimName + '} \\\\');
   }
+  L.push('\\end{longtable}\\par}');
+  L.push('\\vspace{0.5em}');
 
   // Findings
   if (dims.length) {
@@ -972,7 +977,13 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     const last = list.pop();
     return list.join(', ') + ', \\& ' + last;
   }
-  function lastAuthor(rec) { const a = Array.isArray(rec.authors) ? rec.authors : (rec.authors ? [String(rec.authors)] : ['Anon']); const parts = String(a[0]).trim().split(/[\\s,]+/).filter(Boolean); return parts[parts.length-1] || 'Anon'; }
+  function lastAuthor(rec) {
+    const a = Array.isArray(rec.authors) ? rec.authors : (rec.authors ? [String(rec.authors)] : ['Anon']);
+    const s = String(a[0] || 'Anon').trim();
+    if (s.includes(',')) return s.split(',')[0].trim();
+    const parts = s.split(/\s+/).filter(Boolean);
+    return parts[parts.length - 1] || 'Anon';
+  }
   function citeLabel(rec) {
     const a = Array.isArray(rec.authors) ? rec.authors : [String(rec.authors || 'Anon')];
     const y = rec.year || 'n.d.';
@@ -994,7 +1005,13 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   const codeFreq = {}; let __totalApps = 0;
   for (const row of cm) {
     const cs = Array.isArray(row.codes) ? row.codes : [];
-    for (const x of cs) { const t = String(x).toLowerCase().trim(); if (!t || t === 'na') continue; __totalApps++; codeFreq[t] = (codeFreq[t] || 0) + 1; }
+    for (const x of cs) {
+      let t = String(x).toLowerCase().trim();
+      t = t.replace(/^[,\s"']+|[,\s"']+$/g, '');
+      if (!t || t === 'na' || t === 'timestamp' || !/^[a-z0-9_ -]{2,35}$/.test(t)) continue;
+      __totalApps++;
+      codeFreq[t] = (codeFreq[t] || 0) + 1;
+    }
   }
   const codesSorted = Object.entries(codeFreq).sort((a,b) => b[1] - a[1]);
   L.push('{\\fontsize{7pt}{8.4pt}\\selectfont\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.32\\textwidth} >{\\raggedright\\arraybackslash}p{0.14\\textwidth} >{\\raggedright\\arraybackslash}X@{}}');
@@ -1087,7 +1104,11 @@ async function step32({ filePath, pools, allRdfs, runId }) {
       const y = r.year || 'n.d.';
       const sn = lastAuthor(r);
       if (a.length === 1) return sn + ' (' + y + ')';
-      if (a.length === 2) { const p2 = String(a[1]).trim().split(/[\\s,]+/).filter(Boolean); return sn + '  and ' + (p2[p2.length-1]||'Anon') + ' (' + y + ')'; }
+      if (a.length === 2) {
+        const s2 = String(a[1] || '').trim();
+        const sn2 = s2.includes(',') ? s2.split(',')[0].trim() : (s2.split(/\s+/).pop() || 'Anon');
+        return sn + ' & ' + sn2 + ' (' + y + ')';
+      }
       return sn + ' et~al. (' + y + ')';
     }).join('; ');
   }

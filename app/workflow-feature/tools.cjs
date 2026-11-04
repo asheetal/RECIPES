@@ -103,8 +103,10 @@ function wrapExecution(load){return async p=>{
       bash = createBashExecutionTool({
         authHeaders: () => getCodeApiAuthHeaders(p.req),
       });
-      r.loadedTools.push(bash);
-      if(r.configurable?.ptcToolMap) r.configurable.ptcToolMap.set("bash_tool", bash);
+      if(wantsBash) {
+        r.loadedTools.push(bash);
+        if(r.configurable?.ptcToolMap) r.configurable.ptcToolMap.set("bash_tool", bash);
+      }
     } catch(err) {
       throw Error("Existing bash tool unavailable: " + err.message);
     }

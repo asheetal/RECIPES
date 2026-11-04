@@ -1042,7 +1042,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     L.push('\\subsection*{A.4 Novelty Assessment (R21)}');
     L.push('{\\fontsize{7pt}{8.4pt}\\selectfont\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.28\\textwidth} >{\\raggedright\\arraybackslash}p{0.12\\textwidth} >{\\raggedright\\arraybackslash}X@{}}');
     L.push('\\toprule\\textbf{Theme} & \\textbf{Action} & \\textbf{Rationale}\\\\\\midrule');
-    for (const n of noveltyMap) L.push('{' + esc(n.theme || '') + '} & ' + esc(n.decision || n.action || '') + ' & ' + esc(n.why || n.rationale || n.novelty || '') + ' \');
+    for (const n of noveltyMap) L.push('{' + esc(n.theme || '') + '} & ' + esc(n.decision || n.action || '') + ' & ' + esc(n.why || n.rationale || n.novelty || '') + ' \\\\');
     L.push('\\bottomrule\\end{tabularx}\\par}');
     L.push('');
   }

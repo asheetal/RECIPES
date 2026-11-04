@@ -1,4 +1,5 @@
 "use strict";
+const schemaLoader = require("./schema-loader.cjs");
 const { FINAL_STEP } = require("./steps.cjs");
 const METHODS_NORMS = new Set([
   'gioia2013seeking','braun2006using','corley2011building','malterud2016sample','strauss1998basics',
@@ -1295,7 +1296,7 @@ async function _runStepWithSchema(args) {
   const out = await runStep(args);
   const step = Number(args && args.step);
   try {
-    require('./schema-loader.cjs').validateBoundary(step, out && out.output);
+    schemaLoader.validateBoundary(step, out && out.output);
   } catch (e) {
     const wrapped = new Error('[aqrp boundary ' + step + '] ' + e.message);
     wrapped.step = step;

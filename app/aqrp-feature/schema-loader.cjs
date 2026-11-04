@@ -31,10 +31,30 @@ const SHARED = [
   '_shared/warning.schema'
 ];
 
-const POOL_MAP = {
-  2: 'P01', 5: 'P02', 7: 'P03', 9: 'P04', 11: 'P05', 14: 'P06',
-  18: 'P07', 20: 'P08', 23: 'P09', 25: 'P10', 27: 'P11', 29: 'P12', 31: 'P13'
-};
+function getStepPool(step) {
+  init();
+  const raw = state.rawSchemas[step] || readSchema(BOUNDARY[step]);
+  if (!raw || !raw.properties) return null;
+  for (const [k, v] of Object.entries(raw.properties)) {
+    if (/^P\d{2}$/.test(k) || (v.$ref && v.$ref.includes("citation_pool"))) {
+      return k;
+    }
+  }
+  return null;
+}
+
+function getStepStatus(step) {
+  init();
+  const raw = state.rawSchemas[step] || readSchema(BOUNDARY[step]);
+  if (raw && raw.properties && raw.properties.status && raw.properties.status.const) {
+    return raw.properties.status.const;
+  }
+  return null;
+}
+
+const POOL_MAP = new Proxy({}, {
+  get: (_, prop) => getStepPool(Number(prop))
+});
 
 const RDF_MAP = {
   3: '[R3(pool:P01), R3a(pool:P00)]',
@@ -154,7 +174,7 @@ function getStepContract(step) {
   if (step === 13) return 'no payload required (auto-assembled from step 4 state)';
   if (step === 4 || step === 16 || step === 17) return '{ payload: { panel_result: { panel, n, responses } } }';
   if (step === 22) return '{ payload: { panel_result: { panel, n, responses }, negative_case_resolution: [] } }';
-  if (step === 32) return `{ payload: { submission_paper_tex: string, rdf_records: ${RDF_MAP[32]} } }`;
+  if (step === 32) return `{ payload: { rdf_records: ${RDF_MAP[32]} } }`;
 
   init();
   const raw = state.rawSchemas[step] || readSchema(BOUNDARY[step]);
@@ -191,7 +211,7 @@ function getStepInvocationSignature(step) {
   if (step === 13) return '{step:13}';
   if (step === 4 || step === 16 || step === 17) return `{step:${step}, payload:{panel_result}}`;
   if (step === 22) return '{step:22, payload:{panel_result, negative_case_resolution}}';
-  if (step === 32) return '{step:32, payload:{submission_paper_tex, rdf_records:[R32]}}';
+  if (step === 32) return '{step:32, payload:{rdf_records:[R32]}}';
 
   init();
   const raw = state.rawSchemas[step] || readSchema(BOUNDARY[step]);
@@ -221,6 +241,8 @@ function describe() {
 }
 
 module.exports = {
+  getStepPool,
+  getStepStatus,
   validateBoundary,
   describe,
   BOUNDARY,

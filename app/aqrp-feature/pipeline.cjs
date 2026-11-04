@@ -251,7 +251,9 @@ async function step13({ filePath }) {
   return { output: { status: 'CODE_GROUPING_COMPLETE', merge_candidates } };
 }
 
-async function searchStep(N, { filePath, poolId, extraFields, status }) {
+async function searchStep(N, { filePath, poolId, extraFields, status } = {}) {
+  poolId = poolId || schemaLoader.getStepPool(N);
+  status = status || schemaLoader.getStepStatus(N);
   const p = readJson(filePath);
   validateCitationPool(p[poolId], poolId);
   for (const f of (extraFields || [])) if (p[f] == null) throw new Error(`Step ${N}: payload.${f} required`);
@@ -1271,7 +1273,7 @@ async function runStep({ step, filePath, expectedRecordIds, pools, allRdfs, runI
   if (step === 15) return surgeonStep(15, { filePath, requiredFields: ['codebook'], rdfIds: ['R15'], allowedPools: ['P06'], pools, status: 'CODEBOOK_COMPLETE' });
   if (step === 16) return panelStepGeneric(16, { filePath, matrixField: 'within_case_matrix', disField: 'within_case_disagreements', status: 'WITHIN_CASE_COMPLETE', runId });
   if (step === 17) return panelStepGeneric(17, { filePath, matrixField: 'cross_case_matrix', disField: 'cross_case_disagreements', status: 'ACROSS_CASE_COMPLETE', runId });
-  if (step === 18) return searchStep(18, { filePath, poolId: 'P07', status: 'THEME_SEARCH_COMPLETE' });
+  if (step === 18) return searchStep(18, { filePath });
   if (step === 19) return surgeonStep(19, { filePath, requiredFields: ['themes_k'], rdfIds: ['R19'], allowedPools: ['P07'], pools, status: 'THEMES_COMPLETE' });
   if (step === 20) return searchStep(20, { filePath, poolId: 'P08', status: 'NOVELTY_SEARCH_COMPLETE' });
   if (step === 21) return surgeonStep(21, { filePath, requiredFields: ['novelty_map'], rdfIds: ['R21'], allowedPools: ['P08'], pools, status: 'NOVELTY_COMPLETE' });

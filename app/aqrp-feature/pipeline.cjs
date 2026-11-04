@@ -597,10 +597,11 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     paperLit += '\\par\\vspace{0.6em}\\noindent Theoretical framing builds upon recent scholarship in sociotechnical imaginaries and algorithmic governance \\citep{' + litKeys.slice(0, 3).join(',') + '}.';
   }
 
-  // Ground Methods with canonical __key citations
-  const methodKeys = Object.keys(keyToRec).filter(k => k.startsWith('gioia') || k.startsWith('braun') || k.startsWith('corley'));
-  const methodCite = methodKeys.length ? ' \\citep{' + methodKeys.slice(0, 2).join(',') + '}' : '';
-  const paperMethods = 'This study employs systematic qualitative codebook analysis (Gioia, Corley, & Hamilton, 2013) across a corpus of ' + (s1.n_elements || 'sampled') + ' records' + methodCite + '. Analysis followed systematic familiarization, open coding with a designated codebook (' + codebook.map(c => '\\texttt{' + esc(c.code || c.name) + '}').filter(Boolean).join(', ') + '), cross-case synthesis, and dimension aggregation.';
+  // Ground Methods with canonical methodology keys
+  const gioiaKey = __METHODOLOGY["10.1177/1094428112452151"].__key;
+  const braunKey = __METHODOLOGY["10.1191/1478088706qp063oa"].__key;
+  const methodCite = ` \\citep{${gioiaKey},${braunKey}}`;
+  const paperMethods = 'This study employs systematic qualitative codebook analysis across a corpus of ' + (s1.n_elements || 'sampled') + ' records' + methodCite + '. Analysis followed systematic familiarization, open coding with a designated codebook (' + codebook.map(c => '\\texttt{' + esc(c.code || c.name) + '}').filter(Boolean).join(', ') + '), cross-case synthesis, and dimension aggregation.';
   const paperDiscussion = (s26.model_draft && (s26.model_draft.description || (Array.isArray(s26.model_draft.propositions) ? s26.model_draft.propositions.join(' ') : ''))) || '';
   const paperFindings = [];
 

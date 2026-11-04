@@ -112,6 +112,13 @@ function validateStep7(payload) {
       if (!r || !r.ref_id) throw new Error(`step 7: shortlisted_models[${i}] prior record #${j} missing ref_id`);
       if (!r.justifying_excerpt) throw new Error(`step 7: shortlisted_models[${i}] prior record #${j} missing justifying_excerpt`);
     }
+    if (!Array.isArray(nv.search_provenance) || nv.search_provenance.length === 0) {
+      if (Array.isArray(m.search_provenance) && m.search_provenance.length > 0) {
+        nv.search_provenance = m.search_provenance;
+      } else if (Array.isArray(payload.search_provenance) && payload.search_provenance.length > 0) {
+        nv.search_provenance = payload.search_provenance;
+      }
+    }
     const sp = Array.isArray(nv.search_provenance) ? nv.search_provenance : [];
     if (sp.length < 3) throw new Error(`step 7: shortlisted_models[${i}] search_provenance must have >= 3 entries (got ${sp.length})`);
   }
@@ -523,7 +530,11 @@ async function invoke(req, args) {
         }
       } catch (_) {}
     }
-    gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, step, status: 'error', error: e.message, recoverable: !(e && e.detail) });
+    const recoverable = !(e && e.detail);
+    gateway.audit(req, 'LLM_SURGERY', 'tool_result', { tool: NAME, step, status: 'error', error: e.message, recoverable });
+    if (recoverable) {
+      return JSON.stringify({ status: 'error', error: e.message, recoverable: true });
+    }
     throw e;
   }
 }

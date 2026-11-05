@@ -14,7 +14,7 @@ const baseProperties = {
 const STEP_SCHEMA = z.object({
   ...baseProperties,
   step: z.preprocess((val) => (val !== undefined && val !== null ? Number(val) : undefined), z.number().int().optional()),
-  payload: z.union([z.record(z.any()), z.string()]).optional(),
+  payload: z.record(z.any()).optional(),
 }).passthrough();
 
 const STEP_PARAMETERS = {

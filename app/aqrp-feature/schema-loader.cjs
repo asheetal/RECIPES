@@ -180,7 +180,7 @@ function getStepContract(step) {
   if (!raw || !raw.properties) return '{ payload: object }';
 
   const props = raw.properties || {};
-  const requiredKeys = Array.isArray(raw.required) ? raw.required : Object.keys(props);
+  const requiredKeys = (Array.isArray(raw.required) ? [...raw.required] : Object.keys(props)).sort((a, b) => (a === 'rdf_records' ? -1 : b === 'rdf_records' ? 1 : 0));
   const parts = [];
 
   for (const k of requiredKeys) {
@@ -217,7 +217,7 @@ function getStepInvocationSignature(step) {
   const raw = state.rawSchemas[step] || readSchema(BOUNDARY[step]);
   const fields = [];
   if (raw) {
-    const requiredKeys = Array.isArray(raw.required) ? raw.required : Object.keys(raw.properties || {});
+    const requiredKeys = (Array.isArray(raw.required) ? [...raw.required] : Object.keys(raw.properties || {})).sort((a, b) => (a === 'rdf_records' ? -1 : b === 'rdf_records' ? 1 : 0));
     for (const k of requiredKeys) {
       if (INTERNAL_FIELDS.has(k)) continue;
       if (k === 'rdf_records') {

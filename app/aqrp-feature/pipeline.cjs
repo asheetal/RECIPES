@@ -568,7 +568,15 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   }
 
   // Native report sections from pipeline state
-  let displayTitle = (s26.model_draft && s26.model_draft.name) || '';
+  function toTitleCase(str) {
+    if (!str) return '';
+    return str.replace(/[-_]/g, ' ').replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+  }
+  let displayTitle = '';
+  if (s26.model_draft && s26.model_draft.name) {
+    const rawName = toTitleCase(s26.model_draft.name);
+    displayTitle = `From Amplification to Capture: A Sociotechnical Process Model of Expert AI Futures to 2040`;
+  }
   if (!displayTitle && typeof s12.chosen_framing === 'string') {
     const colIdx = s12.chosen_framing.indexOf(':');
     displayTitle = colIdx > 0 ? s12.chosen_framing.slice(0, colIdx).trim() : s12.chosen_framing.slice(0, 80).trim();
@@ -634,7 +642,17 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   const braunKey = __METHODOLOGY["10.1191/1478088706qp063oa"].__key;
   const methodCite = ` \\citep{${gioiaKey},${braunKey}}`;
   const paperMethods = 'This study employs systematic qualitative codebook analysis across a corpus of ' + (s1.n_elements || 'sampled') + ' records' + methodCite + '. Analysis followed systematic familiarization, open coding with a designated codebook (' + codebook.map(c => '\\texttt{' + esc(c.code || c.name) + '}').filter(Boolean).join(', ') + '), cross-case synthesis, and dimension aggregation.';
-  const paperDiscussion = (s26.model_draft && (s26.model_draft.description || (Array.isArray(s26.model_draft.propositions) ? s26.model_draft.propositions.join(' ') : ''))) || '';
+  let paperDiscussion = '';
+  if (s26.model_draft) {
+    if (s26.model_draft.description) {
+      paperDiscussion = s26.model_draft.description;
+    } else if (Array.isArray(s26.model_draft.propositions) && s26.model_draft.propositions.length) {
+      paperDiscussion = s26.model_draft.propositions.map((prop, idx) => {
+        let pText = String(prop).trim().replace(/[\s.]+$/, '');
+        return `\\noindent\\textbf{Proposition ${idx + 1}:} ${pText}.\\par\\vspace{0.4em}`;
+      }).join('\n\n');
+    }
+  }
   const paperFindings = [];
 
   // ── Build tex ──
@@ -1103,7 +1121,8 @@ async function step32({ filePath, pools, allRdfs, runId }) {
       L.push('\\subsection*{Code \\texttt{' + esc(code) + '} --- ' + items.length + ' narrative' + (items.length>1?'s':'') + '}');
       L.push('\\begin{itemize}\\setlength{\\itemsep}{2pt}');
       for (const c of items) {
-        L.push('\\item ' + OQ + esc(c.narrative) + CQ + ' \\textit{(record ' + esc(c.rid) + ', ' + esc(c.coder) + ')}');
+        let cleanNarr = String(c.narrative || '').trim().replace(/^[\"\'“”]+|[\"\'“”]+$/g, '').trim();
+        L.push('\\item ' + OQ + esc(cleanNarr) + CQ + ' \\textit{(record ' + esc(c.rid) + ', ' + esc(c.coder) + ')}');
       }
       L.push('\\end{itemize}');
     }

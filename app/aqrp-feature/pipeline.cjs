@@ -267,6 +267,31 @@ async function searchStep(N, { filePath, poolId, extraFields, status } = {}) {
   poolId = poolId || schemaLoader.getStepPool(N);
   status = status || schemaLoader.getStepStatus(N);
   const p = readJson(filePath);
+
+  // Normalize citation pool metadata before validation
+  if (p && p[poolId] && Array.isArray(p[poolId].top_k)) {
+    let touched = false;
+    p[poolId].top_k.forEach(t => {
+      if (!t || typeof t !== 'object') return;
+      if (typeof t.authors === 'string' && t.authors.trim()) {
+        t.authors = [t.authors.trim()];
+        touched = true;
+      } else if (!Array.isArray(t.authors) || t.authors.length === 0) {
+        t.authors = ['Unknown'];
+        touched = true;
+      } else {
+        t.authors = t.authors.map(a => (typeof a === 'string' ? a.trim() : '')).filter(Boolean);
+        if (t.authors.length === 0) {
+          t.authors = ['Unknown'];
+          touched = true;
+        }
+      }
+    });
+    if (touched) {
+      require('fs').writeFileSync(filePath, JSON.stringify(p));
+    }
+  }
+
   validateCitationPool(p[poolId], poolId);
   for (const f of (extraFields || [])) if (p[f] == null) throw new Error(`Step ${N}: payload.${f} required`);
   // lit_map normalization (step 9): the pipeline owns the shape. Accept both

@@ -1307,7 +1307,7 @@ async function runStep({ step, filePath, expectedRecordIds, pools, allRdfs, runI
         }
         return cleaned;
       });
-      fs.writeFileSync(filePath, JSON.stringify(p));
+      require('fs').writeFileSync(filePath, JSON.stringify(p));
     }
     return surgeonStep(24, { filePath, requiredFields: ['dimensions'], rdfIds: ['R24'], allowedPools: ['P09'], pools, status: 'DIMENSIONS_COMPLETE' });
   }

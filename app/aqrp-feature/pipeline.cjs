@@ -35,6 +35,13 @@ function validateRdfRecord(rdf, at, allowedPools, pools) {
   if (!Array.isArray(rdf.citations_used)) throw new Error(at + '.citations_used must be array');
   if (!allowedPools.includes(rdf.pool_id)) throw new Error(at + '.pool_id must be one of ' + allowedPools.join(','));
   const st = ['pool_selected','partial','none_gut_feeling'];
+  if (!rdf.citation_status) {
+    if (Array.isArray(rdf.citations_used) && rdf.citations_used.length > 0) {
+      rdf.citation_status = 'pool_selected';
+    } else if (rdf.gut_rationale) {
+      rdf.citation_status = 'none_gut_feeling';
+    }
+  }
   if (!st.includes(rdf.citation_status)) throw new Error(at + '.citation_status must be one of ' + st.join(','));
   if (rdf.citation_status === 'none_gut_feeling' && !rdf.gut_rationale) throw new Error(at + '.gut_rationale required when none_gut_feeling');
   if (rdf.citation_status === 'pool_selected' && rdf.pool_id !== 'P00' && pools && pools[rdf.pool_id]) {

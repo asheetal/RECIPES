@@ -57,19 +57,19 @@ const POOL_MAP = new Proxy({}, {
 });
 
 const RDF_MAP = {
-  3: '[R3(pool:P01), R3a(pool:P00)]',
-  6: '[R6(pool:P02)]',
-  8: '[R8(pool:P03)]',
-  10: '[R10(pool:P04)]',
-  12: '[R12(pool:P05)]',
-  15: '[R15(pool:P06)]',
-  19: '[R19(pool:P07)]',
-  21: '[R21(pool:P08)]',
-  24: '[R24(pool:P09)]',
-  26: '[R26(pool:P10)]',
-  28: '[R28(pool:P11)]',
-  30: '[R30(pool:P12)]',
-  32: '[R32(pool:P13)]'
+  3: '[R3(pool:P01,status:pool_selected), R3a(pool:P00,status:pool_selected)]',
+  6: '[R6(pool:P02,status:pool_selected)]',
+  8: '[R8(pool:P03,status:pool_selected)]',
+  10: '[R10(pool:P04,status:pool_selected)]',
+  12: '[R12(pool:P05,status:pool_selected)]',
+  15: '[R15(pool:P06,status:pool_selected)]',
+  19: '[R19(pool:P07,status:pool_selected)]',
+  21: '[R21(pool:P08,status:pool_selected)]',
+  24: '[R24(pool:P09,status:pool_selected)]',
+  26: '[R26(pool:P10,status:pool_selected)]',
+  28: '[R28(pool:P11,status:pool_selected)]',
+  30: '[R30(pool:P12,status:pool_selected)]',
+  32: '[R32(pool:P13,status:pool_selected)]'
 };
 
 const INTERNAL_FIELDS = new Set([

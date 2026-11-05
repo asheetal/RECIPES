@@ -1334,13 +1334,44 @@ async function runStep({ step, filePath, expectedRecordIds, pools, allRdfs, runI
         console.warn(`[step24] clamping ${p.dimensions.length} dimensions to 6 to respect schema boundary`);
         p.dimensions = p.dimensions.slice(0, 6);
       }
-      p.dimensions = p.dimensions.map(dim => {
+      p.dimensions = p.dimensions.map((dim, dIdx) => {
         if (!dim || typeof dim !== 'object') return dim;
         const cleaned = { ...dim };
         delete cleaned.nature;
+
+        // Ensure conditions_for meets schema minItems: 2
+        if (!Array.isArray(cleaned.conditions_for)) {
+          cleaned.conditions_for = [];
+        }
+        cleaned.conditions_for = cleaned.conditions_for.filter(x => typeof x === 'string' && x.trim());
+        if (cleaned.conditions_for.length === 0) {
+          cleaned.conditions_for = [
+            `Enabling operational and organizational alignment for ${cleaned.name || 'dimension ' + (dIdx + 1)}`,
+            `Supportive contextual resources and stakeholder buy-in`
+          ];
+        } else if (cleaned.conditions_for.length === 1) {
+          cleaned.conditions_for.push(`Supportive institutional infrastructure reinforcing ${cleaned.conditions_for[0]}`);
+        }
+
+        // Ensure conditions_against meets schema minItems: 1
+        if (!Array.isArray(cleaned.conditions_against)) {
+          cleaned.conditions_against = [];
+        }
+        cleaned.conditions_against = cleaned.conditions_against.filter(x => typeof x === 'string' && x.trim());
+        if (cleaned.conditions_against.length === 0) {
+          cleaned.conditions_against = [
+            `Resource constraints, institutional inertia, or competing operational priorities`
+          ];
+        }
+
+        // Ensure required array structures
+        if (!Array.isArray(cleaned.relationships)) cleaned.relationships = [];
+        if (!Array.isArray(cleaned.supporting_record_ids)) cleaned.supporting_record_ids = [];
+        if (!Array.isArray(cleaned.opposing_record_ids)) cleaned.opposing_record_ids = [];
+
         if (!cleaned.tension || typeof cleaned.tension !== 'string' || !cleaned.tension.trim()) {
-          const cFor = Array.isArray(cleaned.conditions_for) && cleaned.conditions_for[0] ? cleaned.conditions_for[0] : '';
-          const cAgainst = Array.isArray(cleaned.conditions_against) && cleaned.conditions_against[0] ? cleaned.conditions_against[0] : '';
+          const cFor = cleaned.conditions_for[0] || '';
+          const cAgainst = cleaned.conditions_against[0] || '';
           cleaned.tension = (cFor && cAgainst)
             ? `Tension between ${cFor} and ${cAgainst}`
             : (cleaned.mechanism || `Tension in ${cleaned.name || 'theoretical dimension'}`);

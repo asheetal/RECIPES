@@ -203,13 +203,37 @@ async function invoke(req, args) {
       try {
         p = JSON.parse(raw);
       } catch (__e) {
-        let recovered = false;
-        try {
-          const patched = raw.replace(/\}\}\s*,\s*"rdf_records"/g, "}, \"rdf_records\"");
-          p = JSON.parse(patched);
-          recovered = true;
-        } catch (_) {}
-        if (!recovered) {
+        if (step === 24 || step === 26) {
+          let text = raw.trim();
+          if (text.startsWith("```")) {
+            text = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+          }
+
+          let repaired = null;
+
+          // Pattern A (Step 24): premature array closure with orphaned field before rdf_records
+          try {
+            const p1 = text.replace(
+              /\}\s*\]\s*,\s*("(?:tension|mechanism|name)"\s*:\s*"[^"]*")\s*\}\s*\]\s*,\s*("rdf_records")/g,
+              ", $1}], $2"
+            );
+            repaired = JSON.parse(p1);
+          } catch (_) {}
+
+          // Pattern B (Step 26): premature double closure (}} or }]) right before rdf_records
+          if (!repaired) {
+            try {
+              const p2 = text.replace(/\}\s*[\}\]]\s*,\s*("rdf_records")/g, "}, $1");
+              repaired = JSON.parse(p2);
+            } catch (_) {}
+          }
+
+          if (repaired) {
+            p = repaired;
+          } else {
+            throw new Error(`step ${step} payload is a string but not valid JSON (repair attempted): ${__e.message}`);
+          }
+        } else {
           throw new Error(`step ${step} payload is a string but not valid JSON: ${__e.message}`);
         }
       }

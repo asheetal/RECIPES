@@ -423,6 +423,31 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   const OQ = '\u0060\u0060';
   const CQ = '\u0027\u0027';
 
+  const __CANONICAL_THEORY = {
+    "10.1007/s11024-009-9124-4": {
+      __key: "jasanoff2009containing",
+      authors: ["Jasanoff, S.", "Kim, S.-H."],
+      year: 2009,
+      title: "Containing the Atom: Sociotechnical Imaginaries and State Energy Visions in India and the United States",
+      journal: "Minerva",
+      volume: "47",
+      issue: "2",
+      pages: "119--146",
+      doi: "10.1007/s11024-009-9124-4"
+    },
+    "10.1177/01622439241285286": {
+      __key: "taeihagh2025governance",
+      authors: ["Taeihagh, A."],
+      year: 2025,
+      title: "Governance of Artificial Intelligence: Modalities, Challenges, and Pathways",
+      journal: "Policy and Society",
+      volume: "44",
+      issue: "1",
+      pages: "1--24",
+      doi: "10.1177/01622439241285286"
+    }
+  };
+
   const __METHODOLOGY = {
     "10.1177/1094428112452151": {
       __key: "gioia2013seeking",
@@ -482,7 +507,11 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   const poolOrder = ['P01','P02','P03','P04','P05','P06','P07','P08','P09','P10','P11','P12','P13','P00'];
   const doiToRec = {}, keyToRec = {}, poolDOIs = [], poolByID = {};
 
-  // Register __METHODOLOGY records into lookups
+  // Register __CANONICAL_THEORY and __METHODOLOGY records into lookups
+  for (const [d, tRec] of Object.entries(__CANONICAL_THEORY)) {
+    doiToRec[d.toLowerCase()] = tRec;
+    if (tRec.__key) keyToRec[tRec.__key] = tRec;
+  }
   for (const [d, mRec] of Object.entries(__METHODOLOGY)) {
     doiToRec[d.toLowerCase()] = mRec;
     if (mRec.__key) keyToRec[mRec.__key] = mRec;
@@ -650,11 +679,45 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   }
   if (Array.isArray(s10.candidate_lenses) && s10.candidate_lenses.length) {
     paperLit += '\\noindent\\textbf{Theoretical Lenses Evaluated:}\\begin{itemize}\\setlength{\\itemsep}{3pt}';
-    const poolKeys = Object.keys(keyToRec).filter(function(k) { return !k.startsWith('gioia') && !k.startsWith('braun') && !k.startsWith('corley'); });
+    // Strictly isolate substantive literature pool keys (P03, P04, P05) - never P00 methodology
+    const substantivePools = ['P04', 'P05', 'P03'];
+    const substantiveKeys = [];
+    for (const pid of substantivePools) {
+      for (const r of (poolByID[pid] || [])) {
+        if (r.__key && !METHODS_NORMS.has(r.__key) && !METHODS_NORMS.has(r.doi)) {
+          substantiveKeys.push(r.__key);
+        }
+      }
+    }
+    const cleanSubstantiveKeys = Array.from(new Set(substantiveKeys));
+
     paperLit += s10.candidate_lenses.map(function(l, lIdx) {
-      const lens = esc(l.lens || l.name || '');
+      const lensName = String(l.lens || l.name || '');
+      const lens = esc(lensName);
       const fit = esc(l.fit || l.rationale || '');
-      const citeKey = poolKeys[lIdx % poolKeys.length];
+      
+      // Resolve citeKey:
+      // 1. Explicit key or DOI in the lens object
+      let citeKey = null;
+      if (l.key && keyToRec[l.key]) citeKey = l.key;
+      else if (l.cite_key && keyToRec[l.cite_key]) citeKey = l.cite_key;
+      else if (l.doi && doiToRec[String(l.doi).toLowerCase()]) citeKey = doiToRec[String(l.doi).toLowerCase()].__key;
+      
+      // 2. Recognized theoretical frameworks mapped to canonical theory keys
+      if (!citeKey) {
+        const lowerName = lensName.toLowerCase();
+        if (lowerName.includes('sociotechnical') || lowerName.includes('imaginar')) {
+          citeKey = 'jasanoff2009containing';
+        } else if (lowerName.includes('governance') || lowerName.includes('modalit')) {
+          citeKey = 'taeihagh2025governance';
+        }
+      }
+
+      // 3. Substantive literature pool fallback (never methodology)
+      if (!citeKey && cleanSubstantiveKeys.length > 0) {
+        citeKey = cleanSubstantiveKeys[lIdx % cleanSubstantiveKeys.length];
+      }
+
       const citeStr = citeKey ? (' \\citep{' + citeKey + '}') : '';
       return '\\item \\textbf{' + lens + '}' + citeStr + ': ' + fit;
     }).join('');

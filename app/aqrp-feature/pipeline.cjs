@@ -1256,8 +1256,8 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   L.push('\\begin{landscape}');
   L.push('\\section*{Appendix C: Researcher Degrees of Freedom Ledger}');
   L.push('\\noindent\\textit{Pool IDs (P00--P13) name the literature searches the pipeline performed. P01 = corpus scope; P02--P12 = step-specific searches; P13 = reporting conventions. P00 is reserved for methodology citations. The top two papers per pool appear inline in the Support column; full bibliography in References.}\\par\\vspace{0.6em}');
-  L.push('{\\fontsize{6.5pt}{8pt}\\selectfont\\begin{singlespacing}\\setlength{\\tabcolsep}{3pt}');
-  L.push('\\begin{longtable}{@{}>{\\raggedright\\arraybackslash}p{0.09\\linewidth} >{\\raggedright\\arraybackslash}p{0.06\\linewidth} >{\\raggedright\\arraybackslash}p{0.18\\linewidth} >{\\raggedright\\arraybackslash}p{0.18\\linewidth} >{\\raggedright\\arraybackslash}p{0.29\\linewidth} >{\\raggedright\\arraybackslash}p{0.17\\linewidth}@{}}');
+  L.push('\\begin{singlespacing}\\fontsize{6.5pt}{8pt}\\selectfont\\setlength{\\tabcolsep}{2.5pt}');
+  L.push('\\begin{longtable}{@{}>{\\fontsize{6.5pt}{8pt}\\selectfont\\raggedright\\arraybackslash}p{0.09\\linewidth} >{\\fontsize{6.5pt}{8pt}\\selectfont\\raggedright\\arraybackslash}p{0.06\\linewidth} >{\\fontsize{6.5pt}{8pt}\\selectfont\\raggedright\\arraybackslash}p{0.18\\linewidth} >{\\fontsize{6.5pt}{8pt}\\selectfont\\raggedright\\arraybackslash}p{0.18\\linewidth} >{\\fontsize{6.5pt}{8pt}\\selectfont\\raggedright\\arraybackslash}p{0.29\\linewidth} >{\\fontsize{6.5pt}{8pt}\\selectfont\\raggedright\\arraybackslash}p{0.17\\linewidth}@{}}');
   L.push('\\toprule\\textbf{Stage} & \\textbf{RDF ID} & \\textbf{Choice} & \\textbf{Forks} & \\textbf{Rationale} & \\textbf{Support} \\\\');
   L.push('\\midrule');
   L.push('\\endfirsthead');
@@ -1267,7 +1267,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   L.push('\\bottomrule\\endfoot');
   L.push(ledgerRows);
   L.push('\\end{longtable}');
-  L.push('\\end{singlespacing}}');
+  L.push('\\end{singlespacing}');
   L.push('\\end{landscape}');
 
   const __bodyJoined = fillMissingCites(__bodyRaw);

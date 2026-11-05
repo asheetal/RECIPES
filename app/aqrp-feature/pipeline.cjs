@@ -1313,6 +1313,10 @@ async function runStep({ step, filePath, expectedRecordIds, pools, allRdfs, runI
   if (step === 24) {
     const p = readJson(filePath);
     if (Array.isArray(p.dimensions)) {
+      if (p.dimensions.length > 6) {
+        console.warn(`[step24] clamping ${p.dimensions.length} dimensions to 6 to respect schema boundary`);
+        p.dimensions = p.dimensions.slice(0, 6);
+      }
       p.dimensions = p.dimensions.map(dim => {
         if (!dim || typeof dim !== 'object') return dim;
         const cleaned = { ...dim };

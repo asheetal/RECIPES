@@ -1266,7 +1266,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   L.push('\\endhead');
   L.push('\\bottomrule\\endfoot');
   L.push(ledgerRows);
-  L.push('\\end{longtable}\\endgroup');
+  L.push('\\end{longtable}');
   L.push('\\end{singlespacing}}');
   L.push('\\end{landscape}');
 
@@ -1367,7 +1367,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
         __pdfB64 = compileRes.pdf_b64;
         __pdfSource = "auto-step32-" + new Date().toISOString();
       } else {
-        console.error("[step32] auto-compile failed:", compileRes && (compileRes.stage || compileRes.error || compileRes.log_tail));
+        console.error("[step32] auto-compile failed:", JSON.stringify({ stage: compileRes?.stage, error: compileRes?.error, log_tail: compileRes?.log_tail }));
       }
     } else {
       console.error("[step32] latex template shell not found");

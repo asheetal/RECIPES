@@ -172,8 +172,7 @@ function getStepContract(step) {
   step = Number(step);
   if (step === 1) return '{ file_id: string }';
   if (step === 13) return 'no payload required (auto-assembled from step 4 state)';
-  if (step === 4 || step === 16 || step === 17) return '{ payload: { panel_result: { panel, n, responses } } }';
-  if (step === 22) return '{ payload: { panel_result: { panel, n, responses }, negative_case_resolution: [] } }';
+  if (step === 4 || step === 16 || step === 17 || step === 22) return '{ payload: { panel_result: { panel, n, responses } } }';
   if (step === 32) return `{ payload: { rdf_records: ${RDF_MAP[32]} } }`;
 
   init();
@@ -209,8 +208,7 @@ function getStepInvocationSignature(step) {
   step = Number(step);
   if (step === 1) return '{step:1, file_id:"<attached file_id>"}';
   if (step === 13) return '{step:13}';
-  if (step === 4 || step === 16 || step === 17) return `{step:${step}, payload:{panel_result}}`;
-  if (step === 22) return '{step:22, payload:{panel_result, negative_case_resolution}}';
+  if (step === 4 || step === 16 || step === 17 || step === 22) return `{step:${step}, payload:{panel_result}}`;
   if (step === 32) return '{step:32, payload:{rdf_records:[R32]}}';
 
   init();

@@ -240,7 +240,29 @@ function describe() {
   };
 }
 
+
+function getPanelBatchSchema(step) {
+  step = Number(step);
+  init();
+  const boundaryFile = BOUNDARY[step];
+  if (!boundaryFile) return null;
+  const raw = state.rawSchemas[step] || readSchema(boundaryFile);
+  if (!raw || !raw.properties) return null;
+  const matrixKey = Object.keys(raw.properties).find(k => k.endsWith('_matrix'));
+  if (!matrixKey || !raw.properties[matrixKey].items) return null;
+  const rowSchema = raw.properties[matrixKey].items;
+  const props = { ...rowSchema.properties };
+  delete props.coder_id;
+  const req = (rowSchema.required || []).filter(k => k !== 'coder_id');
+  return {
+    type: 'object',
+    properties: props,
+    required: req
+  };
+}
+
 module.exports = {
+  getPanelBatchSchema,
   getStepPool,
   getStepStatus,
   validateBoundary,

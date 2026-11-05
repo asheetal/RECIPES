@@ -1403,7 +1403,19 @@ async function runStep({ step, filePath, expectedRecordIds, pools, allRdfs, runI
   if (step === 9) return searchStep(9, { filePath, poolId: 'P04', extraFields: ['lit_map'], status: 'LIT_SCAN_COMPLETE' });
   if (step === 10) return surgeonStep(10, { filePath, requiredFields: ['candidate_lenses'], rdfIds: ['R10'], allowedPools: ['P04'], pools, status: 'LENSES_PROPOSED' });
   if (step === 11) return searchStep(11, { filePath, poolId: 'P05', status: 'LENS_SEARCH_COMPLETE' });
-  if (step === 12) return surgeonStep(12, { filePath, requiredFields: ['chosen_framing','framing_comparison'], rdfIds: ['R12'], allowedPools: ['P05'], pools, status: 'FRAMING_SELECTED' });
+  if (step === 12) {
+    const res = await surgeonStep(12, { filePath, requiredFields: ['chosen_framing','framing_comparison'], rdfIds: ['R12'], allowedPools: ['P05'], pools, status: 'FRAMING_SELECTED' });
+    if (Array.isArray(res.output?.framing_comparison)) {
+      res.output.framing_comparison = res.output.framing_comparison.map(fc => ({
+        lens: String(fc.lens || ''),
+        coverage: Number(fc.coverage),
+        novelty: Number(fc.novelty),
+        negative_case_fit: Number(fc.negative_case_fit),
+        total_score: Number(fc.total_score)
+      }));
+    }
+    return res;
+  }
   if (step === 13) return step13({ filePath });
   if (step === 14) return searchStep(14, { filePath, poolId: 'P06', status: 'CODEBOOK_SEARCH_COMPLETE' });
   if (step === 15) return surgeonStep(15, { filePath, requiredFields: ['codebook'], rdfIds: ['R15'], allowedPools: ['P06'], pools, status: 'CODEBOOK_COMPLETE' });

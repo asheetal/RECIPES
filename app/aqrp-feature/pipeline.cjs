@@ -782,12 +782,12 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   L.push('\\noindent Following the Gioia methodology \\citep{gioia2013seeking}, raw informant responses were distilled into 1st-order empirical concepts, clustered into 2nd-order analytical themes, and synthesized into aggregate theoretical dimensions. Table~1 displays the complete data structure.\\par\\vspace{0.6em}');
   L.push('{\\fontsize{8pt}{9.6pt}\\selectfont');
   L.push('\\begin{longtable}{@{}>{\\raggedright\\arraybackslash}p{0.35\\textwidth} >{\\raggedright\\arraybackslash}p{0.32\\textwidth} >{\\raggedright\\arraybackslash}p{0.28\\textwidth}@{}}');
-  L.push('\\toprule\\textbf{1st-Order Concepts (Informant Grounding)} & \\textbf{2nd-Order Analytical Themes} & \\textbf{Aggregate Dimensions} \\\\
-\midrule
-\endfirsthead');
-  L.push('\\toprule\\textbf{1st-Order Concepts (Informant Grounding)} & \\textbf{2nd-Order Analytical Themes} & \\textbf{Aggregate Dimensions} \\\\
-\midrule
-\endhead');
+  L.push('\toprule\textbf{1st-Order Concepts (Informant Grounding)} & \textbf{2nd-Order Analytical Themes} & \textbf{Aggregate Dimensions} \\');
+  L.push('\midrule');
+  L.push('\endfirsthead');
+  L.push('\toprule\textbf{1st-Order Concepts (Informant Grounding)} & \textbf{2nd-Order Analytical Themes} & \textbf{Aggregate Dimensions} \\');
+  L.push('\midrule');
+  L.push('\endhead');
   L.push('\\bottomrule\\endfoot');
 
   const fullThemes = (themes_k && (themes_k.k7 || themes_k.k5 || themes_k.k9)) || [];
@@ -1170,8 +1170,12 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   L.push('\\noindent\\textit{Pool IDs (P00--P13) name the literature searches the pipeline performed. P01 = corpus scope; P02--P12 = step-specific searches; P13 = reporting conventions. P00 is reserved for methodology citations. The top two papers per pool appear inline in the Support column; full bibliography in References.}\\par\\vspace{0.6em}');
   L.push('{\fontsize{6.5pt}{8pt}\selectfont\begin{singlespacing}\setlength{\tabcolsep}{3pt}');
   L.push('\begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.09\linewidth} >{\raggedright\arraybackslash}p{0.06\linewidth} >{\raggedright\arraybackslash}p{0.18\linewidth} >{\raggedright\arraybackslash}p{0.18\linewidth} >{\raggedright\arraybackslash}p{0.29\linewidth} >{\raggedright\arraybackslash}p{0.17\linewidth}@{}}');
-  L.push('\toprule\textbf{Stage} & \textbf{RDF ID} & \textbf{Choice} & \textbf{Forks} & \textbf{Rationale} & \textbf{Support} \\\\n\midrule\\n\endfirsthead');
-  L.push('\toprule\textbf{Stage} & \textbf{RDF ID} & \textbf{Choice} & \textbf{Forks} & \textbf{Rationale} & \textbf{Support} \\\\n\midrule\\n\endhead');
+  L.push('\toprule\textbf{Stage} & \textbf{RDF ID} & \textbf{Choice} & \textbf{Forks} & \textbf{Rationale} & \textbf{Support} \\');
+  L.push('\midrule');
+  L.push('\endfirsthead');
+  L.push('\toprule\textbf{Stage} & \textbf{RDF ID} & \textbf{Choice} & \textbf{Forks} & \textbf{Rationale} & \textbf{Support} \\');
+  L.push('\midrule');
+  L.push('\endhead');
   L.push('\\bottomrule\\endfoot');
   L.push(ledgerRows);
   L.push('\\end{longtable}');

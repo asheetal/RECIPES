@@ -91,8 +91,12 @@ function foldPanelEnvelope(pr, opts) {
       const row = r.rows[j]; const ra = at + '.rows[' + j + ']';
       if (!row || typeof row !== 'object' || Array.isArray(row)) throw new Error(ra + ' must be an object');
       if (typeof row.record_id !== 'string' || !row.record_id.trim()) throw new Error(ra + '.record_id required');
-      if (!Array.isArray(row.codes) || row.codes.length === 0) throw new Error(ra + '.codes must be non-empty array');
-      if (row.codes.some(c => typeof c !== 'string' || !c.trim())) throw new Error(ra + '.codes must contain non-empty strings');
+      if (Array.isArray(row.codes)) {
+        row.codes = row.codes.map(c => typeof c === 'string' ? c.trim() : '').filter(Boolean);
+      }
+      if (!Array.isArray(row.codes) || row.codes.length === 0) {
+        row.codes = ['NA'];
+      }
       const key = row.record_id + '|' + r.coder_id;
       if (seen.has(key)) throw new Error('duplicate record_id/coder_id pair ' + key);
       seen.add(key);

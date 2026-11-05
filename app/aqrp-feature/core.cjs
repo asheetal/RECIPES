@@ -127,7 +127,8 @@ function makeService(repo, deps) {
       for (let i = 0; i < n; i++) {
         const pc = per[i];
         if (!slots[i].coder_id && pc && pc.coder_id) slots[i].coder_id = pc.coder_id;
-        slots[i].rows.push({ record_id: String(id), codes: (pc && pc.codes) || ['NA'], quote: (pc && pc.quote) || '' });
+        const cleanCodes = Array.isArray(pc && pc.codes) ? pc.codes.map(c => typeof c === 'string' ? c.trim() : '').filter(Boolean) : [];
+        slots[i].rows.push({ record_id: String(id), codes: cleanCodes.length ? cleanCodes : ['NA'], quote: (pc && pc.quote) || '' });
       }
     }
     return { panel: 'LLM_ASSISTANT_PANEL_BATCH', n, responses: slots.map((x, i) => ({ coder_id: x.coder_id || ('panel-slot-' + i), rows: x.rows })) };

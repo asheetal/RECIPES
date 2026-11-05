@@ -782,12 +782,12 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   L.push('\\noindent Following the Gioia methodology \\citep{gioia2013seeking}, raw informant responses were distilled into 1st-order empirical concepts, clustered into 2nd-order analytical themes, and synthesized into aggregate theoretical dimensions. Table~1 displays the complete data structure.\\par\\vspace{0.6em}');
   L.push('{\\fontsize{8pt}{9.6pt}\\selectfont');
   L.push('\\begin{longtable}{@{}>{\\raggedright\\arraybackslash}p{0.35\\textwidth} >{\\raggedright\\arraybackslash}p{0.32\\textwidth} >{\\raggedright\\arraybackslash}p{0.28\\textwidth}@{}}');
-  L.push('\toprule\textbf{1st-Order Concepts (Informant Grounding)} & \textbf{2nd-Order Analytical Themes} & \textbf{Aggregate Dimensions} \\');
-  L.push('\midrule');
-  L.push('\endfirsthead');
-  L.push('\toprule\textbf{1st-Order Concepts (Informant Grounding)} & \textbf{2nd-Order Analytical Themes} & \textbf{Aggregate Dimensions} \\');
-  L.push('\midrule');
-  L.push('\endhead');
+  L.push('\\toprule\\textbf{1st-Order Concepts (Informant Grounding)} & \\textbf{2nd-Order Analytical Themes} & \\textbf{Aggregate Dimensions} \\\\');
+  L.push('\\midrule');
+  L.push('\\endfirsthead');
+  L.push('\\toprule\\textbf{1st-Order Concepts (Informant Grounding)} & \\textbf{2nd-Order Analytical Themes} & \\textbf{Aggregate Dimensions} \\\\');
+  L.push('\\midrule');
+  L.push('\\endhead');
   L.push('\\bottomrule\\endfoot');
 
   const fullThemes = (themes_k && (themes_k.k7 || themes_k.k5 || themes_k.k9)) || [];
@@ -804,8 +804,8 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   for (let idx = 0; idx < cbEntries.length; idx++) {
     const cb = cbEntries[idx];
     const firstOrder = '\\textbf{' + esc(cb.code || cb.name || 'Concept') + '}: ' + esc(cb.example || cb.definition || '');
-    const th = fullThemes[idx % Math.max(1, fullThemes.length)];
-    const thName = esc(typeof th === 'string' ? th : (th.theme || th.name || cb.definition || 'Grounded theme'));
+    const th = (fullThemes && fullThemes.length) ? fullThemes[idx % fullThemes.length] : null;
+    const thName = esc(typeof th === 'string' ? th : ((th && (th.theme || th.name)) || cb.definition || 'Grounded theme'));
     const dm = dims[idx % Math.max(1, dims.length)];
     const dimName = esc(dm ? (dm.name || ('Dimension ' + (idx + 1))) : 'Socio-Technical Governance');
     L.push(firstOrder + ' & ' + thName + ' & \\textbf{' + dimName + '} \\\\');
@@ -1098,7 +1098,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     L.push('\\subsection*{A.4 Novelty Assessment (R21)}');
     L.push('{\\fontsize{7pt}{8.4pt}\\selectfont\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}p{0.28\\textwidth} >{\\raggedright\\arraybackslash}p{0.12\\textwidth} >{\\raggedright\\arraybackslash}X@{}}');
     L.push('\\toprule\\textbf{Theme} & \\textbf{Action} & \\textbf{Rationale}\\\\\\midrule');
-    for (const n of noveltyMap) L.push('{' + esc(n.theme || '') + '} & ' + esc(n.decision || n.action || '') + ' & ' + esc(n.why || n.rationale || n.novelty || '') + ' \\\\');
+    for (const n of noveltyMap) { if (!n) continue; L.push('{' + esc(n.theme || '') + '} & ' + esc(n.decision || n.action || '') + ' & ' + esc(n.why || n.rationale || n.novelty || '') + ' \\\\'); }
     L.push('\\bottomrule\\end{tabularx}\\par}');
     L.push('');
   }
@@ -1168,14 +1168,14 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   L.push('\\begin{landscape}');
   L.push('\\section*{Appendix C: Researcher Degrees of Freedom Ledger}');
   L.push('\\noindent\\textit{Pool IDs (P00--P13) name the literature searches the pipeline performed. P01 = corpus scope; P02--P12 = step-specific searches; P13 = reporting conventions. P00 is reserved for methodology citations. The top two papers per pool appear inline in the Support column; full bibliography in References.}\\par\\vspace{0.6em}');
-  L.push('{\fontsize{6.5pt}{8pt}\selectfont\begin{singlespacing}\setlength{\tabcolsep}{3pt}');
-  L.push('\begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.09\linewidth} >{\raggedright\arraybackslash}p{0.06\linewidth} >{\raggedright\arraybackslash}p{0.18\linewidth} >{\raggedright\arraybackslash}p{0.18\linewidth} >{\raggedright\arraybackslash}p{0.29\linewidth} >{\raggedright\arraybackslash}p{0.17\linewidth}@{}}');
-  L.push('\toprule\textbf{Stage} & \textbf{RDF ID} & \textbf{Choice} & \textbf{Forks} & \textbf{Rationale} & \textbf{Support} \\');
-  L.push('\midrule');
-  L.push('\endfirsthead');
-  L.push('\toprule\textbf{Stage} & \textbf{RDF ID} & \textbf{Choice} & \textbf{Forks} & \textbf{Rationale} & \textbf{Support} \\');
-  L.push('\midrule');
-  L.push('\endhead');
+  L.push('{\\fontsize{6.5pt}{8pt}\\selectfont\\begin{singlespacing}\\setlength{\\tabcolsep}{3pt}');
+  L.push('\\begin{longtable}{@{}>{\\raggedright\\arraybackslash}p{0.09\\linewidth} >{\\raggedright\\arraybackslash}p{0.06\\linewidth} >{\\raggedright\\arraybackslash}p{0.18\\linewidth} >{\\raggedright\\arraybackslash}p{0.18\\linewidth} >{\\raggedright\\arraybackslash}p{0.29\\linewidth} >{\\raggedright\\arraybackslash}p{0.17\\linewidth}@{}}');
+  L.push('\\toprule\\textbf{Stage} & \\textbf{RDF ID} & \\textbf{Choice} & \\textbf{Forks} & \\textbf{Rationale} & \\textbf{Support} \\\\');
+  L.push('\\midrule');
+  L.push('\\endfirsthead');
+  L.push('\\toprule\\textbf{Stage} & \\textbf{RDF ID} & \\textbf{Choice} & \\textbf{Forks} & \\textbf{Rationale} & \\textbf{Support} \\\\');
+  L.push('\\midrule');
+  L.push('\\endhead');
   L.push('\\bottomrule\\endfoot');
   L.push(ledgerRows);
   L.push('\\end{longtable}');

@@ -14,7 +14,7 @@ const baseProperties = {
 const STEP_SCHEMA = z.object({
   ...baseProperties,
   step: z.preprocess((val) => (val !== undefined && val !== null ? Number(val) : undefined), z.number().int().optional()),
-  payload: z.record(z.any()).optional(),
+  payload: z.union([z.record(z.any()), z.string()]).optional(),
 }).passthrough();
 
 const STEP_PARAMETERS = {
@@ -203,7 +203,15 @@ async function invoke(req, args) {
       try {
         p = JSON.parse(raw);
       } catch (__e) {
-        throw new Error(`step ${step} payload is a string but not valid JSON: ${__e.message}`);
+        let recovered = false;
+        try {
+          const patched = raw.replace(/\}\}\s*,\s*"rdf_records"/g, "}, \"rdf_records\"");
+          p = JSON.parse(patched);
+          recovered = true;
+        } catch (_) {}
+        if (!recovered) {
+          throw new Error(`step ${step} payload is a string but not valid JSON: ${__e.message}`);
+        }
       }
     }
     else { p = payload; }

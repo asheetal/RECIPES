@@ -625,10 +625,13 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   }
   if (Array.isArray(s10.candidate_lenses) && s10.candidate_lenses.length) {
     paperLit += '\\noindent\\textbf{Theoretical Lenses Evaluated:}\\begin{itemize}\\setlength{\\itemsep}{3pt}';
-    paperLit += s10.candidate_lenses.map(l => {
-      const lens = l.lens || l.name || '';
-      const fit = l.fit || l.rationale || '';
-      return '\\item \\textbf{' + lens + '}: ' + fit;
+    const poolKeys = Object.keys(keyToRec).filter(function(k) { return !k.startsWith('gioia') && !k.startsWith('braun') && !k.startsWith('corley'); });
+    paperLit += s10.candidate_lenses.map(function(l, lIdx) {
+      const lens = esc(l.lens || l.name || '');
+      const fit = esc(l.fit || l.rationale || '');
+      const citeKey = poolKeys[lIdx % poolKeys.length];
+      const citeStr = citeKey ? (' \\citep{' + citeKey + '}') : '';
+      return '\\item \\textbf{' + lens + '}' + citeStr + ': ' + fit;
     }).join('');
     paperLit += '\\end{itemize}';
   }
@@ -779,8 +782,12 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   L.push('\\noindent Following the Gioia methodology \\citep{gioia2013seeking}, raw informant responses were distilled into 1st-order empirical concepts, clustered into 2nd-order analytical themes, and synthesized into aggregate theoretical dimensions. Table~1 displays the complete data structure.\\par\\vspace{0.6em}');
   L.push('{\\fontsize{8pt}{9.6pt}\\selectfont');
   L.push('\\begin{longtable}{@{}>{\\raggedright\\arraybackslash}p{0.35\\textwidth} >{\\raggedright\\arraybackslash}p{0.32\\textwidth} >{\\raggedright\\arraybackslash}p{0.28\\textwidth}@{}}');
-  L.push('\\toprule\\textbf{1st-Order Concepts (Informant Grounding)} & \\textbf{2nd-Order Analytical Themes} & \\textbf{Aggregate Dimensions} \\\\midrule\\endfirsthead');
-  L.push('\\toprule\\textbf{1st-Order Concepts (Informant Grounding)} & \\textbf{2nd-Order Analytical Themes} & \\textbf{Aggregate Dimensions} \\\\midrule\\endhead');
+  L.push('\\toprule\\textbf{1st-Order Concepts (Informant Grounding)} & \\textbf{2nd-Order Analytical Themes} & \\textbf{Aggregate Dimensions} \\\\
+\midrule
+\endfirsthead');
+  L.push('\\toprule\\textbf{1st-Order Concepts (Informant Grounding)} & \\textbf{2nd-Order Analytical Themes} & \\textbf{Aggregate Dimensions} \\\\
+\midrule
+\endhead');
   L.push('\\bottomrule\\endfoot');
 
   const fullThemes = (themes_k && (themes_k.k7 || themes_k.k5 || themes_k.k9)) || [];
@@ -1102,7 +1109,10 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     for (const row of (resp.rows || [])) {
       const n = String(row.narrative || row.quote || '').trim();
       if (n.length > 20 && n.length < 500) {
-        const codes = (row.codes || []).filter(c => String(c).toUpperCase() !== 'NA');
+        const codes = (row.codes || []).filter(c => {
+          const s = String(c).trim();
+          return s.toUpperCase() !== 'NA' && s.length < 40 && !s.includes('minimal pair') && !s.includes('robustness');
+        });
         allCoderNarr.push({ rid: String(row.record_id), coder: resp.coder_id, codes, narrative: n });
       }
     }
@@ -1146,24 +1156,27 @@ async function step32({ filePath, pools, allRdfs, runId }) {
     }).join('; ');
   }
   const ledgerRows = all.map(r => {
-    const num = (String(r.rdf_id || '').match(/\\d+/) || [String(r.stage || '')])[0];
+    const stageName = esc(String(r.stage || '').replace(/_/g, ' '));
+    const rdfId = esc(String(r.rdf_id || ''));
     const forks = Array.isArray(r.options) ? r.options.filter(o => o !== r.chosen).map(esc).join('; ') : '';
     const poolId = r.pool_id || '';
     const support = esc(r.citation_status || '') + (poolId ? ' [' + poolId + '] ' + esc(poolLabel(poolId)) : '');
-    return esc(num) + ' & ' + esc(r.rdf_id) + ' & ' + esc(r.chosen || '') + ' & ' + forks + ' & ' + esc(r.rationale || '') + ' & ' + support + ' \\\\';
+    return stageName + ' & ' + rdfId + ' & ' + esc(r.chosen || '') + ' & ' + forks + ' & ' + esc(r.rationale || '') + ' & ' + support + ' \\\\';
   }).join('\n');
 
   L.push('\\clearpage');
+  L.push('\\begin{landscape}');
   L.push('\\section*{Appendix C: Researcher Degrees of Freedom Ledger}');
   L.push('\\noindent\\textit{Pool IDs (P00--P13) name the literature searches the pipeline performed. P01 = corpus scope; P02--P12 = step-specific searches; P13 = reporting conventions. P00 is reserved for methodology citations. The top two papers per pool appear inline in the Support column; full bibliography in References.}\\par\\vspace{0.6em}');
-  L.push('\\begin{singlespacing}\\begin{tiny}\\setlength{\\tabcolsep}{1.5pt}');
-  L.push('\\begin{longtable}{@{}>{\\raggedright\\arraybackslash}p{0.05\\linewidth} >{\\raggedright\\arraybackslash}p{0.06\\linewidth} >{\\raggedright\\arraybackslash}p{0.14\\linewidth} >{\\raggedright\\arraybackslash}p{0.16\\linewidth} >{\\raggedright\\arraybackslash}p{0.35\\linewidth} >{\\raggedright\\arraybackslash}p{0.24\\linewidth}@{}}');
-  L.push('\\toprule\\textbf{Step} & \\textbf{RDF} & \\textbf{Choice} & \\textbf{Forks} & \\textbf{Rationale} & \\textbf{Support} \\\\\\midrule\\endfirsthead');
-  L.push('\\toprule\\textbf{Step} & \\textbf{RDF} & \\textbf{Choice} & \\textbf{Forks} & \\textbf{Rationale} & \\textbf{Support} \\\\\\midrule\\endhead');
+  L.push('{\fontsize{6.5pt}{8pt}\selectfont\begin{singlespacing}\setlength{\tabcolsep}{3pt}');
+  L.push('\begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.09\linewidth} >{\raggedright\arraybackslash}p{0.06\linewidth} >{\raggedright\arraybackslash}p{0.18\linewidth} >{\raggedright\arraybackslash}p{0.18\linewidth} >{\raggedright\arraybackslash}p{0.29\linewidth} >{\raggedright\arraybackslash}p{0.17\linewidth}@{}}');
+  L.push('\toprule\textbf{Stage} & \textbf{RDF ID} & \textbf{Choice} & \textbf{Forks} & \textbf{Rationale} & \textbf{Support} \\\\n\midrule\\n\endfirsthead');
+  L.push('\toprule\textbf{Stage} & \textbf{RDF ID} & \textbf{Choice} & \textbf{Forks} & \textbf{Rationale} & \textbf{Support} \\\\n\midrule\\n\endhead');
   L.push('\\bottomrule\\endfoot');
   L.push(ledgerRows);
   L.push('\\end{longtable}');
-  L.push('\\end{tiny}\\end{singlespacing}');
+  L.push('\\end{singlespacing}}');
+  L.push('\\end{landscape}');
 
   const __bodyJoined = fillMissingCites(__bodyRaw);
   const __appendixJoined = fillMissingCites(L.join('\n'));

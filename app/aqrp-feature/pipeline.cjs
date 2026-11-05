@@ -1291,7 +1291,26 @@ async function runStep({ step, filePath, expectedRecordIds, pools, allRdfs, runI
   if (step === 21) return surgeonStep(21, { filePath, requiredFields: ['novelty_map'], rdfIds: ['R21'], allowedPools: ['P08'], pools, status: 'NOVELTY_COMPLETE' });
   if (step === 22) return panelStepGeneric(22, { filePath, matrixField: 'negative_case_matrix', disField: 'negative_case_disagreements', status: 'NEGATIVE_CASES_COMPLETE', runId });
   if (step === 23) return searchStep(23, { filePath, poolId: 'P09', status: 'AGGREGATION_SEARCH_COMPLETE' });
-  if (step === 24) return surgeonStep(24, { filePath, requiredFields: ['dimensions'], rdfIds: ['R24'], allowedPools: ['P09'], pools, status: 'DIMENSIONS_COMPLETE' });
+  if (step === 24) {
+    const p = readJson(filePath);
+    if (Array.isArray(p.dimensions)) {
+      p.dimensions = p.dimensions.map(dim => {
+        if (!dim || typeof dim !== 'object') return dim;
+        const cleaned = { ...dim };
+        delete cleaned.nature;
+        if (!cleaned.tension || typeof cleaned.tension !== 'string' || !cleaned.tension.trim()) {
+          const cFor = Array.isArray(cleaned.conditions_for) && cleaned.conditions_for[0] ? cleaned.conditions_for[0] : '';
+          const cAgainst = Array.isArray(cleaned.conditions_against) && cleaned.conditions_against[0] ? cleaned.conditions_against[0] : '';
+          cleaned.tension = (cFor && cAgainst)
+            ? `Tension between ${cFor} and ${cAgainst}`
+            : (cleaned.mechanism || `Tension in ${cleaned.name || 'theoretical dimension'}`);
+        }
+        return cleaned;
+      });
+      fs.writeFileSync(filePath, JSON.stringify(p));
+    }
+    return surgeonStep(24, { filePath, requiredFields: ['dimensions'], rdfIds: ['R24'], allowedPools: ['P09'], pools, status: 'DIMENSIONS_COMPLETE' });
+  }
   if (step === 25) return searchStep(25, { filePath, poolId: 'P10', status: 'MODEL_SEARCH_COMPLETE' });
   if (step === 26) return surgeonStep(26, { filePath, requiredFields: ['model_draft'], rdfIds: ['R26'], allowedPools: ['P10'], pools, status: 'MODEL_COMPLETE' });
   if (step === 27) return searchStep(27, { filePath, poolId: 'P11', status: 'DIAGRAM_SEARCH_COMPLETE' });

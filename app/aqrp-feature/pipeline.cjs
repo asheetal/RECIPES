@@ -1203,7 +1203,7 @@ async function step32({ filePath, pools, allRdfs, runId }) {
   L.push('\\endhead');
   L.push('\\bottomrule\\endfoot');
   L.push(ledgerRows);
-  L.push('\\end{longtable}');
+  L.push('\\end{longtable}\\endgroup');
   L.push('\\end{singlespacing}}');
   L.push('\\end{landscape}');
 

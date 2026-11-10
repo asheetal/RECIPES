@@ -3,7 +3,9 @@ import sys
 import json
 import re
 import argparse
-
+import subprocess
+import shutil
+import traceback
 
 def build_executive_takeaways(payload):
     try:

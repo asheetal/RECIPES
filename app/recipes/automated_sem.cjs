@@ -35,8 +35,7 @@ RULES (verbatim from design doc step_03_taxonomy.tex):
   7. Record every discretionary taxonomy and modeling classification in decision_log.
   8. Single-Producer Invariance: emit strictly valid step3_out.json.
 Payload keys: file_path; data_sheet; header_row_index:0; max_evaluations:5000; controls:[codes]; taxonomy:[{code, role, family, valence}]; family_summary:{family_name:{role:"IV"|"MOD"|"MED"|"DV"|"CONTROL", members:["CODE1","CODE2",...]}}; cardinality_check:{IV:{count,cap,pass}, MOD:{...}, MED:{...}, DV:{...}, CONTROL:{...}}; claims (verbatim + new); retrieval_log (verbatim + new); decision_log (verbatim + new entries with decision_type in {TAXONOMY_ROLE_CLASSIFICATION, CONSTRUCT_FAMILY_CLUSTERING, VALENCE_ASSIGNMENT, COVARIATE_SELECTION}).
-HARD PINS — valence is FIXED by design doc step3_out.json. Use EXACTLY these per code:
-  OrTe:Neutral, PrTe:Neutral, A3:Negative, PAPE:Positive, APMT:Positive, AVMT:Negative, PMFS:Positive, PVFS:Negative, LOTV:Positive, LMX:Positive, FBFA:Positive, POS:Positive, JOAT:Positive, FBFJ:Positive, JOIS:Negative, GN:Positive, SN:Negative, GNS:Positive, PRMT:Positive, INMT:Positive, ORID:Positive, JOIV:Positive, ORCM:Positive, AC:Positive, CC:Negative, NC:Positive, WE:Positive, PV:Positive, AV:Neutral, DV:Negative, PMV:Positive, PHV:Negative, TP:Positive, VOFU:Negative, VOEF:Positive, HAID:Positive, PS:Positive.
+Assign theoretical valence (Positive | Negative | Neutral) strictly to the variable codes resolved in step2_out.json.
 family_summary MUST be {family_name:{role, members:[codes]}} — NEVER count integers like {motivation:4}.
 Call asp_step_run({step:3, payload:{...}}).
 

@@ -242,30 +242,59 @@ const DEDUP_KEY = { claims: 'claim_id', retrieval_log: 'query_id', decision_log:
 
 function deriveStep2Mappings(prior) {
   if (!prior || !Array.isArray(prior.sheets)) return null;
-  const meta = prior.sheets.find((sh) => sh && typeof sh.sheet_name === 'string' && /variable\s*description/i.test(sh.sheet_name));
-  const data = prior.sheets.find((sh) => sh && typeof sh.sheet_name === 'string' && /^dataset$/i.test(sh.sheet_name.trim()));
+  const meta = prior.sheets.find((sh) => sh && typeof sh.sheet_name === "string" && /variable\s*description/i.test(sh.sheet_name));
+  const data = prior.sheets.find((sh) => sh && typeof sh.sheet_name === "string" && /^dataset$/i.test(sh.sheet_name.trim()));
   if (!meta || !data) return null;
   const cols = Array.isArray(meta.columns) ? meta.columns : [];
-  if (cols.length < 4) return null;
-  const waveCol = (cols[0] && cols[0].sample_values) || [];
-  const typeCol = (cols[1] && cols[1].sample_values) || [];
-  const nameCol = (cols[2] && cols[2].sample_values) || [];
-  const codeCol = (cols[3] && cols[3].sample_values) || [];
-  const n = Math.min(waveCol.length, typeCol.length, nameCol.length, codeCol.length);
+  if (cols.length < 2) return null;
+
   const dataCols = Array.isArray(data.columns) ? data.columns : [];
-  const dataHeaders = dataCols.map((c) => (c && c.sample_values && c.sample_values[0]) || '');
-  const roleMap = { 'independent variable': 'IV', 'moderator': 'MOD', 'mediator': 'MED', 'dependent variable': 'DV', 'control': 'Control' };
+  const dataHeaders = dataCols.map((c) => (c && c.sample_values && c.sample_values[0]) || "");
+  const dataHeaderSet = new Set(dataHeaders.filter(Boolean));
+
+  let bestCodeColIdx = -1;
+  let maxMatches = 0;
+  for (let c = 0; c < cols.length; c++) {
+    const samples = (cols[c] && cols[c].sample_values) || [];
+    let matches = 0;
+    for (let r = 1; r < samples.length; r++) {
+      if (dataHeaderSet.has(String(samples[r] || "").trim())) matches++;
+    }
+    if (matches > maxMatches) {
+      maxMatches = matches;
+      bestCodeColIdx = c;
+    }
+  }
+
+  const codeColIdx = bestCodeColIdx >= 0 ? bestCodeColIdx : Math.min(3, cols.length - 1);
+  const codeCol = (cols[codeColIdx] && cols[codeColIdx].sample_values) || [];
+
+  let nameColIdx = cols.findIndex((_, idx) => idx !== codeColIdx && /name|description|label/i.test(String((cols[idx].sample_values || [])[0] || "")));
+  if (nameColIdx < 0) nameColIdx = Math.max(0, codeColIdx - 1);
+
+  let typeColIdx = cols.findIndex((_, idx) => idx !== codeColIdx && idx !== nameColIdx && /type|role/i.test(String((cols[idx].sample_values || [])[0] || "")));
+  let waveColIdx = cols.findIndex((_, idx) => idx !== codeColIdx && idx !== nameColIdx && /wave/i.test(String((cols[idx].sample_values || [])[0] || "")));
+
+  const waveCol = (waveColIdx >= 0 && cols[waveColIdx] && cols[waveColIdx].sample_values) || (cols[0] && cols[0].sample_values) || [];
+  const typeCol = (typeColIdx >= 0 && cols[typeColIdx] && cols[typeColIdx].sample_values) || (cols[1] && cols[1].sample_values) || [];
+  const nameCol = (nameColIdx >= 0 && cols[nameColIdx] && cols[nameColIdx].sample_values) || (cols[2] && cols[2].sample_values) || [];
+
+  const n = Math.max(waveCol.length, typeCol.length, nameCol.length, codeCol.length);
+  const roleMap = { "independent variable": "IV", "independent": "IV", "moderator": "MOD", "mediator": "MED", "dependent variable": "DV", "dependent": "DV", "control": "Control" };
   const out = [];
   for (let i = 1; i < n; i += 1) {
-    const wave = String(waveCol[i] || '').trim();
-    const rawRole = String(typeCol[i] || '').trim().toLowerCase();
-    const codebook_name = String(nameCol[i] || '').trim();
-    const column_name = String(codeCol[i] || '').trim();
-    if (!codebook_name || !column_name) continue;
+    const wave = String(waveCol[i] || "Wave 1").trim() || "Wave 1";
+    const rawRole = String(typeCol[i] || "").trim().toLowerCase();
+    const column_name = String(codeCol[i] || "").trim();
+    let codebook_name = String(nameCol[i] || "").trim();
+    if (!column_name) continue;
+    if (!codebook_name || codebook_name === column_name) {
+      codebook_name = column_name;
+    }
     const ci = dataHeaders.indexOf(column_name);
     if (ci < 0) continue;
-    const role = roleMap[rawRole] || 'Control';
-    out.push({ codebook_name, column_name, column_index: ci, wave, codebook_role: role, data_type: 'numeric' });
+    const role = roleMap[rawRole] || "IV";
+    out.push({ codebook_name, column_name, column_index: ci, wave, codebook_role: role, data_type: "numeric" });
   }
   return out.length > 0 ? out : null;
 }
@@ -434,7 +463,16 @@ function mergePassthrough(step, prior, payload) {
   }
   if (step === 2 && prior) {
     const der = deriveStep2Fields(prior);
-    if (der) { for (const [k, v] of Object.entries(der)) out[k] = v; }
+    if (der) {
+      for (const [k, v] of Object.entries(der)) {
+        if (k === "variable_mappings" && Array.isArray(out.variable_mappings) && out.variable_mappings.length > 0) {
+          continue;
+        }
+        if (out[k] === undefined) {
+          out[k] = v;
+        }
+      }
+    }
   }
   if (step === 12 && prior) {
     const refs = deriveStep12References(prior, out.claims || []);
@@ -590,7 +628,7 @@ const PAYLOAD_SCHEMAS = {
       downstream_impact: z.string(),
       claims: z.array(z.string()),
     }).strip()).min(1),
-  }).strict(),
+  }).passthrough(),
 };
 
 function validatePayloadSchema(step, payload, zlib) {

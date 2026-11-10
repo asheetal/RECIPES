@@ -10,7 +10,7 @@ STEP-CLOSE RULE: A recipe step N closes ONLY when asp_step_run({step:N, payload?
 
 STEP 1 (tool): asp_step_run({step:1, file_id:"<attached file_id>"}). Returns {sheets:[{sheet_name, n_cols, columns:[{col_idx, sample_values}]}]}.
 
-STEP 2 (cognitive): Emit ONLY the fields the tool cannot derive. The tool reads step1_out.json and fills data_sheet, metadata_sheet, header_row_index, data_start_row_index, survey_design, join_key, n_variables_mapped, variable_mappings, quorum_passed, and status. You must NOT include those fields in the payload.
+STEP 2 (cognitive): Inspect step1_out.json. If the layout is standard, emit the minimal payload and let the tool derive variable_mappings. If the metadata sheet has a non-standard layout (e.g. 5+ columns or trailing blank columns in Dataset), you MAY explicitly include variable_mappings in the payload with [{ codebook_name, column_name, column_index, wave, codebook_role, data_type }].
 
 STEP 2 PAYLOAD (MINIMAL): { status:"RESOLVED", unmapped_dropped:[], claims:[{claim_id, decision_id:"DEC_SCH_001", text, claim_type, citations_required:true, support_status:"SUPPORTED", ref_id, short_cite, justifying_excerpt}], retrieval_log:[{query_id:"Q2_01", query, database:"openalex", date:"YYYY-MM-DD", results:[{ref_id, title, year, doi, abstract_snippet, retrieved_for_claims:["CLM_2_001a"]}]}], decision_log:[{step:2, stage_name:"Semantic Schema & Sheet Layout Resolver", decision_id:"DEC_SCH_001", decision_type:"SCHEMA_DISAMBIGUATION", choice_made, counterfactual_forks:[...], epistemic_rationale, downstream_impact, claims:["CLM_2_001a"]}] }
 
@@ -19,7 +19,7 @@ RULES for step 2 (strict):
 - claims[] MUST contain exactly one SUPPORTED claim with a verbatim justifying_excerpt from the returned abstract.
 - retrieval_log[] MUST contain exactly one entry documenting that search. results[] MUST contain exactly one result object with the fields listed above.
 - decision_log[] MUST contain exactly one entry with decision_type SCHEMA_DISAMBIGUATION.
-- payload is a strict JSON object. Do NOT stringify. Do NOT include data_sheet, metadata_sheet, header_row_index, data_start_row_index, survey_design, join_key, n_variables_mapped, variable_mappings, quorum_passed, status — the tool derives them.
+- payload is a strict JSON object. Do NOT stringify. If variable_mappings cannot be auto-derived by standard heuristic, provide variable_mappings explicitly as an array of { codebook_name, column_name, column_index, wave, codebook_role, data_type }.
 - File names of that claim and result must match the actual search return. Never invent DOI, title, or author.
 
 Call asp_step_run({step:2, payload:{ status:"RESOLVED", unmapped_dropped:[], claims:[...], retrieval_log:[...], decision_log:[...] }}).

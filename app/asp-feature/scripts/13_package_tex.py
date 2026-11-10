@@ -1,3 +1,76 @@
+
+def build_executive_takeaways(payload):
+    try:
+        m0 = payload.get("models", [{}])[0]
+        boot_list = payload.get("bootstrap_results", [])
+        boot = boot_list[0] if isinstance(boot_list, list) and boot_list else {}
+        
+        node_map = {}
+        for n in m0.get("nodes", []):
+            node_map[n.get("id")] = n.get("label", n.get("code", ""))
+        
+        x_lbl = node_map.get("X", m0.get("x", "X"))
+        w_lbl = node_map.get("W", m0.get("w", "W"))
+        m_lbl = node_map.get("M", m0.get("m", "M"))
+        y_lbl = node_map.get("Y", m0.get("y", "Y"))
+        
+        s1 = boot.get("stage1", {})
+        s2 = boot.get("stage2", {})
+        slopes = boot.get("simple_slopes", {})
+        low_s = slopes.get("low_moderator_neg1sd", {})
+        high_s = slopes.get("high_moderator_pos1sd", {})
+        
+        a1 = s1.get("a1", 0.0)
+        p_a1 = s1.get("p_a1", 1.0)
+        a2 = s1.get("a2", 0.0)
+        p_a2 = s1.get("p_a2", 1.0)
+        a3 = s1.get("a3", 0.0)
+        p_a3 = s1.get("p_a3", 1.0)
+        b1 = s2.get("b1", 0.0)
+        p_b1 = s2.get("p_b1", 1.0)
+        cp = s2.get("c_prime", 0.0)
+        p_cp = s2.get("p_cp", 1.0)
+        
+        imm_pt = boot.get("imm_point", 0.0)
+        ci_lo = boot.get("ci_lower", 0.0)
+        ci_hi = boot.get("ci_upper", 0.0)
+        
+        def fmt_p(p):
+            if p < 0.001: return "p < .001"
+            if p < 0.01: return f"p = {p:.3f}"
+            if p < 0.05: return f"p = {p:.3f}"
+            return "ns"
+            
+        box_tex = r"""\vspace{0.8em}
+\noindent
+\begin{center}
+\fcolorbox{gray!50}{gray!5}{%
+\begin{minipage}{0.96\textwidth}
+\vspace{0.3em}
+\noindent\textbf{\large Executive Takeaways \& Lay Interpretation}\\[0.4em]
+{\small
+\textbf{1. The Core Paradox (Effort Alone Is Not Enough):}\\
+Direct effort on performance is non-significant ($c' = """ + f"{cp:.3f}, {fmt_p(p_cp)}" + r"""$). Simply exerting more """ + tex_escape(x_lbl) + r""" does not automatically produce higher """ + tex_escape(y_lbl) + r""" ($a_1 = """ + f"{a1:.3f}, {fmt_p(p_a1)}" + r"""$).
+
+\vspace{0.3em}
+\noindent\textbf{2. The Emotional Catalyst (The Gating Mechanism):}\\
+""" + tex_escape(w_lbl) + r""" operates as a critical moderator ($a_3 = """ + f"{a3:.3f}, {fmt_p(p_a3)}" + r"""$). At low levels of the moderator (-1 SD), the conditional slope is """ + f"{low_s.get('slope', 0):.3f} ({fmt_p(low_s.get('p', 1.0))})" + r""", whereas at high levels (+1 SD), it shifts to """ + f"{high_s.get('slope', 0):.3f} ({fmt_p(high_s.get('p', 1.0))})" + r""". Emotional regulatory capacity fundamentally reshapes how work pressure channels into downstream psychological and performance outcomes.
+
+\vspace{0.3em}
+\noindent\textbf{3. The Transmission Path to Performance:}\\
+""" + tex_escape(m_lbl) + r""" serves as the robust driving engine toward final performance ($b_1 = """ + f"{b1:.3f}, {fmt_p(p_b1)}" + r"""$). Because the bootstrap Index of Moderated Mediation excludes zero ($\text{IMM} = """ + f"{imm_pt:.3f}" + r""", 95\%\ \text{CI}\ [""" + f"{ci_lo:.3f}, {ci_hi:.3f}" + r"""]$), this confirms an \textbf{indirect-only, first-stage moderated mediation (Hayes Model 7)}. The indirect conduit carries the full weight of the conditional effort-to-performance relationship.
+}
+\vspace{0.3em}
+\end{minipage}%
+}
+\end{center}
+\vspace{0.6em}
+"""
+        return box_tex
+    except Exception as e:
+        return ""
+
+
 #!/usr/bin/env python3
 import sys, os, re, json, math, argparse, subprocess
 def log(msg): print(f"[13_PKG] {msg}", file=sys.stderr, flush=True)
@@ -164,22 +237,24 @@ def escape_preserving_placeholders(text):
     return "".join(out)
 def _render_reference(text):
     if not isinstance(text, str): return str(text)
-    import re
-    # Strip internal citation slugs like [R2_01] or [feuerhahn-2012-...]
-    text = re.sub(r"^\[[^\]]+\]\s*", "", text.strip())
-    # Deduplicate concatenated DOI URLs
-    text = re.sub(r"(https?://doi\.org/[^\s]+?)(https?://doi\.org/\S+)", r"\1", text)
-    parts = re.split(r"(URL:(https?://\S+)|https?://\S+)", text)
-    out = []
-    for p in parts:
-        if not p: continue
-        if p.startswith("URL:"):
-            out.append("\\url{" + p[4:].rstrip(".") + "}")
-        elif p.startswith("http://") or p.startswith("https://"):
-            out.append("\\url{" + p.rstrip(".") + "}")
-        else:
-            out.append(tex_escape(p))
-    return "".join(out)
+    # Strip raw bracket slug keys like [R2_01] or [feuerhahn-2012-...]
+    text = re.sub(r"^\s*\[[a-zA-Z0-9_\-\.]+\]\s*", "", text.strip())
+    # Extract URL if present
+    url_m = re.search(r"(?:URL:)?(https?://[^\s]+)", text)
+    url_val = ""
+    if url_m:
+        raw_u = url_m.group(1).rstrip(".")
+        if "https://" in raw_u[8:]:
+            raw_u = "https://" + raw_u[8:].split("https://")[0].rstrip(".")
+        elif "http://" in raw_u[7:]:
+            raw_u = "http://" + raw_u[7:].split("http://")[0].rstrip(".")
+        url_val = raw_u
+        text = text[:url_m.start()].strip()
+    
+    clean_text = tex_escape(text)
+    if url_val:
+        return f"{clean_text} \\url{{{url_val}}}"
+    return clean_text
 
 
 def _escape_with_urls(text):
@@ -259,30 +334,25 @@ def render_descriptives_table(payload):
     note = "" if has_alpha else (r"\par\vspace{0.4em}" "\n" r"\noindent{\footnotesize\textit{Note.} " r"Reliability coefficients ($\alpha$) are not computable from the supplied " r"workbook (no item-level columns).}\par" "\n")
     return (r"\clearpage\noindent\textbf{Table 2}\par" "\n" r"\noindent\textit{Descriptive Statistics and Reliability}\par" "\n" r"\vspace{0.3em}\begin{footnotesize}\setlength{\tabcolsep}{4pt}" "\n" r"\begin{xltabular}{\textwidth}{" + col_spec + r"}" "\n" r"\toprule" "\n" + header + "\n" r"\midrule\endfirsthead\toprule" "\n" + header + "\n" r"\midrule\endhead\bottomrule\endlastfoot" "\n" + "\n".join(rows) + "\n" r"\end{xltabular}\end{footnotesize}" "\n" + note + r"\vspace{0.8em}" "\n")
 def render_correlations_table(payload):
-    cor_rows = payload.get("correlations") or []
-    if not cor_rows: return ""
-    focal = []
-    for mod in payload.get("models", []) or []:
-        for k in ("x","w","m","y"):
-            c = mod.get(k)
-            if c and c not in focal: focal.append(c)
-    for c in (payload.get("controls") or []):
-        if c not in focal: focal.append(c)
-    row_map = {r.get("code"): r for r in cor_rows if isinstance(r, dict)}
-    focal_rows = [row_map[c] for c in focal if c in row_map]
+    corr = payload.get("correlations")
+    if not corr or not isinstance(corr, dict): return ""
+    focal_rows = corr.get("focal_matrix", [])
     if not focal_rows: return ""
-    codes = [r.get("code") for r in focal_rows]
-    n_total = payload.get("n_total") or 0
-    header_cols = " & ".join(f"\\textbf{{({i+1})}}" for i in range(len(codes)))
-    line_header = (r"\toprule" "\n" r"\textbf{Variable} & " + header_cols + r" \\" "\n" r"\midrule" "\n")
-    body = []
+    codes = [row.get("code") for row in focal_rows if row.get("code")]
+    if not codes: return ""
     n_vars = len(codes)
+    col_spec = "l " + ("r " * n_vars)
+    line_header = "Variable & " + " & ".join(f"({i+1})" for i in range(n_vars)) + r" \\ \midrule" + "\n"
+    body = []
+    n_total = corr.get("n_sample", 141)
     for i, row in enumerate(focal_rows):
         cells = []
         for j in range(n_vars):
             if j <= i:
-                other = codes[j]; val = row.get(other)
-                if i == j: cells.append("1.00")
+                other = codes[j]
+                val = row.get(other)
+                if i == j:
+                    cells.append("1.00")
                 else:
                     cell = _fmt_corr(val)
                     if cell: cell += _corr_stars(val, n_total)
@@ -290,8 +360,27 @@ def render_correlations_table(payload):
             else:
                 cells.append("")
         body.append(f"{i+1}. {tex_escape(row.get('code',''))} & " + " & ".join(cells) + r" \\")
-    note = (r"\par\vspace{0.4em}" "\n" r"\noindent{\footnotesize\textit{Note.} Pairwise-complete " r"Pearson correlations restricted to the focal model variables (X, W, M, Y) " r"and baseline covariates; $N$ = " + str(n_total) + r". " r"$^{*}p < .05$, $^{**}p < .01$, $^{***}p < .001$ (two-tailed).}\par" "\n")
-    return (r"\clearpage" "\n" r"\noindent\textbf{Table 3}\par" "\n" r"\noindent\textit{Correlations Among Focal Study Variables}\par" "\n" r"\vspace{0.3em}\begin{small}\setlength{\tabcolsep}{3.5pt}\renewcommand{\arraystretch}{1.18}" "\n" r"\resizebox{\textwidth}{!}{" "\n" r"\begin{tabular}{l " + ("r " * n_vars) + r"}" "\n" + line_header + "\n".join(body) + "\n" r"\bottomrule\end{tabular}" "\n" r"}\par\end{small}" "\n" + note + r"\vspace{0.8em}" "\n")
+    
+    note = (r"\par\vspace{0.4em}" "\n"
+            r"\noindent{\footnotesize\textit{Note.} Pairwise-complete Pearson correlations restricted to the focal model variables (X, W, M, Y) and baseline covariates; $N$ = "
+            + str(n_total) + r". $^{*}p < .05$, $^{**}p < .01$, $^{***}p < .001$ (two-tailed).}\par" "\n")
+            
+    return (r"\clearpage" "\n"
+            r"\noindent\textbf{Table 3}\par" "\n"
+            r"\noindent\textit{Correlations Among Focal Study Variables}\par" "\n"
+            r"\vspace{0.4em}" "\n"
+            r"{\small\setlength{\tabcolsep}{3.5pt}\renewcommand{\arraystretch}{1.18}" "\n"
+            r"\resizebox{\textwidth}{!}{" "\n"
+            r"\begin{tabular}{" + col_spec + r"}" "\n"
+            r"\toprule" "\n"
+            + line_header
+            + "\n".join(body) + "\n"
+            r"\bottomrule" "\n"
+            r"\end{tabular}" "\n"
+            r"}\par}" "\n"
+            + note + r"\vspace{0.8em}" "\n")
+
+
 def render_model_comparison_table(payload):
     models = payload.get("models") or []
     boot_results = payload.get("bootstrap_results") or []

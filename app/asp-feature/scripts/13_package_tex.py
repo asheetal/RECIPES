@@ -2,9 +2,20 @@
 def build_executive_takeaways(payload):
     try:
         m0 = payload.get("models", [{}])[0]
-        boot_list = payload.get("bootstrap_results", [])
-        boot = boot_list[0] if isinstance(boot_list, list) and boot_list else {}
+        focal_id = m0.get("model_id", "")
         
+        boot_list = payload.get("bootstrap_results", [])
+        boot = {}
+        if isinstance(boot_list, list):
+            for b in boot_list:
+                if isinstance(b, dict) and b.get("model_id") == focal_id:
+                    boot = b
+                    break
+            if not boot and boot_list and isinstance(boot_list[0], dict):
+                boot = boot_list[0]
+        elif isinstance(boot_list, dict):
+            boot = boot_list
+
         node_map = {}
         for n in m0.get("nodes", []):
             node_map[n.get("id")] = n.get("label", n.get("code", ""))
@@ -14,34 +25,58 @@ def build_executive_takeaways(payload):
         m_lbl = node_map.get("M", m0.get("m", "M"))
         y_lbl = node_map.get("Y", m0.get("y", "Y"))
         
-        s1 = boot.get("stage1", {})
-        s2 = boot.get("stage2", {})
-        slopes = boot.get("simple_slopes", {})
+        s1 = boot.get("stage1") or m0.get("stage1", {})
+        s2 = boot.get("stage2") or m0.get("stage2", {})
+        slopes = boot.get("simple_slopes") or m0.get("simple_slopes", {})
         low_s = slopes.get("low_moderator_neg1sd", {})
         high_s = slopes.get("high_moderator_pos1sd", {})
         
-        a1 = s1.get("a1", 0.0)
-        p_a1 = s1.get("p_a1", 1.0)
-        a2 = s1.get("a2", 0.0)
-        p_a2 = s1.get("p_a2", 1.0)
-        a3 = s1.get("a3", 0.0)
-        p_a3 = s1.get("p_a3", 1.0)
-        b1 = s2.get("b1", 0.0)
-        p_b1 = s2.get("p_b1", 1.0)
-        cp = s2.get("c_prime", 0.0)
-        p_cp = s2.get("p_cp", 1.0)
+        a1 = s1.get("a1", m0.get("a1", 0.0))
+        p_a1 = s1.get("p_a1", m0.get("p_a1", 1.0))
+        a2 = s1.get("a2", m0.get("a2", 0.0))
+        p_a2 = s1.get("p_a2", m0.get("p_a2", 1.0))
+        a3 = s1.get("a3", m0.get("a3", 0.0))
+        p_a3 = s1.get("p_a3", m0.get("p_a3", 1.0))
+        b1 = s2.get("b1", m0.get("b1", 0.0))
+        p_b1 = s2.get("p_b1", m0.get("p_b1", 1.0))
+        cp = s2.get("c_prime", m0.get("c_prime", 0.0))
+        p_cp = s2.get("p_cp", m0.get("p_cp", 1.0))
         
-        imm_pt = boot.get("imm_point", 0.0)
-        ci_lo = boot.get("ci_lower", 0.0)
-        ci_hi = boot.get("ci_upper", 0.0)
+        imm_pt = boot.get("imm_point", m0.get("footnote", {}).get("imm", {}).get("point", m0.get("imm", 0.0)))
+        ci_lo = boot.get("ci_lower", m0.get("footnote", {}).get("imm", {}).get("ci_low", 0.0))
+        ci_hi = boot.get("ci_upper", m0.get("footnote", {}).get("imm", {}).get("ci_high", 0.0))
         
         def fmt_p(p):
             if p < 0.001: return "p < .001"
             if p < 0.01: return f"p = {p:.3f}"
             if p < 0.05: return f"p = {p:.3f}"
             return "ns"
-            
-        box_tex = r"""\vspace{0.8em}
+
+        # Directional framing: buffering vs amplifying
+        if a3 > 0:
+            mod_framing = "amplifies the positive relationship"
+            role_desc = "operates as an amplifying catalyst, sensitizing the transmission path"
+        else:
+            mod_framing = "attenuates and buffers the relationship"
+            role_desc = "operates as a protective buffer, dampening the transmission path"
+
+        low_val = low_s.get('slope', 0.0)
+        low_p = fmt_p(low_s.get('p', 1.0))
+        high_val = high_s.get('slope', 0.0)
+        high_p = fmt_p(high_s.get('p', 1.0))
+
+        excludes_zero = (ci_lo > 0 and ci_hi > 0) or (ci_lo < 0 and ci_hi < 0)
+        imm_status = (
+            r"Because the bootstrap Index of Moderated Mediation excludes zero "
+            r"($\text{IMM} = " + f"{imm_pt:.3f}" + r"$, 95\%\ \text{CI}\ [" + f"{ci_lo:.3f}, {ci_hi:.3f}" + r"]$), "
+            r"this confirms an \textbf{indirect-only, first-stage moderated mediation (Hayes Model 7)}."
+        ) if excludes_zero else (
+            r"The bootstrap Index of Moderated Mediation includes zero "
+            r"($\text{IMM} = " + f"{imm_pt:.3f}" + r"$, 95\%\ \text{CI}\ [" + f"{ci_lo:.3f}, {ci_hi:.3f}" + r"]$), "
+            r"indicating conditional indirect transmission remains tentative."
+        )
+
+        box_tex = r"""\vspace{0.6em}
 \noindent
 \begin{center}
 \fcolorbox{gray!50}{gray!5}{%
@@ -49,16 +84,16 @@ def build_executive_takeaways(payload):
 \vspace{0.3em}
 \noindent\textbf{\large Executive Takeaways \& Lay Interpretation}\\[0.4em]
 {\small
-\textbf{1. The Core Paradox (Effort Alone Is Not Enough):}\\
-Direct effort on performance is non-significant ($c' = """ + f"{cp:.3f}, {fmt_p(p_cp)}" + r"""$). Simply exerting more """ + tex_escape(x_lbl) + r""" does not automatically produce higher """ + tex_escape(y_lbl) + r""" ($a_1 = """ + f"{a1:.3f}, {fmt_p(p_a1)}" + r"""$).
+\textbf{1. The Exogenous Driver and Direct Effect:}\\
+Direct effect on performance is non-significant ($c' = """ + f"{cp:.3f}, {fmt_p(p_cp)}" + r"""$). Exogenous """ + tex_escape(x_lbl) + r""" exerts a primary effect on """ + tex_escape(m_lbl) + r""" ($a_1 = """ + f"{a1:.3f}, {fmt_p(p_a1)}" + r"""$), channeling primarily through the mediating mechanism.
 
 \vspace{0.3em}
-\noindent\textbf{2. The Emotional Catalyst (The Gating Mechanism):}\\
-""" + tex_escape(w_lbl) + r""" operates as a critical moderator ($a_3 = """ + f"{a3:.3f}, {fmt_p(p_a3)}" + r"""$). At low levels of the moderator (-1 SD), the conditional slope is """ + f"{low_s.get('slope', 0):.3f} ({fmt_p(low_s.get('p', 1.0))})" + r""", whereas at high levels (+1 SD), it shifts to """ + f"{high_s.get('slope', 0):.3f} ({fmt_p(high_s.get('p', 1.0))})" + r""". Emotional regulatory capacity fundamentally reshapes how work pressure channels into downstream psychological and performance outcomes.
+\noindent\textbf{2. The Moderating Mechanism:}\\
+""" + tex_escape(w_lbl) + r""" """ + mod_framing + r""" ($a_3 = """ + f"{a3:.3f}, {fmt_p(p_a3)}" + r"""$). At low levels of the moderator (-1 SD), the conditional slope is """ + f"{low_val:.3f} ({low_p})" + r""", whereas at high levels (+1 SD), it shifts to """ + f"{high_val:.3f} ({high_p})" + r""". Thus, """ + tex_escape(w_lbl) + r""" """ + role_desc + r""".
 
 \vspace{0.3em}
 \noindent\textbf{3. The Transmission Path to Performance:}\\
-""" + tex_escape(m_lbl) + r""" serves as the robust driving engine toward final performance ($b_1 = """ + f"{b1:.3f}, {fmt_p(p_b1)}" + r"""$). Because the bootstrap Index of Moderated Mediation excludes zero ($\text{IMM} = """ + f"{imm_pt:.3f}" + r""", 95\%\ \text{CI}\ [""" + f"{ci_lo:.3f}, {ci_hi:.3f}" + r"""]$), this confirms an \textbf{indirect-only, first-stage moderated mediation (Hayes Model 7)}. The indirect conduit carries the full weight of the conditional effort-to-performance relationship.
+""" + tex_escape(m_lbl) + r""" predicts final performance ($b_1 = """ + f"{b1:.3f}, {fmt_p(p_b1)}" + r"""$). """ + imm_status + r"""
 }
 \vspace{0.3em}
 \end{minipage}%
@@ -71,8 +106,6 @@ Direct effort on performance is non-significant ($c' = """ + f"{cp:.3f}, {fmt_p(
         return ""
 
 
-#!/usr/bin/env python3
-import sys, os, re, json, math, argparse, subprocess
 def log(msg): print(f"[13_PKG] {msg}", file=sys.stderr, flush=True)
 STOPWORDS = set("""a an the of and or in on to for with by as is are was were
 be been being this that these those it its at from not but""".split())

@@ -76,36 +76,29 @@ def build_executive_takeaways(payload):
         excludes_zero = (ci_lo > 0 and ci_hi > 0) or (ci_lo < 0 and ci_hi < 0)
         imm_status = (
             r"Because the bootstrap Index of Moderated Mediation excludes zero "
-            r"($\text{IMM} = " + f"{imm_pt:.3f}" + r"$, 95\%\ \text{CI}\ [" + f"{ci_lo:.3f}, {ci_hi:.3f}" + r"]$), "
+            r"($\text{IMM} = " + f"{imm_pt:.3f}" + r"$, 95\% CI [" + f"{ci_lo:.3f}, {ci_hi:.3f}" + r"]$), "
             r"this confirms an \textbf{indirect-only, first-stage moderated mediation (Hayes Model 7)}."
         ) if excludes_zero else (
             r"The bootstrap Index of Moderated Mediation includes zero "
-            r"($\text{IMM} = " + f"{imm_pt:.3f}" + r"$, 95\%\ \text{CI}\ [" + f"{ci_lo:.3f}, {ci_hi:.3f}" + r"]$), "
+            r"($\text{IMM} = " + f"{imm_pt:.3f}" + r"$, 95\% CI [" + f"{ci_lo:.3f}, {ci_hi:.3f}" + r"]$), "
             r"indicating conditional indirect transmission remains tentative."
         )
 
         box_tex = r"""\vspace{0.6em}
 \noindent
 \begin{center}
-\fcolorbox{gray!50}{gray!5}{%
-\begin{minipage}{0.96\textwidth}
-\vspace{0.3em}
-\noindent\textbf{\large Executive Takeaways \& Lay Interpretation}\\[0.4em]
-{\small
-\textbf{1. The Exogenous Driver and Direct Effect:}\\
-Direct effect on performance is non-significant ($c' = """ + f"{cp:.3f}, {fmt_p(p_cp)}" + r"""$). Exogenous """ + tex_escape(x_lbl) + r""" exerts a primary effect on """ + tex_escape(m_lbl) + r""" ($a_1 = """ + f"{a1:.3f}, {fmt_p(p_a1)}" + r"""$), channeling primarily through the mediating mechanism.
+\begin{tcolorbox}[colback=gray!5,colframe=gray!50,arc=1mm,width=0.98\textwidth]
+\noindent\textbf{\large Executive Takeaways \& Lay Interpretation}\par\vspace{0.4em}
+\small
+\noindent\textbf{1. The Exogenous Driver and Direct Effect:}\\
+Direct effect on performance is non-significant ($c' = """ + f"{cp:.3f}, {fmt_p(p_cp)}" + r"""$). Exogenous """ + tex_escape(x_lbl) + r""" exerts a primary effect on """ + tex_escape(m_lbl) + r""" ($a_1 = """ + f"{a1:.3f}, {fmt_p(p_a1)}" + r"""$), channeling primarily through the mediating mechanism.\par\vspace{0.4em}
 
-\vspace{0.3em}
 \noindent\textbf{2. The Moderating Mechanism:}\\
-""" + tex_escape(w_lbl) + r""" """ + mod_framing + r""" ($a_3 = """ + f"{a3:.3f}, {fmt_p(p_a3)}" + r"""$). At low levels of the moderator (-1 SD), the conditional slope is """ + f"{low_val:.3f} ({low_p})" + r""", whereas at high levels (+1 SD), it shifts to """ + f"{high_val:.3f} ({high_p})" + r""". Thus, """ + tex_escape(w_lbl) + r""" """ + role_desc + r""".
+""" + tex_escape(w_lbl) + r""" """ + mod_framing + r""" ($a_3 = """ + f"{a3:.3f}, {fmt_p(p_a3)}" + r"""$). At low levels of the moderator (-1 SD), the conditional slope is """ + f"{low_val:.3f} ({low_p})" + r""", whereas at high levels (+1 SD), it shifts to """ + f"{high_val:.3f} ({high_p})" + r""". Thus, """ + tex_escape(w_lbl) + r""" """ + role_desc + r""".\par\vspace{0.4em}
 
-\vspace{0.3em}
 \noindent\textbf{3. The Transmission Path to Performance:}\\
 """ + tex_escape(m_lbl) + r""" predicts final performance ($b_1 = """ + f"{b1:.3f}, {fmt_p(p_b1)}" + r"""$). """ + imm_status + r"""
-}
-\vspace{0.3em}
-\end{minipage}%
-}
+\end{tcolorbox}
 \end{center}
 \vspace{0.6em}
 """
@@ -535,6 +528,7 @@ def build_tex_report(payload, output_tex="Automated_SEM_Recipe_Report.tex"):
 \usepackage{xltabular}
 \usepackage{listings}
 \usepackage{xcolor}
+\usepackage{tcolorbox}
 \usepackage{graphicx}
 \usepackage{amsmath, amssymb}
 \usepackage{ragged2e}

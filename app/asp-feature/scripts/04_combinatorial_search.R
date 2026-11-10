@@ -8,7 +8,8 @@ input_json <- if (length(args) > 0) fromJSON(args[1]) else fromJSON(readLines("s
 file_path        <- path.expand(input_json$file_path)
 data_sheet       <- input_json$data_sheet
 header_row_index <- ifelse(!is.null(input_json$header_row_index), as.integer(input_json$header_row_index), 0)
-controls         <- input_json$controls
+controls_raw     <- input_json$controls
+controls         <- if (is.null(controls_raw) || length(controls_raw) == 0) character(0) else as.character(unlist(controls_raw))
 max_evals        <- ifelse(!is.null(input_json$max_evaluations), as.integer(input_json$max_evaluations), 5000)
 taxonomy_dt      <- as.data.table(input_json$taxonomy)
 df_raw <- as.data.table(suppressMessages(read_excel(file_path, sheet = data_sheet, skip = header_row_index)))
@@ -22,14 +23,15 @@ eval_count <- 0
 for (x in iv_pool) { for (w in mod_pool) { for (m in med_pool) { for (y in dv_pool) {
   eval_count <- eval_count + 1
   if (eval_count > max_evals) break
-  needed <- unique(c(x, w, m, y, controls))
+  needed <- unique(as.character(c(x, w, m, y, controls)))
   d_sub <- na.omit(df_raw[, ..needed])
   if (nrow(d_sub) < 30) next
   d_sub[, X_c := get(x) - mean(get(x))]
   d_sub[, W_c := get(w) - mean(get(w))]
   d_sub[, X_W := X_c * W_c]
-  f1_b <- as.formula(paste(m, "~ X_c + W_c +", paste(controls, collapse = " + ")))
-  f1_f <- as.formula(paste(m, "~ X_c + W_c + X_W +", paste(controls, collapse = " + ")))
+  ctrl_str <- if (length(controls) > 0) paste(" +", paste(controls, collapse = " + ")) else ""
+  f1_b <- as.formula(paste0(m, " ~ X_c + W_c", ctrl_str))
+  f1_f <- as.formula(paste0(m, " ~ X_c + W_c + X_W", ctrl_str))
   fit1_b <- tryCatch(lm(f1_b, data = d_sub), error = function(e) NULL)
   fit1   <- tryCatch(lm(f1_f, data = d_sub), error = function(e) NULL)
   if (is.null(fit1) || is.null(fit1_b)) next
@@ -37,7 +39,7 @@ for (x in iv_pool) { for (w in mod_pool) { for (m in med_pool) { for (y in dv_po
   if (!"X_W" %in% rownames(s1)) next
   p_xw <- s1["X_W", "Pr(>|t|)"]
   if (is.na(p_xw) || p_xw >= 0.05) next
-  f2 <- as.formula(paste(y, "~", m, "+ X_c +", paste(controls, collapse = " + ")))
+  f2 <- as.formula(paste0(y, " ~ ", m, " + X_c", ctrl_str))
   fit2 <- tryCatch(lm(f2, data = d_sub), error = function(e) NULL)
   if (is.null(fit2)) next
   s2 <- summary(fit2)$coefficients

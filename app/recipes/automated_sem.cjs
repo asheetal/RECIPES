@@ -36,6 +36,7 @@ RULES (verbatim from design doc step_03_taxonomy.tex):
   8. Single-Producer Invariance: emit strictly valid step3_out.json.
 Payload keys: file_path; data_sheet; header_row_index:0; max_evaluations:5000; controls:[codes]; taxonomy:[{code, role, family, valence}]; family_summary:{family_name:{role:"IV"|"MOD"|"MED"|"DV"|"CONTROL", members:["CODE1","CODE2",...]}}; cardinality_check:{IV:{count,cap,pass}, MOD:{...}, MED:{...}, DV:{...}, CONTROL:{...}}; claims (verbatim + new); retrieval_log (verbatim + new); decision_log (verbatim + new entries with decision_type in {TAXONOMY_ROLE_CLASSIFICATION, CONSTRUCT_FAMILY_CLUSTERING, VALENCE_ASSIGNMENT, COVARIATE_SELECTION}).
 Assign theoretical valence (Positive | Negative | Neutral) strictly to the variable codes resolved in step2_out.json.
+CRITICAL FOR STEP 3 TAXONOMY CODES: The "code" field for every taxonomy entry MUST be the exact "column_name" string present in step2_out.variable_mappings (e.g. "E1", "R1", "SEA1"), NEVER composite construct names like "EFFORT" or "REWARD" that do not exist as columns in data_sheet.
 family_summary MUST be {family_name:{role, members:[codes]}} — NEVER count integers like {motivation:4}.
 Call asp_step_run({step:3, payload:{...}}).
 

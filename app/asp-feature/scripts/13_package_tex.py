@@ -580,7 +580,7 @@ mean-centered. $**p < .01$. See model footnote for IMM, controls, and prior-art 
     tex.append(render_descriptives_table(payload))
     tex.append(render_correlations_table(payload))
     tex.append("\n\\clearpage\n" + render_model_comparison_table(payload))
-    tex.append("\\begin{center}\\textbf{References}\\end{center}\n\\vspace{0.5em}\n")
+    tex.append("\\clearpage\n\\begin{center}\\textbf{References}\\end{center}\n\\vspace{0.5em}\n")
     for r in sections.get("references",[]) or []:
         rt = _render_reference(str(r))
         tex.append("\\noindent\\hangindent=0.5in\\hangafter=1 " + rt + "\\par\\vspace{0.8em}\n")

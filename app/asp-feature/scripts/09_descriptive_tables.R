@@ -38,10 +38,23 @@ if (length(num_codes) >= 2) {
   }
 }
 item_groups <- list()
-for (v in var_codes) {
-  p1 <- grep(paste0("^", v, "_[0-9]+$"), names(df), value = TRUE)
-  p2 <- grep(paste0("^", v, "[a-z]$"), names(df), value = TRUE)
-  cand <- c(p1, p2); if (length(cand) >= 2) item_groups[[v]] <- cand
+# Group items by taxonomy family if present
+if ("family" %in% names(taxonomy_dt)) {
+  families <- unique(na.omit(taxonomy_dt$family))
+  for (fam in families) {
+    fam_vars <- taxonomy_dt[family == fam, code]
+    fam_vars <- fam_vars[fam_vars %in% names(df)]
+    if (length(fam_vars) >= 2) item_groups[[fam]] <- fam_vars
+  }
+}
+# Also extract item groups based on common prefixes (e.g., E, SEA, TP, R, CP, CB)
+col_names <- names(df)
+prefixes <- unique(sub("[0-9]+$", "", col_names[grepl("^[A-Za-z]+[0-9]+$", col_names)]))
+for (pfx in prefixes) {
+  matched <- grep(paste0("^", pfx, "[0-9]+$"), col_names, value = TRUE)
+  if (length(matched) >= 2 && !pfx %in% names(item_groups)) {
+    item_groups[[pfx]] <- matched
+  }
 }
 alpha_table <- list()
 for (v in names(item_groups)) {

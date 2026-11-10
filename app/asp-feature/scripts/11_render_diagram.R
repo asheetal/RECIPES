@@ -90,7 +90,7 @@ for (m_idx in seq_along(models_list)) {
       p <- p + annotate("segment", x = x_w, y = y_w - bh, xend = x_target, yend = y_target + 0.08, arrow = arrow(length = unit(0.28, "cm"), type = "closed"), linewidth = p_lw, color = p_col)
       st_lx <- if (!is.na(p_lx)) p_lx else x_target + 0.65
       st_ly <- if (!is.na(p_ly)) p_ly else (y_w + y_target) / 2 + 0.20
-      p <- p + annotate("text", x = st_lx, y = st_ly, label = p_label, hjust = 0.5, size = 3.6, fontface = "bold", color = p_col, family = "sans")
+      p <- p + annotate("label", x = st_lx, y = st_ly, label = p_label, hjust = 0.5, size = 3.4, fontface = "bold", color = p_col, fill = "white", label.size = NA, label.padding = unit(0.12, "lines"), family = "sans")
     } else if (identical(p_type, "dashed_arc")) {
       if (!to_id %in% names(node_coords)) fail(sprintf("model [%d] arc refs unknown '%s'", m_idx, to_id))
       x_start <- node_coords[[from_id]]$x + 0.15; y_start <- node_coords[[from_id]]$y - bh
@@ -105,7 +105,7 @@ for (m_idx in seq_along(models_list)) {
       p <- p + annotate("segment", x = arc_x[95], y = arc_y[95], xend = x_end, yend = y_end - 0.02, arrow = arrow(length = unit(0.25, "cm"), type = "closed"), linewidth = p_lw, color = arc_col)
       arc_lx <- if (!is.na(p_lx)) p_lx else ctrl_x
       arc_ly <- if (!is.na(p_ly)) p_ly else min(arc_df$y) - 0.16
-      p <- p + annotate("text", x = arc_lx, y = arc_ly, label = p_label, hjust = 0.5, size = 3.4, fontface = "italic", color = arc_col, family = "sans")
+      p <- p + annotate("label", x = arc_lx, y = arc_ly, label = p_label, hjust = 0.5, size = 3.2, fontface = "italic", color = arc_col, fill = "white", label.size = NA, label.padding = unit(0.12, "lines"), family = "sans")
     } else {
       if (!to_id %in% names(node_coords)) fail(sprintf("model [%d] path refs unknown '%s'", m_idx, to_id))
       x_from <- node_coords[[from_id]]$x + bw; y_from <- node_coords[[from_id]]$y
@@ -113,7 +113,7 @@ for (m_idx in seq_along(models_list)) {
       p <- p + annotate("segment", x = x_from, y = y_from, xend = x_to, yend = y_to, arrow = arrow(length = unit(0.28, "cm"), type = "closed"), linewidth = p_lw, color = p_col)
       x_lbl <- if (!is.na(p_lx)) p_lx else (x_from + x_to) / 2
       y_lbl <- if (!is.na(p_ly)) p_ly else y_from + 0.30
-      p <- p + annotate("text", x = x_lbl, y = y_lbl, label = p_label, hjust = 0.5, size = 3.6, fontface = "bold", color = p_col, family = "sans")
+      p <- p + annotate("label", x = x_lbl, y = y_lbl, label = p_label, hjust = 0.5, size = 3.4, fontface = "bold", color = p_col, fill = "white", label.size = NA, label.padding = unit(0.12, "lines"), family = "sans")
     }
   }
   for (i in seq_len(nrow(nodes_df))) {

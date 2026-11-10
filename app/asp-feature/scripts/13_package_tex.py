@@ -71,7 +71,9 @@ def _format_apa7(r):
         if issue: jblock += f"({issue})"
     if pages: jblock += (", " if jblock else "") + pages
     if jblock: parts.append(jblock.rstrip(".") + ".")
-    if doi: parts.append(f"https://doi.org/{doi}")
+    if doi:
+        clean_doi = doi.replace("https://doi.org/", "").strip()
+        parts.append(f"https://doi.org/{clean_doi}")
     return " ".join(parts).strip()
 
 
@@ -239,7 +241,12 @@ def render_descriptives_table(payload):
     for d in desc:
         if not isinstance(d, dict): continue
         cells = [tex_escape(str(d.get("code",""))), tex_escape(str(d.get("role",""))), tex_escape(str(d.get("family",""))), _fmt_num(d.get("n")), _fmt_num(d.get("mean")), _fmt_num(d.get("sd")), _fmt_num(d.get("min")), _fmt_num(d.get("max"))]
-        if has_alpha: cells.append(_fmt_num(alpha_map.get(d.get("code",""))))
+        if has_alpha:
+            c_val = alpha_map.get(d.get("code","")) or alpha_map.get(d.get("family",""))
+            if not c_val:
+                pfx = re.sub(r"[0-9]+$", "", str(d.get("code","")))
+                c_val = alpha_map.get(pfx)
+            cells.append(_fmt_num(c_val) if c_val else "---")
         rows.append(" & ".join(cells) + r" \\")
     if not rows: return ""
     note = "" if has_alpha else (r"\par\vspace{0.4em}" "\n" r"\noindent{\footnotesize\textit{Note.} " r"Reliability coefficients ($\alpha$) are not computable from the supplied " r"workbook (no item-level columns).}\par" "\n")
@@ -273,7 +280,7 @@ def render_correlations_table(payload):
                 cells.append(cell)
         body.append(f"{i+1}. {tex_escape(row.get('code',''))} & " + " & ".join(cells) + r" \\")
     note = (r"\par\vspace{0.4em}" "\n" r"\noindent{\footnotesize\textit{Note.} Pairwise-complete " r"Pearson correlations restricted to the focal model variables (X, W, M, Y) " r"and baseline covariates; $N$ = " + str(n_total) + r". " r"$^{*}p < .05$, $^{**}p < .01$, $^{***}p < .001$ (two-tailed).}\par" "\n")
-    return (r"\noindent\textbf{Table 3}\par" "\n" r"\noindent\textit{Correlations Among Focal Study Variables}\par" "\n" r"\vspace{0.3em}\begin{footnotesize}\setlength{\tabcolsep}{6pt}" "\n" r"\begin{tabular}{l " + ("r " * len(codes)) + r"}" "\n" + line_header + "\n".join(body) + "\n" r"\bottomrule\end{tabular}\par" "\n" r"\end{footnotesize}" "\n" + note + r"\vspace{0.8em}" "\n")
+    return (r"\noindent\textbf{Table 3}\par" "\n" r"\noindent\textit{Correlations Among Focal Study Variables}\par" "\n" r"\vspace{0.3em}\begin{footnotesize}\setlength{\tabcolsep}{5pt}\renewcommand{\arraystretch}{1.18}" "\n" r"\begin{tabular}{l " + ("r " * len(codes)) + r"}" "\n" + line_header + "\n".join(body) + "\n" r"\bottomrule\end{tabular}\par" "\n" r"\end{footnotesize}" "\n" + note + r"\vspace{0.8em}" "\n")
 def render_model_comparison_table(payload):
     models = payload.get("models") or []
     boot_results = payload.get("bootstrap_results") or []

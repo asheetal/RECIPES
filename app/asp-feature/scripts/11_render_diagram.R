@@ -67,7 +67,7 @@ for (m_idx in seq_along(models_list)) {
   bw <- if (!is.null(m_spec$node_w)) as.numeric(unlist(m_spec$node_w))[1] else 1.05
   bh <- if (!is.null(m_spec$node_h)) as.numeric(unlist(m_spec$node_h))[1] else 0.48
   xlim_val <- if (!is.null(m_spec$canvas_xlim)) as.numeric(unlist(m_spec$canvas_xlim))[1:2] else c(0, 11)
-  ylim_val <- if (!is.null(m_spec$canvas_ylim)) as.numeric(unlist(m_spec$canvas_ylim))[1:2] else c(0, 6)
+  ylim_val <- if (!is.null(m_spec$canvas_ylim)) as.numeric(unlist(m_spec$canvas_ylim))[1:2] else c(-0.2, 6.7)
   p <- ggplot() + coord_fixed(ratio = 1, xlim = xlim_val, ylim = ylim_val) + theme_void() +
     theme(plot.background = element_rect(fill = "white", color = NA))
   for (i in seq_len(nrow(paths_df))) {
@@ -126,7 +126,7 @@ for (m_idx in seq_along(models_list)) {
     wrapped <- paste(strwrap(footnote_text, width = 110), collapse = "\n")
     p <- p + annotate("text", x = 5.5, y = 0.15, label = wrapped, size = 3.1, fontface = "italic", color = "gray25", hjust = 0.5, vjust = 0, family = "sans")
   }
-  tryCatch({ ggsave(output_img, plot = p, width = 10.0, height = 5.2, dpi = 300) },
+  tryCatch({ ggsave(output_img, plot = p, width = 10.0, height = 5.7, dpi = 300) },
            error = function(e) fail(sprintf("ggsave failed model [%d]: %s", m_idx, conditionMessage(e))))
   rendered_files[[length(rendered_files) + 1L]] <- list(
     model_idx = idx_num, output_image = output_img, resolution = "300 dpi", footnote_rendered = footnote_text

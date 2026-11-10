@@ -250,7 +250,7 @@ def render_descriptives_table(payload):
         rows.append(" & ".join(cells) + r" \\")
     if not rows: return ""
     note = "" if has_alpha else (r"\par\vspace{0.4em}" "\n" r"\noindent{\footnotesize\textit{Note.} " r"Reliability coefficients ($\alpha$) are not computable from the supplied " r"workbook (no item-level columns).}\par" "\n")
-    return (r"\noindent\textbf{Table 2}\par" "\n" r"\noindent\textit{Descriptive Statistics and Reliability}\par" "\n" r"\vspace{0.3em}\begin{footnotesize}\setlength{\tabcolsep}{4pt}" "\n" r"\begin{xltabular}{\textwidth}{" + col_spec + r"}" "\n" r"\toprule" "\n" + header + "\n" r"\midrule\endfirsthead\toprule" "\n" + header + "\n" r"\midrule\endhead\bottomrule\endlastfoot" "\n" + "\n".join(rows) + "\n" r"\end{xltabular}\end{footnotesize}" "\n" + note + r"\vspace{0.8em}" "\n")
+    return (r"\clearpage\noindent\textbf{Table 2}\par" "\n" r"\noindent\textit{Descriptive Statistics and Reliability}\par" "\n" r"\vspace{0.3em}\begin{footnotesize}\setlength{\tabcolsep}{4pt}" "\n" r"\begin{xltabular}{\textwidth}{" + col_spec + r"}" "\n" r"\toprule" "\n" + header + "\n" r"\midrule\endfirsthead\toprule" "\n" + header + "\n" r"\midrule\endhead\bottomrule\endlastfoot" "\n" + "\n".join(rows) + "\n" r"\end{xltabular}\end{footnotesize}" "\n" + note + r"\vspace{0.8em}" "\n")
 def render_correlations_table(payload):
     cor_rows = payload.get("correlations") or []
     if not cor_rows: return ""
@@ -269,18 +269,22 @@ def render_correlations_table(payload):
     header_cols = " & ".join(f"\\textbf{{({i+1})}}" for i in range(len(codes)))
     line_header = (r"\toprule" "\n" r"\textbf{Variable} & " + header_cols + r" \\" "\n" r"\midrule" "\n")
     body = []
-    for i,row in enumerate(focal_rows):
+    n_vars = len(codes)
+    for i, row in enumerate(focal_rows):
         cells = []
-        for j in range(i+1):
-            other = codes[j]; val = row.get(other)
-            if i == j: cells.append("1.00")
+        for j in range(n_vars):
+            if j <= i:
+                other = codes[j]; val = row.get(other)
+                if i == j: cells.append("1.00")
+                else:
+                    cell = _fmt_corr(val)
+                    if cell: cell += _corr_stars(val, n_total)
+                    cells.append(cell if cell else "")
             else:
-                cell = _fmt_corr(val)
-                if cell: cell += _corr_stars(val, n_total)
-                cells.append(cell)
+                cells.append("")
         body.append(f"{i+1}. {tex_escape(row.get('code',''))} & " + " & ".join(cells) + r" \\")
     note = (r"\par\vspace{0.4em}" "\n" r"\noindent{\footnotesize\textit{Note.} Pairwise-complete " r"Pearson correlations restricted to the focal model variables (X, W, M, Y) " r"and baseline covariates; $N$ = " + str(n_total) + r". " r"$^{*}p < .05$, $^{**}p < .01$, $^{***}p < .001$ (two-tailed).}\par" "\n")
-    return (r"\noindent\textbf{Table 3}\par" "\n" r"\noindent\textit{Correlations Among Focal Study Variables}\par" "\n" r"\vspace{0.3em}\begin{footnotesize}\setlength{\tabcolsep}{5pt}\renewcommand{\arraystretch}{1.18}" "\n" r"\begin{tabular}{l " + ("r " * len(codes)) + r"}" "\n" + line_header + "\n".join(body) + "\n" r"\bottomrule\end{tabular}\par" "\n" r"\end{footnotesize}" "\n" + note + r"\vspace{0.8em}" "\n")
+    return (r"\clearpage" "\n" r"\noindent\textbf{Table 3}\par" "\n" r"\noindent\textit{Correlations Among Focal Study Variables}\par" "\n" r"\vspace{0.3em}\begin{small}\setlength{\tabcolsep}{3.5pt}\renewcommand{\arraystretch}{1.18}" "\n" r"\resizebox{\textwidth}{!}{" "\n" r"\begin{tabular}{l " + ("r " * n_vars) + r"}" "\n" + line_header + "\n".join(body) + "\n" r"\bottomrule\end{tabular}" "\n" r"}\par\end{small}" "\n" + note + r"\vspace{0.8em}" "\n")
 def render_model_comparison_table(payload):
     models = payload.get("models") or []
     boot_results = payload.get("bootstrap_results") or []

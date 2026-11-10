@@ -76,11 +76,11 @@ def build_executive_takeaways(payload):
         excludes_zero = (ci_lo > 0 and ci_hi > 0) or (ci_lo < 0 and ci_hi < 0)
         imm_status = (
             r"Because the bootstrap Index of Moderated Mediation excludes zero "
-            r"($\text{IMM} = " + f"{imm_pt:.3f}" + r"$, 95\% CI [" + f"{ci_lo:.3f}, {ci_hi:.3f}" + r"]$), "
+            r"($\text{IMM} = " + f"{imm_pt:.3f}" + r"$, 95\% CI [" + f"{ci_lo:.3f}, {ci_hi:.3f}" + r"], "
             r"this confirms an \textbf{indirect-only, first-stage moderated mediation (Hayes Model 7)}."
         ) if excludes_zero else (
             r"The bootstrap Index of Moderated Mediation includes zero "
-            r"($\text{IMM} = " + f"{imm_pt:.3f}" + r"$, 95\% CI [" + f"{ci_lo:.3f}, {ci_hi:.3f}" + r"]$), "
+            r"($\text{IMM} = " + f"{imm_pt:.3f}" + r"$, 95\% CI [" + f"{ci_lo:.3f}, {ci_hi:.3f}" + r"], "
             r"indicating conditional indirect transmission remains tentative."
         )
 

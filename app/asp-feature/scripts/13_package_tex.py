@@ -164,12 +164,19 @@ def escape_preserving_placeholders(text):
     return "".join(out)
 def _render_reference(text):
     if not isinstance(text, str): return str(text)
-    # tool.cjs emits "URL:https://..." to preserve the explicit-URL marker
-    parts = re.split(r"(URL:(https?://\S+))", text)
+    import re
+    # Strip internal citation slugs like [R2_01] or [feuerhahn-2012-...]
+    text = re.sub(r"^\[[^\]]+\]\s*", "", text.strip())
+    # Deduplicate concatenated DOI URLs
+    text = re.sub(r"(https?://doi\.org/[^\s]+?)(https?://doi\.org/\S+)", r"\1", text)
+    parts = re.split(r"(URL:(https?://\S+)|https?://\S+)", text)
     out = []
     for p in parts:
+        if not p: continue
         if p.startswith("URL:"):
-            out.append("\\url{" + p[4:] + "}")
+            out.append("\\url{" + p[4:].rstrip(".") + "}")
+        elif p.startswith("http://") or p.startswith("https://"):
+            out.append("\\url{" + p.rstrip(".") + "}")
         else:
             out.append(tex_escape(p))
     return "".join(out)
@@ -418,7 +425,31 @@ def build_tex_report(payload, output_tex="Automated_SEM_Recipe_Report.tex"):
     tex.append(sec1 + "\n\n\\vspace{1em}\n\n")
     tex.append("\\begin{center}\\textbf{Structural Equation Modeling Report}\\end{center}\n")
     tex.append(sec2 + "\n\n\\vspace{1.5em}\n\n")
-    tex.append(r"""\clearpage
+    tex.append(r"""\vspace{1.0em}
+\noindent
+\begin{center}
+\fcolorbox{gray!50}{gray!5}{%
+\begin{minipage}{0.96\textwidth}
+\vspace{0.3em}
+\noindent\textbf{\large Executive Takeaways \& Lay Interpretation (Rookie Guide)}\\[0.4em]
+{\small
+\textbf{1. The Core Paradox (Effort Alone Is Not Enough):}
+Putting in high work effort ($X$) does \emph{not} directly translate to higher task performance ($c' = -.001\text{ to }-.068, \text{ns}$) or automatic strain ($a_1 = .056, \text{ns}$). Hard work alone is psychologically neutral.
+
+\vspace{0.3em}
+\noindent\textbf{2. The Emotional Catalyst (How Strain Emerges):}
+Emotional intelligence regulation ($W$) acts as the critical gating factor. For individuals low in emotion regulation/appraisal, heavy effort either operates unchecked or fails to mobilize buffering. For individuals high in emotional appraisal/use, emotional sensitivity directs how work effort channels into psychological investment ($a_3$ moderation).
+
+\vspace{0.3em}
+\noindent\textbf{3. The Transmission Path to Performance:}
+Overcommitment ($M$) is what actually drives task output ($b_1 = .225\text{ to }.247, p \le .001$). Because the direct effect ($c'$) is non-significant while the bootstrap Index of Moderated Mediation excludes zero, this model is an \textbf{indirect-only, first-stage moderated mediation (Hayes Model 7)}. Strain is the sole conduit carrying effort to performance.
+}
+\vspace{0.3em}
+\end{minipage}%
+}
+\end{center}
+\vspace{0.8em}
+\clearpage
 \noindent\textbf{Figure 1}\par\vspace{0.2em}
 \noindent\textit{First-Stage Moderated Mediation Structural Equation Model}\par
 \vspace{0.4em}

@@ -335,16 +335,32 @@ def render_descriptives_table(payload):
     return (r"\clearpage\noindent\textbf{Table 2}\par" "\n" r"\noindent\textit{Descriptive Statistics and Reliability}\par" "\n" r"\vspace{0.3em}\begin{footnotesize}\setlength{\tabcolsep}{4pt}" "\n" r"\begin{xltabular}{\textwidth}{" + col_spec + r"}" "\n" r"\toprule" "\n" + header + "\n" r"\midrule\endfirsthead\toprule" "\n" + header + "\n" r"\midrule\endhead\bottomrule\endlastfoot" "\n" + "\n".join(rows) + "\n" r"\end{xltabular}\end{footnotesize}" "\n" + note + r"\vspace{0.8em}" "\n")
 def render_correlations_table(payload):
     corr = payload.get("correlations")
-    if not corr or not isinstance(corr, dict): return ""
-    focal_rows = corr.get("focal_matrix", [])
-    if not focal_rows: return ""
+    if not corr:
+        return ""
+    
+    if isinstance(corr, dict):
+        focal_rows = corr.get("focal_matrix", [])
+        n_total = corr.get("n_sample", 141)
+    elif isinstance(corr, list):
+        m0 = payload.get("models", [{}])[0]
+        focal_vars = [m0.get("x"), m0.get("w"), m0.get("m"), m0.get("y")]
+        target_vars = [v for v in focal_vars + ["R3", "SEA3"] if v]
+        focal_rows = [row for row in corr if row.get("code") in target_vars]
+        if not focal_rows:
+            focal_rows = corr[:6]
+        n_total = 141
+    else:
+        return ""
+
     codes = [row.get("code") for row in focal_rows if row.get("code")]
-    if not codes: return ""
+    if not codes:
+        return ""
+
     n_vars = len(codes)
     col_spec = "l " + ("r " * n_vars)
     line_header = "Variable & " + " & ".join(f"({i+1})" for i in range(n_vars)) + r" \\ \midrule" + "\n"
     body = []
-    n_total = corr.get("n_sample", 141)
+
     for i, row in enumerate(focal_rows):
         cells = []
         for j in range(n_vars):
@@ -355,21 +371,22 @@ def render_correlations_table(payload):
                     cells.append("1.00")
                 else:
                     cell = _fmt_corr(val)
-                    if cell: cell += _corr_stars(val, n_total)
+                    if cell:
+                        cell += _corr_stars(val, n_total)
                     cells.append(cell if cell else "")
             else:
                 cells.append("")
         body.append(f"{i+1}. {tex_escape(row.get('code',''))} & " + " & ".join(cells) + r" \\")
-    
+
     note = (r"\par\vspace{0.4em}" "\n"
-            r"\noindent{\footnotesize\textit{Note.} Pairwise-complete Pearson correlations restricted to the focal model variables (X, W, M, Y) and baseline covariates; $N$ = "
-            + str(n_total) + r". $^{*}p < .05$, $^{**}p < .01$, $^{***}p < .001$ (two-tailed).}\par" "\n")
-            
+            r"\noindent{\footnotesize\textit{Note.} Pairwise-complete Pearson correlations restricted to the focal model variables (X, W, M, Y) and baseline covariates; $N = "
+            + str(n_total) + r"$. $^{*}p < .05$, $^{**}p < .01$, $^{***}p < .001$ (two-tailed).}\par" "\n")
+
     return (r"\clearpage" "\n"
             r"\noindent\textbf{Table 3}\par" "\n"
             r"\noindent\textit{Correlations Among Focal Study Variables}\par" "\n"
             r"\vspace{0.4em}" "\n"
-            r"{\small\setlength{\tabcolsep}{3.5pt}\renewcommand{\arraystretch}{1.18}" "\n"
+            r"{\small\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{1.2}" "\n"
             r"\resizebox{\textwidth}{!}{" "\n"
             r"\begin{tabular}{" + col_spec + r"}" "\n"
             r"\toprule" "\n"
@@ -514,30 +531,7 @@ def build_tex_report(payload, output_tex="Automated_SEM_Recipe_Report.tex"):
     tex.append(sec1 + "\n\n\\vspace{1em}\n\n")
     tex.append("\\begin{center}\\textbf{Structural Equation Modeling Report}\\end{center}\n")
     tex.append(sec2 + "\n\n\\vspace{1.5em}\n\n")
-    tex.append(r"""\vspace{1.0em}
-\noindent
-\begin{center}
-\fcolorbox{gray!50}{gray!5}{%
-\begin{minipage}{0.96\textwidth}
-\vspace{0.3em}
-\noindent\textbf{\large Executive Takeaways \& Lay Interpretation (Rookie Guide)}\\[0.4em]
-{\small
-\textbf{1. The Core Paradox (Effort Alone Is Not Enough):}
-Putting in high work effort ($X$) does \emph{not} directly translate to higher task performance ($c' = -.001\text{ to }-.068, \text{ns}$) or automatic strain ($a_1 = .056, \text{ns}$). Hard work alone is psychologically neutral.
-
-\vspace{0.3em}
-\noindent\textbf{2. The Emotional Catalyst (How Strain Emerges):}
-Emotional intelligence regulation ($W$) acts as the critical gating factor. For individuals low in emotion regulation/appraisal, heavy effort either operates unchecked or fails to mobilize buffering. For individuals high in emotional appraisal/use, emotional sensitivity directs how work effort channels into psychological investment ($a_3$ moderation).
-
-\vspace{0.3em}
-\noindent\textbf{3. The Transmission Path to Performance:}
-Overcommitment ($M$) is what actually drives task output ($b_1 = .225\text{ to }.247, p \le .001$). Because the direct effect ($c'$) is non-significant while the bootstrap Index of Moderated Mediation excludes zero, this model is an \textbf{indirect-only, first-stage moderated mediation (Hayes Model 7)}. Strain is the sole conduit carrying effort to performance.
-}
-\vspace{0.3em}
-\end{minipage}%
-}
-\end{center}
-\vspace{0.8em}
+    tex.append(r"""""" + build_executive_takeaways(payload) + r"""
 \clearpage
 \noindent\textbf{Figure 1}\par\vspace{0.2em}
 \noindent\textit{First-Stage Moderated Mediation Structural Equation Model}\par
@@ -585,7 +579,7 @@ mean-centered. $**p < .01$. See model footnote for IMM, controls, and prior-art 
         tex.append("\\end{xltabular}\n\\end{footnotesize}\n\\clearpage\n")
     tex.append(render_descriptives_table(payload))
     tex.append(render_correlations_table(payload))
-    tex.append(render_model_comparison_table(payload))
+    tex.append("\n\\clearpage\n" + render_model_comparison_table(payload))
     tex.append("\\begin{center}\\textbf{References}\\end{center}\n\\vspace{0.5em}\n")
     for r in sections.get("references",[]) or []:
         rt = _render_reference(str(r))

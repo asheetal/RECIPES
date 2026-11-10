@@ -223,9 +223,9 @@ def _corr_stars(r, n):
     except (ValueError,TypeError): return ""
     if nf < 4: return ""
     absr = abs(rf)
-    if absr >= 3.291 / math.sqrt(nf): return "***"
-    if absr >= 2.576 / math.sqrt(nf): return "**"
-    if absr >= 1.96 / math.sqrt(nf): return "*"
+    if absr >= 3.291 / math.sqrt(nf): return "$^{*}$$^{*}$$^{*}$"
+    if absr >= 2.576 / math.sqrt(nf): return "$^{*}$$^{*}$"
+    if absr >= 1.96 / math.sqrt(nf): return "$^{*}$"
     return ""
 def render_descriptives_table(payload):
     desc = payload.get("descriptives") or []
@@ -383,14 +383,16 @@ def build_tex_report(payload, output_tex="Automated_SEM_Recipe_Report.tex"):
 \definecolor{codebg}{HTML}{F8F9FA}\definecolor{codeframe}{HTML}{D0D5DD}
 \lstdefinestyle{Rstyle}{
     language=R, backgroundcolor=\color{codebg},
-    basicstyle=\ttfamily\scriptsize\color{black},
+    basicstyle=\ttfamily\tiny\color{black},
+    columns=fullflexible,
     breaklines=true, breakatwhitespace=false,
+    postbreak=\mbox{\textcolor{gray}{$\hookrightarrow$}\space},
     frame=single, rulecolor=\color{codeframe},
     numbers=none, keepspaces=true, showspaces=false,
     showstringspaces=false, xleftmargin=4pt, xrightmargin=4pt,
     framexleftmargin=4pt, framexrightmargin=4pt,
     framextopmargin=4pt, framexbottommargin=4pt,
-    lineskip=-0.5pt, extendedchars=true, inputencoding=utf8
+    lineskip=-0.2pt, extendedchars=true, inputencoding=utf8
 }
 \begin{document}
 """)

@@ -88,8 +88,8 @@ for (m_idx in seq_along(models_list)) {
       x_target <- (x_1 + x_2) / 2; y_target <- (y_1 + y_2) / 2
       x_w <- node_coords[[from_id]]$x; y_w <- node_coords[[from_id]]$y
       p <- p + annotate("segment", x = x_w, y = y_w - bh, xend = x_target, yend = y_target + 0.08, arrow = arrow(length = unit(0.28, "cm"), type = "closed"), linewidth = p_lw, color = p_col)
-      st_lx <- if (!is.na(p_lx)) p_lx else x_target + 0.55
-      st_ly <- if (!is.na(p_ly)) p_ly else (y_w + y_target) / 2 + 0.15
+      st_lx <- if (!is.na(p_lx)) p_lx else x_target + 0.65
+      st_ly <- if (!is.na(p_ly)) p_ly else (y_w + y_target) / 2 + 0.20
       p <- p + annotate("text", x = st_lx, y = st_ly, label = p_label, hjust = 0.5, size = 3.6, fontface = "bold", color = p_col, family = "sans")
     } else if (identical(p_type, "dashed_arc")) {
       if (!to_id %in% names(node_coords)) fail(sprintf("model [%d] arc refs unknown '%s'", m_idx, to_id))
@@ -112,7 +112,7 @@ for (m_idx in seq_along(models_list)) {
       x_to   <- node_coords[[to_id]]$x   - bw; y_to   <- node_coords[[to_id]]$y
       p <- p + annotate("segment", x = x_from, y = y_from, xend = x_to, yend = y_to, arrow = arrow(length = unit(0.28, "cm"), type = "closed"), linewidth = p_lw, color = p_col)
       x_lbl <- if (!is.na(p_lx)) p_lx else (x_from + x_to) / 2
-      y_lbl <- if (!is.na(p_ly)) p_ly else y_from + 0.18
+      y_lbl <- if (!is.na(p_ly)) p_ly else y_from + 0.30
       p <- p + annotate("text", x = x_lbl, y = y_lbl, label = p_label, hjust = 0.5, size = 3.6, fontface = "bold", color = p_col, family = "sans")
     }
   }

@@ -71,6 +71,10 @@ STEP 7 NOVELTY PIN (deterministic, enforced by the tool — payload WILL be reje
 - decision_log entries for step 7 MUST use decision_type from {THEORETICAL_FRAMEWORK_SELECTION, LITERATURE_GROUNDING, PRIOR_ART_ADJUDICATION}. THRESHOLD_CALIBRATION is forbidden at step 7.
 - search_provenance must contain at least 3 entries per shortlisted model.
 - Never invent author, year, title, journal, or DOI. Only identifiers returned by search().
+CRITICAL FOR STEP 7 CLAIMS & RETRIEVAL (enforced by Step 13 citation gate):
+- Every claim in claims[] with support_status == "SUPPORTED" MUST set "ref_id" to a reference ID that explicitly lists that claim_id inside its retrieval_log[].results[].retrieved_for_claims array.
+- "justifying_excerpt" in the claim MUST be copied verbatim (or near-verbatim with >= 0.60 token overlap) from that exact result's "abstract_snippet" in retrieval_log. Never synthesize or summarize an excerpt from outside the abstract snippet.
+- Every claim placeholder referenced in sections.garden_of_forking_paths or sections.sem_report must satisfy this exact match.
 
 Payload keys: status:"THEORETICAL_REVIEW_COMPLETE"; file_path; data_sheet; header_row_index:0; controls; survivors_count; survivors (verbatim from step6.survivors); shortlisted_count; shortlisted_models:[{id, rank, x, w, m, y, theoretical_framework, recommended_role, novelty_verdict:{status, exact_prior_records:[{ref_id,supports_link,justifying_excerpt}], component_records:[{ref_id,supports_link,justifying_excerpt}], search_provenance:[{query, database, date, n_results_reviewed}]}}]; evaluations:[{id, theoretical_framework, tension_resolution_score, anti_tautology_score, divergence_rationale, overall_novelty_rank}]; taxonomy (verbatim); claims (verbatim + new); retrieval_log (verbatim + new); decision_log (verbatim + new).
 

@@ -976,7 +976,7 @@ export class Job {
       );
     }
 
-    if (this.fileEgressBaseUrl() && this.files.some(f => f.id && f.storage_session_id)) {
+    if (this.session && this.fileEgressBaseUrl() && this.files.some(f => f.id && f.storage_session_id)) {
       await this.autoLoadDirkeep();
     }
 

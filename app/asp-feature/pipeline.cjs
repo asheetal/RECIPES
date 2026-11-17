@@ -21,4 +21,16 @@ async function readStep({ runId, step }) {
   } catch (_) { return null; }
 }
 
-module.exports = { runStep, readStep, RUNNER_URL };
+async function cleanupRun(runId) {
+  if (!runId) return;
+  try {
+    await fetch(`${RUNNER_URL}/cleanup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ run_id: String(runId) }),
+      signal: AbortSignal.timeout(5000),
+    });
+  } catch (_) {}
+}
+
+module.exports = { runStep, readStep, cleanupRun, RUNNER_URL };

@@ -2,6 +2,7 @@
 const RUN_ABORTS = new Map();
 const runKeyOf = (s) => `${s.user}|${s.tenant}|${s.projectId}`;
 const { makeService } = require('./core.cjs');
+const { cleanupRun } = require('./pipeline.cjs');
 let instance;
 function service() {
   if (instance) return instance;
@@ -37,6 +38,7 @@ function registerRoutes(router, projectFilesService) {
         const db = mongoose.connection.db;
         const prev = await db.collection('aspruns').findOne({ user: s.user, tenant: s.tenant, projectId: s.projectId });
         if (prev) {
+          if (prev.runId) await cleanupRun(prev.runId);
           if (prev.traceId) { const d = '/app/admin-tools/prompt-dumps/' + prev.traceId; if (fs.existsSync(d)) fs.rmSync(d, { recursive: true, force: true }); }
           if (prev.conversationId) {
             await db.collection('conversations').deleteOne({ conversationId: prev.conversationId });
@@ -72,9 +74,17 @@ function registerRoutes(router, projectFilesService) {
       }).then(async (r) => {
         const body = await r.text().catch(() => '');
         console.error('[ASP] chat response', r.status, body.slice(0, 2000));
-        if (!r.ok) await svc.failRun(s, `chat ${r.status}: ${body.slice(0, 200)}`);
-      }).catch(async (e) => { console.error('[ASP] chat fetch error', e.message); await svc.failRun(s, e.message); })
-      .finally(() => { clearTimeout(__timeout); RUN_ABORTS.delete(rk); });
+        if (!r.ok) {
+          const cur = await svc.getState(s).catch(() => null);
+          if (cur && cur.runId) await cleanupRun(cur.runId);
+          await svc.failRun(s, `chat ${r.status}: ${body.slice(0, 200)}`);
+        }
+      }).catch(async (e) => {
+        console.error('[ASP] chat fetch error', e.message);
+        const cur = await svc.getState(s).catch(() => null);
+        if (cur && cur.runId) await cleanupRun(cur.runId);
+        await svc.failRun(s, e.message);
+      }).finally(() => { clearTimeout(__timeout); RUN_ABORTS.delete(rk); });
     } catch (e) { next(e); }
   });
   router.get('/:projectId/automated-sem/output/:step', async (req, res, next) => {
@@ -115,12 +125,19 @@ function registerRoutes(router, projectFilesService) {
       const s = await svc.scope(req, req.params.projectId);
       const ctl = RUN_ABORTS.get(runKeyOf(s));
       if (ctl) { try { ctl.abort(); } catch (_) {} RUN_ABORTS.delete(runKeyOf(s)); }
+      const cur = await svc.getState(s).catch(() => null);
+      if (cur && cur.runId) await cleanupRun(cur.runId);
       const killed = await svc.killRun(s, 'killed by user');
       res.json(killed);
     } catch (e) { next(e); }
   });
   router.delete('/:projectId/automated-sem', async (req, res, next) => {
-    try { const s = await svc.scope(req, req.params.projectId); res.json(await svc.deleteRun(s)); } catch (e) { next(e); }
+    try {
+      const s = await svc.scope(req, req.params.projectId);
+      const cur = await svc.getState(s).catch(() => null);
+      if (cur && cur.runId) await cleanupRun(cur.runId);
+      res.json(await svc.deleteRun(s));
+    } catch (e) { next(e); }
   });
 }
 module.exports = { registerRoutes, service };

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from http.server import HTTPServer, BaseHTTPRequestHandler
-import json, os, base64, subprocess, pathlib, zipfile, io
+import json, os, base64, subprocess, pathlib, zipfile, io, shutil
 HOST = '0.0.0.0'; PORT = 8091
 RUNS_DIR = '/tmp/asp-runs'
 SCRIPTS = '/app/asp-feature/scripts'
@@ -38,8 +38,16 @@ class H(BaseHTTPRequestHandler):
                 return self._json({'ok': False, 'error': f'parse: {e}'})
         self.send_error(404)
     def do_POST(self):
+        if self.path == '/cleanup':
+            n = int(self.headers.get('Content-Length', 0))
+            try: body = json.loads(self.rfile.read(n) or b'{}')
+            except Exception as e: return self._json({'ok': False, 'error': f'bad json: {e}'})
+            run_id = body.get('run_id', '')
+            if not safe_id(run_id): return self._json({'ok': False, 'error': 'bad run_id'})
+            shutil.rmtree(os.path.join(RUNS_DIR, run_id), ignore_errors=True)
+            return self._json({'ok': True})
         if self.path == '/compile-tex':
-            import uuid, shutil
+            import uuid
             n = int(self.headers.get('Content-Length', 0))
             try:
                 body = json.loads(self.rfile.read(n) or b'{}')
@@ -160,6 +168,7 @@ class H(BaseHTTPRequestHandler):
                 resp['pdf_b64'] = base64.b64encode(pdf_p.read_bytes()).decode()
                 resp['pdf_name'] = pdf_p.name
                 resp['pdf_bytes'] = pdf_p.stat().st_size
+            shutil.rmtree(workdir, ignore_errors=True)
         return self._json(resp)
     def _json(self, obj):
         data = json.dumps(obj).encode()

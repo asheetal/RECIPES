@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "triage://boundary/opd_in",
+  "title": "dispatcher -> OPD",
+  "type": "object",
+  "required": ["contractVersion", "currentPrompt", "clock", "conversation", "handoff"],
+  "properties": {
+    "contractVersion": {"const": 1},
+    "currentPrompt": {"type": "string"},
+    "clock": {"type": "object"},
+    "conversation": {"type": "array", "items": {"$ref": "triage://shared/message"}},
+    "handoff": {"$ref": "triage://boundary/handoff"},
+    "surgeonPlan": {"type": "string"}
+  },
+  "additionalProperties": false
+}

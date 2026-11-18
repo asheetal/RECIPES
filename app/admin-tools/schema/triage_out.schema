@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "triage://boundary/triage_out",
+  "title": "TRIAGE -> dispatcher",
+  "type": "object",
+  "required": ["contractVersion", "route", "source"],
+  "properties": {
+    "contractVersion": {"const": 1},
+    "route": {"enum": ["OPD", "SURGERY"]},
+    "source": {"enum": ["model", "file_signal", "fallback"]}
+  },
+  "additionalProperties": false
+}

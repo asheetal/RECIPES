@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "triage://boundary/opd_out",
+  "title": "OPD -> user",
+  "type": "object",
+  "required": ["contractVersion", "text"],
+  "properties": {
+    "contractVersion": {"const": 1},
+    "text": {"type": "string", "minLength": 1}
+  },
+  "additionalProperties": false
+}

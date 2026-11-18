@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "triage://boundary/surgery_in",
+  "title": "dispatcher -> SURGEON",
+  "type": "object",
+  "required": ["contractVersion", "conversation", "summaries"],
+  "properties": {
+    "contractVersion": {"const": 1},
+    "conversation": {"type": "array", "items": {"$ref": "triage://shared/message"}},
+    "summaries": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": false
+}

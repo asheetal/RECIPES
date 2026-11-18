@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "triage://boundary/user_in",
+  "title": "user -> TRIAGE",
+  "type": "object",
+  "required": ["contractVersion", "currentPrompt", "conversation", "files"],
+  "properties": {
+    "contractVersion": {"const": 1},
+    "currentPrompt": {"type": "string"},
+    "conversation": {"type": "array", "items": {"$ref": "triage://shared/message"}},
+    "files": {"type": "array", "items": {"$ref": "triage://shared/file_record"}}
+  },
+  "additionalProperties": false
+}

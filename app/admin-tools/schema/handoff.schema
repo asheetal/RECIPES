@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "triage://boundary/handoff",
+  "title": "SURGEON -> OPD",
+  "type": "object",
+  "required": ["contractVersion", "status", "error", "errors", "draft", "tools", "files", "progress"],
+  "properties": {
+    "contractVersion": {"const": 1},
+    "status": {"enum": ["returned", "needs_resolution", "paused"]},
+    "error": {
+      "type": ["object", "null"],
+      "required": ["code", "message"],
+      "properties": {
+        "code": {"type": "string", "minLength": 1},
+        "message": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["code", "message"],
+        "properties": {
+          "code": {"type": "string", "minLength": 1},
+          "message": {"type": "string", "minLength": 1}
+        },
+        "additionalProperties": false
+      }
+    },
+    "draft": {"type": "string"},
+    "tools": {"type": "array", "items": {"$ref": "triage://shared/tool_record"}},
+    "files": {"type": "array", "items": {"$ref": "triage://shared/file_record"}},
+    "progress": {"type": ["object", "null"]}
+  },
+  "additionalProperties": false
+}

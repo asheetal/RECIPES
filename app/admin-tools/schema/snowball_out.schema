@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "triage://boundary/snowball_out",
+  "title": "snowball extractor -> model input",
+  "type": "object",
+  "required": ["contractVersion", "content"],
+  "properties": {
+    "contractVersion": {"const": 1},
+    "content": {"type": "string", "minLength": 1}
+  },
+  "additionalProperties": false
+}

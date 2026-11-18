@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "triage://boundary/surgery_tool_result",
+  "title": "tool -> SURGEON (receipt)",
+  "type": "object",
+  "required": ["contractVersion", "tool", "status", "result", "files", "savedFiles", "delivery", "stdout", "stderr"],
+  "properties": {
+    "contractVersion": {"const": 1},
+    "tool": {"type": "string", "minLength": 1},
+    "status": {"enum": ["ok", "error"]},
+    "result": {"type": ["object", "null"]},
+    "files": {"type": "array", "items": {"$ref": "triage://shared/file_record"}},
+    "savedFiles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "path", "sha256", "verified"],
+        "properties": {
+          "name": {"type": "string", "minLength": 1},
+          "path": {"type": "string", "minLength": 1},
+          "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "verified": {"const": true}
+        },
+        "additionalProperties": false
+      }
+    },
+    "delivery": {
+      "type": "object",
+      "required": ["status", "files"],
+      "properties": {
+        "status": {"enum": ["none", "registered"]},
+        "files": {"type": "array", "items": {"$ref": "triage://shared/file_record"}}
+      },
+      "additionalProperties": false
+    },
+    "stdout": {"type": "string"},
+    "stderr": {"type": "string"}
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,6 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "triage://boundary/snowball_in",
+  "title": "tool receipt -> snowball extractor",
+  "$ref": "triage://boundary/surgery_tool_result"
+}

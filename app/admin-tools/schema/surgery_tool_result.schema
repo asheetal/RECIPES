@@ -9,6 +9,7 @@
     "tool": {"type": "string", "minLength": 1},
     "status": {"enum": ["ok", "error"]},
     "result": {"type": ["object", "null"]},
+    "error": {"type": ["object", "null"]},
     "files": {"type": "array", "items": {"$ref": "triage://shared/file_record"}},
     "savedFiles": {
       "type": "array",
@@ -36,5 +37,28 @@
     "stdout": {"type": "string"},
     "stderr": {"type": "string"}
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {"properties": {"status": {"const": "error"}}, "required": ["status"]},
+      "then": {
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": ["code", "blame"],
+            "properties": {
+              "code": {"type": "string", "minLength": 1},
+              "blame": {"enum": ["transport", "data", "contract", "model", "tool"]},
+              "message": {"type": "string"}
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "else": {
+        "properties": {"error": {"type": "null"}}
+      }
+    }
+  ]
 }
